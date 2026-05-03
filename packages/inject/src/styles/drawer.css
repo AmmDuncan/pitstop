@@ -195,9 +195,17 @@
 }
 .dheader .theme-btn,
 .dheader .pos-btn,
-.dheader .size-btn {
-  font-size: 14px;
-  line-height: 1;
+.dheader .size-btn,
+.dheader .min-btn {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+}
+.dheader .theme-btn svg,
+.dheader .pos-btn svg,
+.dheader .size-btn svg,
+.dheader .min-btn svg {
+  display: block;
 }
 
 /* Header is a drag handle when drawer is floating */
