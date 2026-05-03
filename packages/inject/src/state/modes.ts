@@ -2,12 +2,29 @@ import { createSignal, createEffect, createRoot } from 'solid-js';
 
 type Position = 'right' | 'left' | 'floating';
 type Size = 'standard' | 'compact' | 'strip';
+export type Theme = 'auto' | 'dark' | 'light';
 
 const KEY = 'walkthrough.modes.v1';
 
-type Modes = { position: Position; size: Size; width: number; height: number; floatingTop: number; floatingLeft: number };
+type Modes = {
+  position: Position;
+  size: Size;
+  width: number;
+  height: number;
+  floatingTop: number;
+  floatingLeft: number;
+  theme: Theme;
+};
 
-const DEFAULTS: Modes = { position: 'right', size: 'standard', width: 504, height: 600, floatingTop: 80, floatingLeft: 80 };
+const DEFAULTS: Modes = {
+  position: 'right',
+  size: 'standard',
+  width: 504,
+  height: 600,
+  floatingTop: 80,
+  floatingLeft: 80,
+  theme: 'auto',
+};
 
 function load(): Modes {
   if (typeof localStorage === 'undefined') return DEFAULTS;
@@ -25,6 +42,7 @@ export const [width, setWidth] = createSignal(initial.width);
 export const [height, setHeight] = createSignal(initial.height);
 export const [floatingTop, setFloatingTop] = createSignal(initial.floatingTop);
 export const [floatingLeft, setFloatingLeft] = createSignal(initial.floatingLeft);
+export const [theme, setTheme] = createSignal<Theme>(initial.theme);
 
 createRoot(() => {
   createEffect(() => {
@@ -35,6 +53,7 @@ createRoot(() => {
       height: height(),
       floatingTop: floatingTop(),
       floatingLeft: floatingLeft(),
+      theme: theme(),
     };
     try { localStorage.setItem(KEY, JSON.stringify(m)); } catch {}
   });
@@ -51,4 +70,22 @@ export function cyclePosition() {
 export function cycleSize() {
   const i = SIZES.indexOf(size());
   setSize(SIZES[(i + 1) % SIZES.length]!);
+}
+
+const THEMES: Theme[] = ['auto', 'dark', 'light'];
+
+export function cycleTheme() {
+  const i = THEMES.indexOf(theme());
+  setTheme(THEMES[(i + 1) % THEMES.length]!);
+}
+
+/** Resolved theme — derives 'dark' or 'light' from theme() + system preference when 'auto'. */
+export function resolvedTheme(): 'dark' | 'light' {
+  const t = theme();
+  if (t === 'dark') return 'dark';
+  if (t === 'light') return 'light';
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return 'dark';
 }
