@@ -87,15 +87,21 @@ claude mcp list | grep pitstop
 # pitstop: bun run /Users/YOU/pitstop/... - ✓ Connected
 ```
 
-### 3. Add the Vite plugin to your dev project
+### 3. Wire it into your dev app
+
+Pitstop needs two things in your app's HTML during dev:
+1. A `window.__PITSTOP_PROJECT__` value pointing at your project's absolute path.
+2. A `<script src="http://localhost:7773/inject.js">` tag.
+
+For **Vite** and **Nuxt** there's a one-line plugin that does both. For everything else, paste a 5-line snippet into your layout.
+
+#### Vite / Nuxt (one-line setup)
 
 In the project you want to review work on:
 
 ```bash
 bun add -d /Users/YOU/pitstop/packages/vite-plugin
 ```
-
-Then wire it in.
 
 **Vite** (`vite.config.ts`):
 ```ts
@@ -115,6 +121,58 @@ export default defineNuxtConfig({
   vite: { plugins: [pitstop()] },
 });
 ```
+
+The plugin is dev-only by default. Production builds drop the inject script automatically.
+
+#### Other frameworks (manual snippet)
+
+There's no plugin for non-Vite frameworks yet, but the snippet is small. The shape is identical everywhere — set the project root, then load the inject script.
+
+**Next.js (App Router)** — `app/layout.tsx`:
+```tsx
+import Script from 'next/script';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html>
+      <body>
+        {process.env.NODE_ENV === 'development' && (
+          <>
+            <Script id="pitstop-project" strategy="beforeInteractive">
+              {`window.__PITSTOP_PROJECT__ = "/Users/YOU/your-next-project";`}
+            </Script>
+            <Script src="http://localhost:7773/inject.js" strategy="afterInteractive" />
+          </>
+        )}
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+**Next.js (Pages Router)** — same idea in `pages/_document.tsx` or `pages/_app.tsx`.
+
+**Anywhere else** — paste this into whatever file holds your dev HTML, gated on dev mode if your framework supports it:
+
+```html
+<script>window.__PITSTOP_PROJECT__ = "/Users/YOU/your-project";</script>
+<script src="http://localhost:7773/inject.js"></script>
+```
+
+Where to put it, by framework:
+
+| Framework | File |
+|---|---|
+| Vite / Nuxt | `@pitstop/vite-plugin` (above) |
+| Next.js | `app/layout.tsx` (App Router) or `pages/_document.tsx` (Pages Router) |
+| Remix | `app/root.tsx` inside the `<Scripts />` block |
+| SvelteKit | `src/app.html` |
+| CRA / webpack | `public/index.html` |
+| Astro | `src/layouts/Layout.astro` |
+| Plain HTML | wherever your `<body>` is |
+
+> ⚠️ **Tested setups**: Vite + Nuxt on macOS. Next.js / Remix / SvelteKit / CRA / Astro snippets are derived from how their script-injection mechanisms work but aren't yet smoke-tested. If something doesn't work, [open an issue](https://github.com/AmmDuncan/pitstop/issues).
 
 ---
 
@@ -166,11 +224,11 @@ Position, size, and theme persist per-browser via `localStorage`.
 ## Known limitations
 
 - **Daemon doesn't auto-start.** You have to keep Terminal A running.
-- **Vite / Nuxt only.** No webpack, Next.js, or Remix plugin yet. No browser extension.
+- **Only Vite / Nuxt have a one-line plugin.** Everything else needs the manual snippet above. No browser extension yet.
 - **One review per browser tab.** Sessions are bound to the project root the agent passes in.
 - **No session cleanup.** Old sessions accumulate in `~/.claude/pitstop/sessions/`.
-- **macOS-tested.** Linux should work; Windows untested.
-- **Pre-1.0.** Tool names, ports, and config shape can change between commits.
+- **Smoke-tested on macOS with Bun + Claude Code + Vite/Nuxt.** Test suite passes (30/30); daemon endpoints (`/health`, `/inject.js`, `/demo`) verified. Other framework snippets are derived from each framework's normal script-injection mechanism but aren't yet smoke-tested end-to-end.
+- **Pre-1.0.** Tool names, ports, and config shape can change between commits. Pin to a tag once they exist.
 
 ---
 
