@@ -9,6 +9,8 @@ import {
 } from '../state/store';
 import { submitResponse } from '../state/client';
 import { FileRef } from './FileRef';
+import { ImageAttachment } from './ImageAttachment';
+import type { Attachment } from '@walkthrough/shared';
 
 export const Detail: Component = () => {
   const item = () => session.s?.items[currentItemIdx()];
@@ -61,6 +63,9 @@ export const Detail: Component = () => {
         <div class="detail-body" innerHTML={marked.parse(item()!.body) as string} />
         <For each={item()!.attachments.filter((a) => a.kind === 'file-ref')}>
           {(att) => <FileRef att={att as any} />}
+        </For>
+        <For each={item()!.attachments.filter((a) => a.kind === 'image')}>
+          {(att) => <ImageAttachment att={att as Extract<Attachment, { kind: 'image' }>} />}
         </For>
         <Show when={item()!.question}>
           <div class="qline">{item()!.question}</div>
