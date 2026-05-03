@@ -2,7 +2,16 @@ import { type Component, Show } from 'solid-js';
 import { session, currentItemIdx, unreviewedIndices, setHelpOpen } from '../state/store';
 import { StatusTag, derivePill } from './StatusTag';
 import { baseUrl } from '../state/client';
-import { theme, cycleTheme, themeGlyph } from '../state/modes';
+import {
+  position,
+  theme,
+  cycleTheme,
+  themeGlyph,
+  floatingTop,
+  setFloatingTop,
+  floatingLeft,
+  setFloatingLeft,
+} from '../state/modes';
 
 export const Header: Component = () => {
   const pill = () => derivePill(session.s);
@@ -23,8 +32,37 @@ export const Header: Component = () => {
     }
   };
 
+  const onHeaderMouseDown = (e: MouseEvent) => {
+    if (position() !== 'floating') return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button, input, textarea, a, [role="button"]')) return;
+
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startTop = floatingTop();
+    const startLeft = floatingLeft();
+
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY;
+      const dx = ev.clientX - startX;
+      setFloatingTop(Math.max(0, startTop + dy));
+      setFloatingLeft(Math.max(0, startLeft + dx));
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+  };
+
   return (
-    <header class="dheader">
+    <header class="dheader" onMouseDown={onHeaderMouseDown} classList={{ draggable: position() === 'floating' }}>
       <div class="mark">W</div>
       <div>
         <div class="name">WALKTHROUGH</div>
