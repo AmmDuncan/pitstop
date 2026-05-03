@@ -6,8 +6,9 @@ import { Header } from './Header';
 import { PipStrip } from './PipStrip';
 import { Footer } from './Footer';
 import { Detail } from './Detail';
+import { ReviewSummary } from './ReviewSummary';
 import { ResizeHandle } from './ResizeHandle';
-import { session } from '../state/store';
+import { session, summaryOpen } from '../state/store';
 import {
   position,
   size,
@@ -62,7 +63,9 @@ export const Drawer: Component = () => {
             </div>
             <Header />
             <PipStrip />
-            <Detail />
+            <Show when={summaryOpen()} fallback={<Detail />}>
+              <ReviewSummary />
+            </Show>
             <Footer />
           </Show>
           <Show when={size() !== 'strip'}>

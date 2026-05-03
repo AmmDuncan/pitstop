@@ -130,6 +130,11 @@
 .dheader .counter .counter-cur { color: var(--amber); font-weight: 600; }
 .dheader .counter .counter-sep { color: var(--t4); padding: 0 2px; }
 .dheader .counter .counter-total { color: var(--t3); }
+.dheader .counter .counter-skipped {
+  color: var(--amber);
+  margin-left: 6px;
+  font-weight: 600;
+}
 .dheader .mark {
   width: 22px; height: 22px;
   background: var(--t1); color: var(--bg-paper);
@@ -483,6 +488,75 @@
 }
 .footer-btn:hover { border-color: var(--rule-3); color: var(--t1); }
 .footer-btn.primary { background: var(--t1); color: var(--bg-paper); border-color: var(--t1); }
+
+/* Review summary — end-of-flow with skipped-item recap */
+.review-summary {
+  padding: 36px 36px 28px;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 18px;
+  overflow-y: auto;
+}
+.summary-stamp {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--t1);
+  text-align: center;
+}
+.summary-stats {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  color: var(--t3);
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.summary-stats .v { color: var(--t1); }
+.summary-stats .v.skipped { color: var(--amber); }
+.summary-stats .sep { color: var(--t4); }
+.summary-skipped-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--rule-1);
+  border: 1px solid var(--rule-1);
+}
+.summary-skipped-row {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--bg-paper);
+  cursor: pointer;
+  gap: 12px;
+}
+.summary-skipped-row:hover { background: var(--bg-panel); }
+.summary-skipped-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--amber);
+  letter-spacing: 0.06em;
+}
+.summary-skipped-title {
+  font-size: 13.5px;
+  color: var(--t1);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.summary-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  padding-top: 8px;
+}
 
 /* Resize handles */
 .resize-handle {

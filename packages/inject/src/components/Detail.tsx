@@ -1,6 +1,12 @@
 import { type Component, createSignal, For, Show } from 'solid-js';
 import { marked } from 'marked';
-import { session, currentItemIdx, setCurrentItemIdx } from '../state/store';
+import {
+  session,
+  currentItemIdx,
+  setCurrentItemIdx,
+  setSummaryOpen,
+  unreviewedIndices,
+} from '../state/store';
 import { submitResponse } from '../state/client';
 import { FileRef } from './FileRef';
 
@@ -15,9 +21,19 @@ export const Detail: Component = () => {
     setSubmitting(true);
     try {
       await submitResponse(session.s.id, { itemId: it.id, kind: 'approve' });
-      // Local auto-advance
-      const next = Math.min(((session.s?.items.length ?? 1) - 1), currentItemIdx() + 1);
-      setCurrentItemIdx(next);
+      const total = session.s.items.length;
+      const wasLast = currentItemIdx() === total - 1;
+      if (wasLast) {
+        // Did the user skip anything earlier? Open the summary so they can address gaps.
+        // Filter the just-approved index in case the response hasn't propagated through the memo yet.
+        const stillSkipped = unreviewedIndices().filter((i) => i !== currentItemIdx());
+        if (stillSkipped.length > 0) {
+          setSummaryOpen(true);
+        }
+        // No skipped items — stay on the last item; complete_review will flip session.status.
+        return;
+      }
+      setCurrentItemIdx(Math.min(total - 1, currentItemIdx() + 1));
     } finally {
       setSubmitting(false);
     }

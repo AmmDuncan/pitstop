@@ -1,5 +1,5 @@
 import { onCleanup } from 'solid-js';
-import { session, currentItemIdx, setCurrentItemIdx } from './store';
+import { session, currentItemIdx, setCurrentItemIdx, summaryOpen, setSummaryOpen, unreviewedIndices } from './store';
 import { submitResponse } from './client';
 import { cyclePosition, cycleSize } from './modes';
 
@@ -8,9 +8,19 @@ type Handler = (e: KeyboardEvent) => boolean | void;
 export function installKeyboard(getCommentEl: () => HTMLTextAreaElement | null) {
   const next = () => {
     if (!session.s) return;
+    if (summaryOpen()) {
+      setSummaryOpen(false);
+      return;
+    }
     setCurrentItemIdx(Math.min(session.s.items.length - 1, currentItemIdx() + 1));
   };
-  const prev = () => setCurrentItemIdx(Math.max(0, currentItemIdx() - 1));
+  const prev = () => {
+    if (summaryOpen()) {
+      setSummaryOpen(false);
+      return;
+    }
+    setCurrentItemIdx(Math.max(0, currentItemIdx() - 1));
+  };
 
   const handlers: Record<string, Handler> = {
     j: next,
@@ -20,6 +30,14 @@ export function installKeyboard(getCommentEl: () => HTMLTextAreaElement | null) 
     Enter: (e) => {
       if (document.activeElement === getCommentEl()) return false;
       if (!session.s) return;
+      // From summary view, Enter = REVIEW_SKIPPED (jump to first skipped, dismiss summary).
+      if (summaryOpen()) {
+        const first = unreviewedIndices()[0];
+        if (first !== undefined) setCurrentItemIdx(first);
+        setSummaryOpen(false);
+        e.preventDefault();
+        return;
+      }
       const item = session.s.items[currentItemIdx()];
       if (!item) return;
       submitResponse(session.s.id, { itemId: item.id, kind: 'approve' }).then(next);
