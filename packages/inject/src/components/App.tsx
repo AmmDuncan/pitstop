@@ -7,7 +7,9 @@ export const App: Component = () => {
   const [closer, setCloser] = createSignal<() => void>(() => {});
   onMount(async () => {
     const projectRoot =
-      new URLSearchParams(window.location.search).get('walkthrough-project') ?? window.location.origin;
+      (window as unknown as { __WALKTHROUGH_PROJECT__?: string }).__WALKTHROUGH_PROJECT__ ??
+      new URLSearchParams(window.location.search).get('walkthrough-project') ??
+      window.location.origin;
     const close = await bootstrap(projectRoot);
     setCloser(() => close);
 
