@@ -1,0 +1,46 @@
+import type { Plugin } from 'vite';
+
+export type WalkthroughPluginOpts = {
+  /** Daemon port. Defaults to 7773. */
+  port?: number;
+  /** Project root override. Defaults to the Vite config's root. */
+  projectRoot?: string;
+  /** When true, also inject in production builds. Defaults to false (dev-only). */
+  alsoInProduction?: boolean;
+};
+
+/**
+ * Vite/Nuxt plugin that injects the walkthrough drawer's inject.js into the dev app.
+ * Production builds drop the script unless `alsoInProduction: true`.
+ */
+export default function walkthrough(opts: WalkthroughPluginOpts = {}): Plugin {
+  const port = opts.port ?? 7773;
+  return {
+    name: '@walkthrough/vite-plugin',
+    apply: opts.alsoInProduction ? undefined : 'serve',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(_html, ctx) {
+        // Skip during production builds unless explicitly opted in
+        if (!opts.alsoInProduction && ctx.bundle) return;
+        const projectRoot = opts.projectRoot ?? (ctx.server?.config.root ?? '');
+        const params = projectRoot ? `?walkthrough-project=${encodeURIComponent(projectRoot)}` : '';
+        return [
+          {
+            tag: 'script',
+            attrs: {
+              src: `http://localhost:${port}/inject.js${params}`,
+              defer: true,
+            },
+            injectTo: 'body',
+          },
+          {
+            tag: 'script',
+            children: `window.__WALKTHROUGH_PROJECT__ = ${JSON.stringify(projectRoot)};`,
+            injectTo: 'body-prepend',
+          },
+        ];
+      },
+    },
+  };
+}
