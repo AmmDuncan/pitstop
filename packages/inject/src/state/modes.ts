@@ -79,6 +79,14 @@ export function cycleTheme() {
   setTheme(THEMES[(i + 1) % THEMES.length]!);
 }
 
+/** Returns the display glyph for the current theme setting. */
+export function themeGlyph(): string {
+  const t = theme();
+  if (t === 'dark') return '☾';
+  if (t === 'light') return '☀';
+  return '◐';
+}
+
 /** Resolved theme — derives 'dark' or 'light' from theme() + system preference when 'auto'. */
 export function resolvedTheme(): 'dark' | 'light' {
   const t = theme();

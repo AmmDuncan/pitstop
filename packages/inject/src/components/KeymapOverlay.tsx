@@ -1,21 +1,46 @@
-import { type Component, For } from 'solid-js';
-import { setHelpOpen } from '../state/store';
+import { type Component, onMount, onCleanup, For } from 'solid-js';
+import { setHelpOpen, session, currentItemIdx, setCurrentItemIdx } from '../state/store';
+import { cyclePosition, cycleSize, cycleTheme } from '../state/modes';
+import { submitResponse } from '../state/client';
 
-type Shortcut = { keys: string[]; label: string };
+type Shortcut = {
+  keys: string[];
+  label: string;
+  action?: () => void;
+  /** Keep the overlay open after the action runs (e.g. layout/theme cycles so user sees the change). */
+  keepOpen?: boolean;
+};
 type Group = { title: string; shortcuts: Shortcut[] };
+
+function next() {
+  if (!session.s) return;
+  setCurrentItemIdx(Math.min(session.s.items.length - 1, currentItemIdx() + 1));
+}
+
+function prev() {
+  setCurrentItemIdx(Math.max(0, currentItemIdx() - 1));
+}
+
+async function approveAndAdvance() {
+  if (!session.s) return;
+  const item = session.s.items[currentItemIdx()];
+  if (!item) return;
+  await submitResponse(session.s.id, { itemId: item.id, kind: 'approve' });
+  next();
+}
 
 const GROUPS: Group[] = [
   {
     title: 'NAVIGATION',
     shortcuts: [
-      { keys: ['J', '↓'], label: 'NEXT_ITEM' },
-      { keys: ['K', '↑'], label: 'PREV_ITEM' },
+      { keys: ['J', '↓'], label: 'NEXT_ITEM', action: next },
+      { keys: ['K', '↑'], label: 'PREV_ITEM', action: prev },
     ],
   },
   {
     title: 'ACTIONS',
     shortcuts: [
-      { keys: ['↵'], label: 'LOOKS_GOOD · ADVANCE' },
+      { keys: ['↵'], label: 'LOOKS_GOOD · ADVANCE', action: approveAndAdvance },
       { keys: ['C'], label: 'FOCUS_COMMENT' },
       { keys: ['⌘', '↵'], label: 'SEND_COMMENT' },
       { keys: ['ESC'], label: 'BLUR_COMMENT · CLOSE_OVERLAY' },
@@ -24,21 +49,21 @@ const GROUPS: Group[] = [
   {
     title: 'LAYOUT',
     shortcuts: [
-      { keys: ['['], label: 'CYCLE_POSITION (RIGHT/LEFT/FLOATING)' },
-      { keys: [']'], label: 'CYCLE_POSITION' },
-      { keys: ['='], label: 'CYCLE_SIZE (STANDARD/COMPACT/STRIP)' },
+      { keys: ['['], label: 'CYCLE_POSITION (RIGHT/LEFT/FLOATING)', action: cyclePosition, keepOpen: true },
+      { keys: [']'], label: 'CYCLE_POSITION', action: cyclePosition, keepOpen: true },
+      { keys: ['='], label: 'CYCLE_SIZE (STANDARD/COMPACT/STRIP)', action: cycleSize, keepOpen: true },
     ],
   },
   {
     title: 'THEME',
     shortcuts: [
-      { keys: ['T'], label: 'CYCLE_THEME (AUTO/DARK/LIGHT)' },
+      { keys: ['T'], label: 'CYCLE_THEME (AUTO/DARK/LIGHT)', action: cycleTheme, keepOpen: true },
     ],
   },
   {
     title: 'HELP',
     shortcuts: [
-      { keys: ['?'], label: 'TOGGLE_THIS_OVERLAY' },
+      { keys: ['?'], label: 'TOGGLE_THIS_OVERLAY', action: () => setHelpOpen(false) },
     ],
   },
 ];
@@ -46,11 +71,27 @@ const GROUPS: Group[] = [
 export const KeymapOverlay: Component = () => {
   const close = () => setHelpOpen(false);
 
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' || e.key === '?') {
+      close();
+      e.preventDefault();
+    }
+  };
+
+  onMount(() => window.addEventListener('keydown', onKey));
+  onCleanup(() => window.removeEventListener('keydown', onKey));
+
+  const handleClick = (s: Shortcut) => {
+    if (!s.action) return;
+    s.action();
+    if (!s.keepOpen) close();
+  };
+
   return (
     <div class="keymap-overlay" onClick={close}>
       <div class="keymap-sheet" onClick={(e) => e.stopPropagation()}>
         <div class="keymap-header">
-          <span class="keymap-title">KEYBOARD_SHORTCUTS</span>
+          <span class="keymap-title">KEYBOARD_SHORTCUTS · CLICK_TO_RUN</span>
           <button class="keymap-close" onClick={close}>× ESC</button>
         </div>
         <div class="keymap-body">
@@ -60,7 +101,10 @@ export const KeymapOverlay: Component = () => {
                 <h3 class="keymap-group-title">{group.title}</h3>
                 <For each={group.shortcuts}>
                   {(s) => (
-                    <div class="keymap-row">
+                    <div
+                      class={`keymap-row ${s.action ? 'clickable' : ''}`}
+                      onClick={() => handleClick(s)}
+                    >
                       <span class="keymap-keys">
                         <For each={s.keys}>
                           {(key, i) => (

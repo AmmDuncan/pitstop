@@ -134,7 +134,7 @@
 
 .dheader {
   display: grid;
-  grid-template-columns: auto 1fr auto auto auto auto;
+  grid-template-columns: auto 1fr auto auto auto auto auto;
   align-items: center;
   gap: 10px;
   padding: 0 14px;
@@ -173,6 +173,10 @@
   padding: 4px 8px; cursor: pointer;
   width: 26px; height: 24px;
   display: grid; place-items: center;
+}
+.dheader .theme-btn {
+  font-size: 14px;
+  line-height: 1;
 }
 
 /* Status tag — filing cabinet label */
@@ -823,4 +827,27 @@
   font-size: 11px;
   color: var(--t2);
   letter-spacing: 0.04em;
+}
+.keymap-row.clickable {
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color 0.1s ease;
+  padding: 6px 8px;
+  margin: 0 -8px;
+}
+.keymap-row.clickable:hover {
+  background: var(--bg-panel);
+}
+.keymap-row.clickable:hover .keymap-key {
+  border-color: var(--amber);
+  color: var(--amber-text);
+}
+.keymap-row:not(.clickable) {
+  opacity: 0.7;
+}
+.keymap-row.clickable .keymap-label::after {
+  content: ' →';
+  color: var(--t4);
+  margin-left: 6px;
+  font-weight: 500;
 }
