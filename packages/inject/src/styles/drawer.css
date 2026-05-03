@@ -14,10 +14,6 @@
 /* Drawer — pinned right, viewport-anchored */
 .drawer {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 504px;
   background: var(--bg-paper);
   background-image: radial-gradient(circle at 1px 1px, var(--dot) 0.7px, transparent 0);
   background-size: 14px 14px;
@@ -29,6 +25,22 @@
   overflow: hidden;
   z-index: 2147483600;
 }
+
+/* Position variants */
+.drawer.pos-right { right: 0; left: auto; top: 0; bottom: 0; }
+.drawer.pos-left { left: 0; right: auto; top: 0; bottom: 0; border-left: none; border-right: 1px solid var(--rule-2); }
+.drawer.pos-floating { position: fixed; height: auto; max-height: 80vh; box-shadow: 0 24px 64px rgba(0,0,0,0.45); }
+
+/* Size variants */
+.drawer.size-strip {
+  grid-template-rows: 1fr;
+  width: 32px !important;
+  background: var(--bg-rail);
+  background-image: none;
+}
+.drawer.size-compact .detail-body { display: none; }
+.drawer.size-compact .metabar { display: none; }
+.drawer.size-compact { grid-template-rows: 48px 40px 1fr 42px; }
 
 .drawer.empty {
   display: grid;
@@ -46,7 +58,8 @@
   background: var(--bg-paper);
   background-image: none;
 }
-.drawer.collapsed .strip {
+.drawer.collapsed .strip,
+.drawer.size-strip .strip {
   display: grid;
   grid-template-rows: 14px auto 1fr auto auto 14px;
   align-items: center;
@@ -55,7 +68,8 @@
   height: 100%;
   background: var(--bg-rail);
 }
-.drawer.collapsed .strip .v-label {
+.drawer.collapsed .strip .v-label,
+.drawer.size-strip .strip .v-label {
   font-family: var(--mono);
   font-size: 9.5px;
   letter-spacing: 0.18em;
@@ -64,7 +78,8 @@
   text-orientation: mixed;
   transform: rotate(180deg);
 }
-.drawer.collapsed .strip .v-num {
+.drawer.collapsed .strip .v-num,
+.drawer.size-strip .strip .v-num {
   font-family: var(--mono);
   font-size: 10px;
   color: var(--amber);
@@ -73,7 +88,8 @@
   transform: rotate(180deg);
   font-weight: 600;
 }
-.drawer.collapsed .strip .v-dot {
+.drawer.collapsed .strip .v-dot,
+.drawer.size-strip .strip .v-dot {
   width: 8px; height: 8px; background: var(--amber); animation: pulse 1.5s ease-in-out infinite;
 }
 

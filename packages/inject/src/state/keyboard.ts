@@ -1,6 +1,7 @@
 import { onCleanup } from 'solid-js';
 import { session, currentItemIdx, setCurrentItemIdx } from './store';
 import { submitResponse } from './client';
+import { cyclePosition, cycleSize } from './modes';
 
 type Handler = (e: KeyboardEvent) => boolean | void;
 
@@ -35,6 +36,10 @@ export function installKeyboard(getCommentEl: () => HTMLTextAreaElement | null) 
       const ta = getCommentEl();
       if (document.activeElement === ta) ta?.blur();
     },
+    '[': cyclePosition,
+    ']': cyclePosition,
+    '=': cycleSize,
+    '+': cycleSize,
   };
 
   const onKey = (e: KeyboardEvent) => {
