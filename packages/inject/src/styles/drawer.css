@@ -529,7 +529,9 @@
 }
 .btn-primary { background: var(--t1); color: var(--bg-paper); border-color: var(--t1); }
 .btn-secondary { background: transparent; color: var(--t1); border-color: var(--rule-3); }
-.btn-secondary:hover { border-color: var(--t1); }
+.btn-secondary:hover:not(:disabled) { border-color: var(--t1); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled .kbd { opacity: 0.6; }
 .btn .kbd {
   font-family: var(--mono);
   font-size: 13px;
