@@ -52,6 +52,10 @@ export const SessionZ = z.object({
   pokePid: z.number().optional(),
   /** Timestamp when the in-flight poke was spawned (for POKE_FAILED detection). */
   pokeSpawnedAt: z.number().optional(),
+  /** True when a spawned poke didn't elicit any agent activity within the watch window. */
+  pokeFailed: z.boolean().default(false).optional(),
+  /** Timestamp of the most recent MCP/RPC tool call landing for this session. */
+  lastAgentActivityAt: z.number().optional(),
 });
 
 export type Attachment = z.infer<typeof AttachmentZ>;

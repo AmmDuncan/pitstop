@@ -5,7 +5,6 @@ import { fetchActiveSession, openEventStream } from './client';
 
 export const [session, setSession] = createStore<{ s: Session | null }>({ s: null });
 export const [currentItemIdx, setCurrentItemIdx] = createSignal(0);
-export const [pokeStatus, setPokeStatus] = createSignal<'idle' | 'working' | 'failed'>('idle');
 
 /** Indices of items that have no response yet (in order). */
 export const unreviewedIndices = createMemo<number[]>(() => {
@@ -38,7 +37,6 @@ export function applyEvent(e: SseEvent): void {
       break;
     case 'agent-activity':
       setSession('s', produce((s) => { s?.agentActivity.push(e.entry); }));
-      setPokeStatus('working');
       break;
     case 'complete':
       setSession('s', produce((s) => { if (s) s.status = 'complete'; }));

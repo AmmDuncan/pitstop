@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { DaemonOpts } from './server';
 import { Store } from '../store/sessions';
 import { Bus } from './sse';
+import { PokeWatch } from '../lifecycle/poke-watch';
 import { ItemZ, SessionStatusZ } from '@walkthrough/shared';
 
 const CreateZ = z.object({
@@ -23,6 +24,7 @@ const ResponseInZ = z.object({
 export function mountRoutes(app: Hono, opts: DaemonOpts) {
   const store = new Store(opts.dataDir);
   const bus = new Bus();
+  const pokeWatch = new PokeWatch({ store, bus });
 
   // Permissive CORS — drawer is injected into arbitrary local dev hosts.
   app.use('*', async (c, next) => {
@@ -90,7 +92,9 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
           clientSessionId: session.clientSessionId,
           context: ctx,
         });
-        await store.update(id, (s) => ({ ...s, pokePid: pid, pokeSpawnedAt: Date.now() }));
+        const updated = await store.update(id, (s) => ({ ...s, pokePid: pid, pokeSpawnedAt: Date.now(), pokeFailed: false }));
+        bus.publish(id, { type: 'state-changed', session: updated });
+        pokeWatch.arm(id);
         exited.then(async () => {
           await store.update(id, (s) => ({ ...s, pokePid: undefined, pokeSpawnedAt: undefined }));
         });
@@ -163,7 +167,9 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
           clientSessionId: session.clientSessionId,
           context: ctx,
         });
-        await store.update(id, (s) => ({ ...s, pokePid: pid, pokeSpawnedAt: Date.now() }));
+        const armed = await store.update(id, (s) => ({ ...s, pokePid: pid, pokeSpawnedAt: Date.now(), pokeFailed: false }));
+        bus.publish(id, { type: 'state-changed', session: armed });
+        pokeWatch.arm(id);
         // When the poke subprocess exits: clear pokePid; if responses still unaddressed, fire one drain poke.
         exited.then(async () => {
           const updated = await store.update(id, (s) => ({ ...s, pokePid: undefined, pokeSpawnedAt: undefined }));
@@ -172,7 +178,9 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
             const ctx2 = `Some responses queued while you were busy on session ${id}. Read get_unread_responses(${id}).`;
             try {
               const next = await poke.trigger({ sessionId: id, clientSessionId: updated.clientSessionId, context: ctx2 });
-              await store.update(id, (s) => ({ ...s, pokePid: next.pid, pokeSpawnedAt: Date.now() }));
+              const drained = await store.update(id, (s) => ({ ...s, pokePid: next.pid, pokeSpawnedAt: Date.now(), pokeFailed: false }));
+              bus.publish(id, { type: 'state-changed', session: drained });
+              pokeWatch.arm(id);
             } catch (err) {
               console.error('drain poke failed', err);
             }
@@ -184,6 +192,33 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     }
 
     return c.json({ accepted: true }, 202);
+  });
+
+  app.post('/api/sessions/:id/retry-poke', async (c) => {
+    const id = c.req.param('id');
+    const session = await store.get(id);
+    if (!session) return c.json({ error: 'NOT_FOUND' }, 404);
+    if (session.pokePid) return c.json({ error: 'ALREADY_IN_FLIGHT' }, 409);
+    if (!session.clientSessionId) return c.json({ error: 'NO_CLIENT_SESSION_ID' }, 400);
+    const unaddressed = session.responses.filter((r) => !r.addressed && r.kind === 'comment');
+    if (unaddressed.length === 0) return c.json({ ok: true, skipped: 'no-unread' });
+
+    const { ClaudeResumePoke } = await import('../poke/claude-resume');
+    const poke = new ClaudeResumePoke({ spawn: opts.spawn });
+    const ctx = `Walkthrough session ${id} retry: ${unaddressed.length} comment${unaddressed.length === 1 ? '' : 's'} pending. Read get_unread_responses(${id}).`;
+    try {
+      const { pid, exited } = await poke.trigger({ sessionId: id, clientSessionId: session.clientSessionId, context: ctx });
+      const updated = await store.update(id, (s) => ({ ...s, pokePid: pid, pokeSpawnedAt: Date.now(), pokeFailed: false }));
+      bus.publish(id, { type: 'state-changed', session: updated });
+      pokeWatch.arm(id);
+      exited.then(async () => {
+        await store.update(id, (s) => ({ ...s, pokePid: undefined, pokeSpawnedAt: undefined }));
+      });
+      return c.json({ ok: true });
+    } catch (err) {
+      console.error('retry poke failed', err);
+      return c.json({ error: 'POKE_FAILED' }, 500);
+    }
   });
 
   const RpcZ = z.object({ method: z.string(), params: z.unknown() });

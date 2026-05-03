@@ -1,15 +1,25 @@
 import { type Component, Show } from 'solid-js';
-import { session, currentItemIdx, pokeStatus, unreviewedIndices } from '../state/store';
+import { session, currentItemIdx, unreviewedIndices } from '../state/store';
 import { StatusTag, derivePill } from './StatusTag';
+import { baseUrl } from '../state/client';
 
 export const Header: Component = () => {
-  const pill = () => derivePill(session.s, pokeStatus());
+  const pill = () => derivePill(session.s);
   const total = () => session.s?.items.length ?? 0;
   const current = () => Math.min(currentItemIdx() + 1, total());
   const skippedCount = () => {
     const reviewed = (session.s?.responses ?? []).length;
     if (reviewed === 0) return 0;
     return unreviewedIndices().filter((i) => i < currentItemIdx()).length;
+  };
+
+  const onRetry = async () => {
+    if (!session.s) return;
+    try {
+      await fetch(`${baseUrl}/api/sessions/${session.s.id}/retry-poke`, { method: 'POST' });
+    } catch (err) {
+      console.error('retry-poke failed', err);
+    }
   };
 
   return (
@@ -29,7 +39,7 @@ export const Header: Component = () => {
           </Show>
         </span>
       </Show>
-      <StatusTag pill={pill()} />
+      <StatusTag pill={pill()} onRetry={onRetry} />
       <button class="x-btn">×</button>
     </header>
   );

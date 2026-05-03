@@ -3,13 +3,10 @@ import type { Session } from '@walkthrough/shared';
 
 export type PillState = 'idle' | 'working' | 'addressing' | 'writing' | 'failed' | 'complete';
 
-export function derivePill(
-  session: Session | null,
-  pokeStatus: 'idle' | 'working' | 'failed',
-): { state: PillState; label: string } {
+export function derivePill(session: Session | null): { state: PillState; label: string } {
   if (!session) return { state: 'idle', label: '' };
   if (session.status === 'complete') return { state: 'complete', label: 'REVIEW_COMPLETE' };
-  if (pokeStatus === 'failed') return { state: 'failed', label: 'POKE_FAILED · CLICK_RETRY' };
+  if (session.pokeFailed) return { state: 'failed', label: 'POKE_FAILED · CLICK_RETRY' };
   const last = session.agentActivity.at(-1);
   const fresh = last && Date.now() - last.at < 5000;
   if (fresh && last.tool === 'mark_addressing') return { state: 'addressing', label: last.narration ?? 'ADDRESSING' };
@@ -18,9 +15,13 @@ export function derivePill(
   return { state: 'idle', label: '' };
 }
 
-export const StatusTag: Component<{ pill: ReturnType<typeof derivePill> }> = (props) => (
+export const StatusTag: Component<{ pill: ReturnType<typeof derivePill>; onRetry?: () => void }> = (props) => (
   <Show when={props.pill.state !== 'idle'}>
-    <span class={`tag ${props.pill.state}`}>
+    <span
+      class={`tag ${props.pill.state}`}
+      onClick={props.pill.state === 'failed' ? props.onRetry : undefined}
+      style={props.pill.state === 'failed' ? { cursor: 'pointer' } : undefined}
+    >
       <span class="dot-cell">
         <span
           class={
