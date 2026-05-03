@@ -53,5 +53,37 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     return c.json(session);
   });
 
+  app.get('/api/sessions/:id/events', (c) => {
+    const id = c.req.param('id');
+    return new Response(
+      new ReadableStream({
+        async start(controller) {
+          const enc = new TextEncoder();
+          const send = (event: string, data: unknown) => {
+            controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+          };
+          // Initial snapshot
+          const session = await store.get(id);
+          if (!session) {
+            send('error', { error: 'NOT_FOUND' });
+            controller.close();
+            return;
+          }
+          send('state-snapshot', { type: 'state-snapshot', session });
+          // Live stream
+          const unsub = bus.subscribe(id, (event) => send(event.type, event));
+          // Heartbeat every 25s so proxies don't close the connection on idle
+          const hb = setInterval(() => controller.enqueue(enc.encode(`: heartbeat\n\n`)), 25_000);
+          c.req.raw.signal.addEventListener('abort', () => {
+            clearInterval(hb);
+            unsub();
+            try { controller.close(); } catch {}
+          });
+        },
+      }),
+      { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' } },
+    );
+  });
+
   Object.assign(app, { _store: store, _bus: bus });
 }
