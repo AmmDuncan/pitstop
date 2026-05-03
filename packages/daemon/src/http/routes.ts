@@ -121,5 +121,10 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     }
   });
 
+  app.get('/inject.js', async () => {
+    const file = Bun.file(new URL('../../../inject/dist/inject.js', import.meta.url));
+    return new Response(file, { headers: { 'content-type': 'application/javascript', 'cache-control': 'no-cache' } });
+  });
+
   Object.assign(app, { _store: store, _bus: bus });
 }
