@@ -87,6 +87,22 @@ export function themeGlyph(): string {
   return '◐';
 }
 
+/** Returns the display glyph for the current drawer position. */
+export function positionGlyph(): string {
+  const p = position();
+  if (p === 'right') return '▷';
+  if (p === 'left') return '◁';
+  return '◇';
+}
+
+/** Returns the display glyph for the current drawer size. */
+export function sizeGlyph(): string {
+  const s = size();
+  if (s === 'standard') return '▭';
+  if (s === 'compact') return '▯';
+  return '▏';
+}
+
 /** Resolved theme — derives 'dark' or 'light' from theme() + system preference when 'auto'. */
 export function resolvedTheme(): 'dark' | 'light' {
   const t = theme();

@@ -13,6 +13,7 @@ import { session, summaryOpen, helpOpen } from '../state/store';
 import {
   position,
   size,
+  setSize,
   width,
   setWidth,
   height,
@@ -55,7 +56,7 @@ export const Drawer: Component = () => {
       <Show when={session.s} fallback={<aside class={`${modeClasses()} empty`} style={floatStyle()}>…</aside>}>
         <aside class={modeClasses()} style={floatStyle()}>
           <Show when={size() !== 'strip'} fallback={
-            <div class="strip">
+            <div class="strip" onClick={() => setSize('standard')} title="Click to expand">
               <span class="v-label">WALKTHROUGH</span>
               <span class="v-num">{String(session.s?.items.length ?? 0).padStart(2, '0')}</span>
               <span class="v-dot" />

@@ -83,14 +83,21 @@
 }
 .drawer.collapsed .strip,
 .drawer.size-strip .strip {
-  display: grid;
-  grid-template-rows: 14px auto 1fr auto auto 14px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-items: center;
-  padding: 10px 0;
+  justify-content: space-between;
+  padding: 16px 0;
   height: 100%;
   background: var(--bg-rail);
+  cursor: pointer;
+  gap: 16px;
 }
+.drawer.collapsed .strip > *,
+.drawer.size-strip .strip > * {
+  flex-shrink: 0;
+}
+
 .drawer.collapsed .strip .v-label,
 .drawer.size-strip .strip .v-label {
   font-family: var(--mono);
@@ -100,20 +107,27 @@
   writing-mode: vertical-rl;
   text-orientation: mixed;
   transform: rotate(180deg);
+  font-weight: 600;
 }
 .drawer.collapsed .strip .v-num,
 .drawer.size-strip .strip .v-num {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--amber);
   letter-spacing: 0.04em;
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  font-weight: 600;
+  font-weight: 700;
 }
 .drawer.collapsed .strip .v-dot,
 .drawer.size-strip .strip .v-dot {
-  width: 8px; height: 8px; background: var(--amber); animation: pulse 1.5s ease-in-out infinite;
+  width: 8px; height: 8px;
+  background: var(--amber);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.drawer.collapsed .strip:hover,
+.drawer.size-strip .strip:hover {
+  background: var(--bg-panel);
 }
 
 /* Drawer rows */
@@ -137,7 +151,7 @@
 
 .dheader {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto auto auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto auto auto auto auto;
   align-items: center;
   gap: 10px;
   padding: 0 14px;
@@ -179,7 +193,9 @@
   width: 26px; height: 24px;
   display: grid; place-items: center;
 }
-.dheader .theme-btn {
+.dheader .theme-btn,
+.dheader .pos-btn,
+.dheader .size-btn {
   font-size: 14px;
   line-height: 1;
 }

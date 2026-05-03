@@ -4,9 +4,15 @@ import { StatusTag, derivePill } from './StatusTag';
 import { baseUrl } from '../state/client';
 import {
   position,
+  size,
+  setSize,
   theme,
   cycleTheme,
   themeGlyph,
+  cyclePosition,
+  cycleSize,
+  positionGlyph,
+  sizeGlyph,
   floatingTop,
   setFloatingTop,
   floatingLeft,
@@ -79,9 +85,11 @@ export const Header: Component = () => {
         </span>
       </Show>
       <StatusTag pill={pill()} onRetry={onRetry} />
-      <button class="x-btn help-btn" onClick={() => setHelpOpen(true)} title="Show keyboard shortcuts">?</button>
+      <button class="x-btn pos-btn" onClick={cyclePosition} title={`Position: ${position()}. Click to cycle (right/left/floating)`}>{positionGlyph()}</button>
+      <button class="x-btn size-btn" onClick={cycleSize} title={`Size: ${size()}. Click to cycle (standard/compact/strip)`}>{sizeGlyph()}</button>
       <button class="x-btn theme-btn" onClick={cycleTheme} title={`Theme: ${theme()}. Click to cycle (auto/dark/light)`}>{themeGlyph()}</button>
-      <button class="x-btn">×</button>
+      <button class="x-btn help-btn" onClick={() => setHelpOpen(true)} title="Show keyboard shortcuts">?</button>
+      <button class="x-btn" onClick={() => setSize('strip')} title="Collapse to strip">×</button>
     </header>
   );
 };
