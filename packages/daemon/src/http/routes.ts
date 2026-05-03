@@ -95,10 +95,51 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     const id = c.req.param('id');
     const parsed = ResponseInZ.safeParse(await c.req.json());
     if (!parsed.success) return c.json({ error: parsed.error.format() }, 400);
+
     const r = { ...parsed.data, at: Date.now(), addressed: false };
     const session = await store.update(id, (s) => ({ ...s, responses: [...s.responses, r] }));
     bus.publish(id, { type: 'state-changed', session });
-    // Poke trigger lives in Phase 4 — wire it in there.
+
+    // Poke policy:
+    //   - looks-good (kind === 'approve'): never poke
+    //   - comment + paused: never poke (queues for resume)
+    //   - comment + in-flight poke: piggy-back on existing
+    //   - comment otherwise: spawn one poke; on exit, drain any queued comments
+    const shouldPoke =
+      r.kind === 'comment' &&
+      session.status !== 'paused' &&
+      !session.pokePid;
+
+    if (shouldPoke) {
+      const { ClaudeResumePoke } = await import('../poke/claude-resume');
+      const poke = new ClaudeResumePoke({ spawn: opts.spawn });
+      const ctx = `Walkthrough item ${r.itemId} got a new comment: ${r.body}. Read get_unread_responses(${id}) for the full list.`;
+      try {
+        const { pid, exited } = await poke.trigger({
+          sessionId: id,
+          clientSessionId: session.clientSessionId,
+          context: ctx,
+        });
+        await store.update(id, (s) => ({ ...s, pokePid: pid, pokeSpawnedAt: Date.now() }));
+        // When the poke subprocess exits: clear pokePid; if responses still unaddressed, fire one drain poke.
+        exited.then(async () => {
+          const updated = await store.update(id, (s) => ({ ...s, pokePid: undefined, pokeSpawnedAt: undefined }));
+          const stillUnread = updated.responses.some((rr) => !rr.addressed);
+          if (stillUnread && updated.status !== 'paused' && updated.clientSessionId) {
+            const ctx2 = `Some responses queued while you were busy on session ${id}. Read get_unread_responses(${id}).`;
+            try {
+              const next = await poke.trigger({ sessionId: id, clientSessionId: updated.clientSessionId, context: ctx2 });
+              await store.update(id, (s) => ({ ...s, pokePid: next.pid, pokeSpawnedAt: Date.now() }));
+            } catch (err) {
+              console.error('drain poke failed', err);
+            }
+          }
+        });
+      } catch (err) {
+        console.error('poke failed', err);
+      }
+    }
+
     return c.json({ accepted: true }, 202);
   });
 
