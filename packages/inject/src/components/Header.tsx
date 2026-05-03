@@ -1,5 +1,5 @@
 import { type Component, Show } from 'solid-js';
-import { session, currentItemIdx, unreviewedIndices } from '../state/store';
+import { session, currentItemIdx, unreviewedIndices, setHelpOpen } from '../state/store';
 import { StatusTag, derivePill } from './StatusTag';
 import { baseUrl } from '../state/client';
 
@@ -40,6 +40,7 @@ export const Header: Component = () => {
         </span>
       </Show>
       <StatusTag pill={pill()} onRetry={onRetry} />
+      <button class="x-btn help-btn" onClick={() => setHelpOpen(true)} title="Show keyboard shortcuts">?</button>
       <button class="x-btn">×</button>
     </header>
   );

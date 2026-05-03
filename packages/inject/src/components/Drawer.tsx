@@ -8,7 +8,8 @@ import { Footer } from './Footer';
 import { Detail } from './Detail';
 import { ReviewSummary } from './ReviewSummary';
 import { ResizeHandle } from './ResizeHandle';
-import { session, summaryOpen } from '../state/store';
+import { KeymapOverlay } from './KeymapOverlay';
+import { session, summaryOpen, helpOpen } from '../state/store';
 import {
   position,
   size,
@@ -71,6 +72,9 @@ export const Drawer: Component = () => {
               <ReviewSummary />
             </Show>
             <Footer />
+          </Show>
+          <Show when={helpOpen()}>
+            <KeymapOverlay />
           </Show>
           <Show when={size() !== 'strip'}>
             <Show when={position() === 'right'}>

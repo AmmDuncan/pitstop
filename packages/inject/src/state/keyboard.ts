@@ -1,5 +1,5 @@
 import { onCleanup } from 'solid-js';
-import { session, currentItemIdx, setCurrentItemIdx, summaryOpen, setSummaryOpen, unreviewedIndices } from './store';
+import { session, currentItemIdx, setCurrentItemIdx, summaryOpen, setSummaryOpen, unreviewedIndices, helpOpen, setHelpOpen } from './store';
 import { submitResponse } from './client';
 import { cyclePosition, cycleSize, cycleTheme } from './modes';
 
@@ -51,9 +51,11 @@ export function installKeyboard(getCommentEl: () => HTMLTextAreaElement | null) 
       }
     },
     Escape: () => {
+      if (helpOpen()) { setHelpOpen(false); return; }
       const ta = getCommentEl();
       if (document.activeElement === ta) ta?.blur();
     },
+    '?': (e) => { setHelpOpen(!helpOpen()); e.preventDefault(); },
     '[': cyclePosition,
     ']': cyclePosition,
     '=': cycleSize,
@@ -62,6 +64,7 @@ export function installKeyboard(getCommentEl: () => HTMLTextAreaElement | null) 
   };
 
   const onKey = (e: KeyboardEvent) => {
+    if (helpOpen() && e.key !== '?' && e.key !== 'Escape') return;
     if (e.metaKey && e.key === 'Enter') {
       const ta = getCommentEl();
       const body = ta?.value.trim();

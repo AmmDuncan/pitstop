@@ -17,6 +17,9 @@ export const unreviewedIndices = createMemo<number[]>(() => {
 /** Triggered by Detail when user approves the LAST item — opens the review summary. */
 export const [summaryOpen, setSummaryOpen] = createSignal(false);
 
+/** Toggled by `?` key or the header `?` button — shows the keymap overlay. */
+export const [helpOpen, setHelpOpen] = createSignal(false);
+
 export function applyEvent(e: SseEvent): void {
   switch (e.type) {
     case 'state-snapshot':
