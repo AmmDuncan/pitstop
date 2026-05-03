@@ -1,5 +1,6 @@
 import { type Component, createMemo } from 'solid-js';
 import { session } from '../state/store';
+import { baseUrl } from '../state/client';
 
 export const Footer: Component = () => {
   const counts = createMemo(() => {
@@ -10,6 +11,28 @@ export const Footer: Component = () => {
     const left = items.length - approved - commented;
     return { approved, commented, left };
   });
+
+  const isPaused = () => session.s?.status === 'paused';
+
+  const togglePause = async () => {
+    if (!session.s) return;
+    const next = isPaused() ? 'active' : 'paused';
+    await fetch(`${baseUrl}/api/sessions/${session.s.id}/status`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status: next }),
+    });
+  };
+
+  const onDone = async () => {
+    if (!session.s) return;
+    await fetch(`${baseUrl}/api/sessions/${session.s.id}/status`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status: 'complete' }),
+    });
+  };
+
   return (
     <footer class="dfooter">
       <div class="counts">
@@ -24,8 +47,12 @@ export const Footer: Component = () => {
         </span>
       </div>
       <div class="actions-r">
-        <button class="footer-btn">STOP</button>
-        <button class="footer-btn">DONE</button>
+        <button class="footer-btn" onClick={togglePause}>
+          {isPaused() ? 'RESUME' : 'STOP'}
+        </button>
+        <button class="footer-btn" onClick={onDone}>
+          DONE
+        </button>
       </div>
     </footer>
   );

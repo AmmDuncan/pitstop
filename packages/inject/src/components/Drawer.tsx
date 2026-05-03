@@ -29,7 +29,11 @@ const MAX_H = 900;
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 export const Drawer: Component = () => {
-  const modeClasses = () => `drawer pos-${position()} size-${size()}`;
+  const modeClasses = () => {
+    const cls = [`drawer pos-${position()} size-${size()}`];
+    if (session.s?.status === 'paused') cls.push('paused');
+    return cls.join(' ');
+  };
   const floatStyle = () =>
     position() === 'floating'
       ? {

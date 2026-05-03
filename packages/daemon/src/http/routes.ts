@@ -69,10 +69,36 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
   });
 
   app.post('/api/sessions/:id/status', async (c) => {
+    const id = c.req.param('id');
     const parsed = StatusBodyZ.safeParse(await c.req.json());
     if (!parsed.success) return c.json({ error: parsed.error.format() }, 400);
-    const session = await store.update(c.req.param('id'), (s) => ({ ...s, status: parsed.data.status }));
+    const before = await store.get(id);
+    const session = await store.update(id, (s) => ({ ...s, status: parsed.data.status }));
     bus.publish(session.id, { type: 'state-changed', session });
+
+    // Resume detection: paused → active with unaddressed responses → fire summarizing poke
+    const wasPaused = before?.status === 'paused';
+    const nowActive = parsed.data.status === 'active';
+    const unaddressed = session.responses.filter((r) => !r.addressed && r.kind === 'comment');
+    if (wasPaused && nowActive && unaddressed.length > 0 && !session.pokePid && session.clientSessionId) {
+      const { ClaudeResumePoke } = await import('../poke/claude-resume');
+      const poke = new ClaudeResumePoke({ spawn: opts.spawn });
+      const ctx = `Walkthrough session ${id} resumed from paused. ${unaddressed.length} comment${unaddressed.length === 1 ? '' : 's'} queued during pause. Read get_unread_responses(${id}) for the full list.`;
+      try {
+        const { pid, exited } = await poke.trigger({
+          sessionId: id,
+          clientSessionId: session.clientSessionId,
+          context: ctx,
+        });
+        await store.update(id, (s) => ({ ...s, pokePid: pid, pokeSpawnedAt: Date.now() }));
+        exited.then(async () => {
+          await store.update(id, (s) => ({ ...s, pokePid: undefined, pokeSpawnedAt: undefined }));
+        });
+      } catch (err) {
+        console.error('resume poke failed', err);
+      }
+    }
+
     return c.json(session);
   });
 
