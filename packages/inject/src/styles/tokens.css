@@ -1,0 +1,42 @@
+:host { color-scheme: dark; }
+
+:host {
+  --bg-paper: oklch(0.165 0.004 70);
+  --bg-rail: oklch(0.185 0.004 70);
+  --bg-panel: oklch(0.205 0.005 70);
+  --bg-input: oklch(0.13 0.004 70);
+  --dot: oklch(0.27 0.005 70);
+  --t1: oklch(0.94 0.006 70);
+  --t2: oklch(0.78 0.008 70);
+  --t3: oklch(0.62 0.010 70);
+  --t4: oklch(0.46 0.010 70);
+  --rule-1: oklch(0.26 0.006 70);
+  --rule-2: oklch(0.34 0.008 70);
+  --rule-3: oklch(0.50 0.010 70);
+  --amber: oklch(0.84 0.15 70);
+  --amber-soft: oklch(0.32 0.06 70);
+  --amber-text: oklch(0.88 0.13 70);
+  --ok: oklch(0.74 0.13 150);
+  --err: oklch(0.66 0.18 30);
+  --mono: 'Martian Mono', ui-monospace, 'SF Mono', monospace;
+  --sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+}
+
+:host(.theme-light) {
+  color-scheme: light;
+  --bg-paper: oklch(0.985 0.003 70);
+  --bg-rail: oklch(0.97 0.004 70);
+  --bg-panel: oklch(0.99 0.003 70);
+  --bg-input: oklch(1 0 0);
+  --dot: oklch(0.84 0.006 70);
+  --t1: oklch(0.18 0.005 70);
+  --t2: oklch(0.36 0.008 70);
+  --t3: oklch(0.50 0.010 70);
+  --t4: oklch(0.66 0.010 70);
+  --rule-1: oklch(0.92 0.006 70);
+  --rule-2: oklch(0.84 0.008 70);
+  --rule-3: oklch(0.66 0.010 70);
+  --amber: oklch(0.62 0.18 60);
+  --amber-soft: oklch(0.93 0.10 75);
+  --amber-text: oklch(0.45 0.18 50);
+}
