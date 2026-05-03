@@ -102,5 +102,24 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     return c.json({ accepted: true }, 202);
   });
 
+  const RpcZ = z.object({ method: z.string(), params: z.unknown() });
+  app.post('/api/rpc', async (c) => {
+    const parsed = RpcZ.safeParse(await c.req.json());
+    if (!parsed.success) return c.json({ error: parsed.error.format() }, 400);
+    const { tools } = await import('../tools');
+    const fn = (tools as Record<string, Function>)[parsed.data.method];
+    if (!fn) return c.json({ error: `UNKNOWN_TOOL: ${parsed.data.method}` }, 404);
+    try {
+      const clientSessionId = c.req.header('x-client-session-id') ?? undefined;
+      const baseUrl = `http://localhost:${opts.port}`;
+      const result = await fn({ store, bus, baseUrl, clientSessionId }, parsed.data.params);
+      return c.json(result);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const status = msg.startsWith('ALREADY_ACTIVE') ? 409 : msg === 'NOT_FOUND' ? 404 : 500;
+      return c.json({ error: msg }, status);
+    }
+  });
+
   Object.assign(app, { _store: store, _bus: bus });
 }
