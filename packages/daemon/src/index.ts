@@ -10,14 +10,6 @@ const idleMs = Number(process.env.WALKTHROUGH_IDLE_MS ?? 30 * 60 * 1000);
 const app = buildApp({ port, dataDir });
 const bus = (app as any)._bus as { subscriberCount(): number };
 
-let server: ReturnType<typeof Bun.serve>;
-try {
-  server = Bun.serve({ port, fetch: app.fetch });
-} catch (err) {
-  console.error(`port ${port} unavailable; another walkthrough-daemon is likely running. exiting.`);
-  process.exit(0);
-}
-
 const idle = new IdleTracker({
   idleMs,
   hasClients: () => bus.subscriberCount() > 0,
@@ -29,10 +21,17 @@ const idle = new IdleTracker({
 });
 idle.start();
 
-const origFetch = app.fetch.bind(app);
-(app as any).fetch = (req: Request) => {
+const wrappedFetch = (req: Request) => {
   idle.touch();
-  return origFetch(req);
+  return app.fetch(req);
 };
+
+let server: ReturnType<typeof Bun.serve>;
+try {
+  server = Bun.serve({ port, fetch: wrappedFetch });
+} catch (err) {
+  console.error(`port ${port} unavailable; another walkthrough-daemon is likely running. exiting.`);
+  process.exit(0);
+}
 
 console.log(`walkthrough-daemon listening on http://localhost:${server.port}`);
