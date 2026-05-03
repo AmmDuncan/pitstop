@@ -14,6 +14,12 @@ const CreateZ = z.object({
 
 const StatusBodyZ = z.object({ status: SessionStatusZ });
 
+const ResponseInZ = z.object({
+  itemId: z.string(),
+  kind: z.enum(['approve', 'comment']),
+  body: z.string().optional(),
+});
+
 export function mountRoutes(app: Hono, opts: DaemonOpts) {
   const store = new Store(opts.dataDir);
   const bus = new Bus();
@@ -83,6 +89,17 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
       }),
       { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' } },
     );
+  });
+
+  app.post('/api/sessions/:id/responses', async (c) => {
+    const id = c.req.param('id');
+    const parsed = ResponseInZ.safeParse(await c.req.json());
+    if (!parsed.success) return c.json({ error: parsed.error.format() }, 400);
+    const r = { ...parsed.data, at: Date.now(), addressed: false };
+    const session = await store.update(id, (s) => ({ ...s, responses: [...s.responses, r] }));
+    bus.publish(id, { type: 'state-changed', session });
+    // Poke trigger lives in Phase 4 — wire it in there.
+    return c.json({ accepted: true }, 202);
   });
 
   Object.assign(app, { _store: store, _bus: bus });
