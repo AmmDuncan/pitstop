@@ -5,7 +5,8 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "test": "bun test",
-    "lint": "biome check --write ."
+    "lint": "biome check --write .",
+    "release": "bun run scripts/release.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
