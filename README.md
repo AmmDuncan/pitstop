@@ -240,10 +240,12 @@ git pull
 cd packages/inject && bun run build   # rebuild the drawer if its source changed
 ```
 
-When release tags exist, pin your local checkout:
+Pin to a specific release if you want stability over latest:
 ```bash
 git checkout v0.1.0
 ```
+
+Latest release: **v0.1.0** (initial public release).
 
 ---
 
