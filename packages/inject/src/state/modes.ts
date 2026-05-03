@@ -5,9 +5,9 @@ type Size = 'standard' | 'compact' | 'strip';
 
 const KEY = 'walkthrough.modes.v1';
 
-type Modes = { position: Position; size: Size; width: number; floatingTop: number; floatingLeft: number };
+type Modes = { position: Position; size: Size; width: number; height: number; floatingTop: number; floatingLeft: number };
 
-const DEFAULTS: Modes = { position: 'right', size: 'standard', width: 504, floatingTop: 80, floatingLeft: 80 };
+const DEFAULTS: Modes = { position: 'right', size: 'standard', width: 504, height: 600, floatingTop: 80, floatingLeft: 80 };
 
 function load(): Modes {
   if (typeof localStorage === 'undefined') return DEFAULTS;
@@ -22,6 +22,7 @@ const initial = load();
 export const [position, setPosition] = createSignal<Position>(initial.position);
 export const [size, setSize] = createSignal<Size>(initial.size);
 export const [width, setWidth] = createSignal(initial.width);
+export const [height, setHeight] = createSignal(initial.height);
 export const [floatingTop, setFloatingTop] = createSignal(initial.floatingTop);
 export const [floatingLeft, setFloatingLeft] = createSignal(initial.floatingLeft);
 
@@ -31,6 +32,7 @@ createRoot(() => {
       position: position(),
       size: size(),
       width: width(),
+      height: height(),
       floatingTop: floatingTop(),
       floatingLeft: floatingLeft(),
     };

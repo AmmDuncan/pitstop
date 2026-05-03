@@ -6,14 +6,39 @@ import { Header } from './Header';
 import { PipStrip } from './PipStrip';
 import { Footer } from './Footer';
 import { Detail } from './Detail';
+import { ResizeHandle } from './ResizeHandle';
 import { session } from '../state/store';
-import { position, size, width, floatingTop, floatingLeft } from '../state/modes';
+import {
+  position,
+  size,
+  width,
+  setWidth,
+  height,
+  setHeight,
+  floatingTop,
+  setFloatingTop,
+  floatingLeft,
+  setFloatingLeft,
+} from '../state/modes';
+
+const MIN_W = 360;
+const MAX_W = 800;
+const MIN_H = 280;
+const MAX_H = 900;
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 export const Drawer: Component = () => {
   const modeClasses = () => `drawer pos-${position()} size-${size()}`;
   const floatStyle = () =>
     position() === 'floating'
-      ? { top: `${floatingTop()}px`, left: `${floatingLeft()}px`, right: 'auto', bottom: 'auto', width: `${width()}px`, height: '600px' }
+      ? {
+          top: `${floatingTop()}px`,
+          left: `${floatingLeft()}px`,
+          right: 'auto',
+          bottom: 'auto',
+          width: `${width()}px`,
+          height: `${height()}px`,
+        }
       : { width: `${width()}px` };
 
   return (
@@ -39,6 +64,62 @@ export const Drawer: Component = () => {
             <PipStrip />
             <Detail />
             <Footer />
+          </Show>
+          <Show when={size() !== 'strip'}>
+            <Show when={position() === 'right'}>
+              <ResizeHandle
+                direction="edge-left"
+                onDrag={(dx) => setWidth(clamp(width() - dx, MIN_W, MAX_W))}
+              />
+            </Show>
+            <Show when={position() === 'left'}>
+              <ResizeHandle
+                direction="edge-right"
+                onDrag={(dx) => setWidth(clamp(width() + dx, MIN_W, MAX_W))}
+              />
+            </Show>
+            <Show when={position() === 'floating'}>
+              <ResizeHandle
+                direction="corner-se"
+                onDrag={(dx, dy) => {
+                  setWidth(clamp(width() + dx, MIN_W, MAX_W));
+                  setHeight(clamp(height() + dy, MIN_H, MAX_H));
+                }}
+              />
+              <ResizeHandle
+                direction="corner-sw"
+                onDrag={(dx, dy) => {
+                  const nextW = clamp(width() - dx, MIN_W, MAX_W);
+                  const appliedDx = width() - nextW;
+                  setWidth(nextW);
+                  setHeight(clamp(height() + dy, MIN_H, MAX_H));
+                  setFloatingLeft(floatingLeft() + appliedDx);
+                }}
+              />
+              <ResizeHandle
+                direction="corner-ne"
+                onDrag={(dx, dy) => {
+                  const nextH = clamp(height() - dy, MIN_H, MAX_H);
+                  const appliedDy = height() - nextH;
+                  setWidth(clamp(width() + dx, MIN_W, MAX_W));
+                  setHeight(nextH);
+                  setFloatingTop(floatingTop() + appliedDy);
+                }}
+              />
+              <ResizeHandle
+                direction="corner-nw"
+                onDrag={(dx, dy) => {
+                  const nextW = clamp(width() - dx, MIN_W, MAX_W);
+                  const appliedDx = width() - nextW;
+                  const nextH = clamp(height() - dy, MIN_H, MAX_H);
+                  const appliedDy = height() - nextH;
+                  setWidth(nextW);
+                  setHeight(nextH);
+                  setFloatingTop(floatingTop() + appliedDy);
+                  setFloatingLeft(floatingLeft() + appliedDx);
+                }}
+              />
+            </Show>
           </Show>
         </aside>
       </Show>

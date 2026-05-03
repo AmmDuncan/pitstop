@@ -344,3 +344,34 @@
 }
 .footer-btn:hover { border-color: var(--rule-3); color: var(--t1); }
 .footer-btn.primary { background: var(--t1); color: var(--bg-paper); border-color: var(--t1); }
+
+/* Resize handles */
+.resize-handle {
+  position: absolute;
+  z-index: 10;
+  background: transparent;
+}
+.resize-handle:hover { background: var(--rule-2); }
+
+.resize-handle.edge-left { left: 0; top: 0; bottom: 0; width: 6px; cursor: ew-resize; }
+.resize-handle.edge-right { right: 0; top: 0; bottom: 0; width: 6px; cursor: ew-resize; }
+.resize-handle.corner-se { right: 0; bottom: 0; width: 14px; height: 14px; cursor: nwse-resize; }
+.resize-handle.corner-sw { left: 0; bottom: 0; width: 14px; height: 14px; cursor: nesw-resize; }
+.resize-handle.corner-ne { right: 0; top: 0; width: 14px; height: 14px; cursor: nesw-resize; }
+.resize-handle.corner-nw { left: 0; top: 0; width: 14px; height: 14px; cursor: nwse-resize; }
+
+/* Hover affordance — subtle dot in the corner */
+.resize-handle.corner-se::after,
+.resize-handle.corner-sw::after,
+.resize-handle.corner-ne::after,
+.resize-handle.corner-nw::after {
+  content: '';
+  position: absolute;
+  width: 4px; height: 4px;
+  background: var(--rule-3);
+  opacity: 0.5;
+}
+.resize-handle.corner-se::after { right: 3px; bottom: 3px; }
+.resize-handle.corner-sw::after { left: 3px; bottom: 3px; }
+.resize-handle.corner-ne::after { right: 3px; top: 3px; }
+.resize-handle.corner-nw::after { left: 3px; top: 3px; }
