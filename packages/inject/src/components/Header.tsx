@@ -89,7 +89,7 @@ export const Header: Component = () => {
       <button class="x-btn size-btn" onClick={cycleSize} title={`Size: ${size()}. Click to cycle (standard/compact/strip)`}>{sizeGlyph()}</button>
       <button class="x-btn theme-btn" onClick={cycleTheme} title={`Theme: ${theme()}. Click to cycle (auto/dark/light)`}>{themeGlyph()}</button>
       <button class="x-btn help-btn" onClick={() => setHelpOpen(true)} title="Show keyboard shortcuts">?</button>
-      <button class="x-btn" onClick={() => setSize('strip')} title="Collapse to strip">×</button>
+      <button class="x-btn min-btn" onClick={() => setSize('strip')} title="Minimize to strip">−</button>
     </header>
   );
 };
