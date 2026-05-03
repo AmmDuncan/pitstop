@@ -62,7 +62,7 @@ export const ReviewSummary: Component = () => {
       </div>
       <div class="summary-actions">
         <button class="btn btn-primary" onClick={onReviewSkipped} disabled={skipped().length === 0}>
-          REVIEW_SKIPPED <span class="kbd">↵</span>
+          REVIEW_SKIPPED <span class="kbd">RET</span>
         </button>
         <button class="btn btn-secondary" onClick={onMarkDone}>MARK_DONE</button>
       </div>
