@@ -218,5 +218,11 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
 </html>`, { headers: { 'content-type': 'text/html; charset=utf-8' } });
   });
 
+  app.get('/api/config', async () => {
+    const { loadConfig } = await import('../config');
+    const config = await loadConfig();
+    return Response.json(config, { headers: { 'cache-control': 'no-cache' } });
+  });
+
   Object.assign(app, { _store: store, _bus: bus });
 }
