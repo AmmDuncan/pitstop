@@ -532,9 +532,9 @@
 .btn-secondary:hover:not(:disabled) { border-color: var(--t1); }
 /* Disabled — change colors instead of opacity so the button keeps its visual size + crisp border */
 .btn:disabled { cursor: not-allowed; }
-.btn-primary:disabled { background: var(--bg-panel); color: var(--t4); border-color: var(--bg-panel); }
-.btn-secondary:disabled { color: var(--t4); border-color: var(--rule-1); }
-.btn:disabled .kbd { color: var(--t4); border-color: var(--t4); }
+.btn-primary:disabled { background: var(--bg-panel); color: var(--t3); border-color: var(--rule-3); }
+.btn-secondary:disabled { color: var(--t3); border-color: var(--rule-2); }
+.btn:disabled .kbd { color: var(--t3); border-color: var(--t3); }
 .btn .kbd {
   font-family: var(--mono);
   font-size: 13px;
