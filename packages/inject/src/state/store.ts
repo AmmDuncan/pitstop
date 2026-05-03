@@ -56,3 +56,26 @@ export async function bootstrap(projectRoot: string): Promise<() => void> {
   }
   return () => {};
 }
+
+/**
+ * Per-item comment drafts. Survives component remount when the drawer collapses to strip
+ * or position changes cause re-render. Cleared after successful submission.
+ */
+const draftMap = new Map<string, string>();
+const [draftsVersion, bumpDrafts] = createSignal(0);
+
+export function getDraft(itemId: string): string {
+  draftsVersion();
+  return draftMap.get(itemId) ?? '';
+}
+
+export function setDraft(itemId: string, body: string): void {
+  if (body) draftMap.set(itemId, body);
+  else draftMap.delete(itemId);
+  bumpDrafts(draftsVersion() + 1);
+}
+
+export function clearDraft(itemId: string): void {
+  draftMap.delete(itemId);
+  bumpDrafts(draftsVersion() + 1);
+}

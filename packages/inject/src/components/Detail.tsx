@@ -6,6 +6,9 @@ import {
   setCurrentItemIdx,
   setSummaryOpen,
   unreviewedIndices,
+  getDraft,
+  setDraft,
+  clearDraft,
 } from '../state/store';
 import { submitResponse } from '../state/client';
 import { FileRef } from './FileRef';
@@ -14,7 +17,8 @@ import type { Attachment } from '@walkthrough/shared';
 
 export const Detail: Component = () => {
   const item = () => session.s?.items[currentItemIdx()];
-  const [comment, setComment] = createSignal('');
+  const itemId = () => item()?.id ?? '';
+  const comment = () => getDraft(itemId());
   const [submitting, setSubmitting] = createSignal(false);
 
   const onApprove = async () => {
@@ -47,7 +51,7 @@ export const Detail: Component = () => {
     setSubmitting(true);
     try {
       await submitResponse(session.s.id, { itemId: it.id, kind: 'comment', body: comment().trim() });
-      setComment('');
+      clearDraft(it.id);
     } finally {
       setSubmitting(false);
     }
@@ -74,7 +78,7 @@ export const Detail: Component = () => {
           class="cbox"
           placeholder="optional comment · leave blank if it's good as-is"
           value={comment()}
-          onInput={(e) => setComment(e.currentTarget.value)}
+          onInput={(e) => setDraft(itemId(), e.currentTarget.value)}
           disabled={submitting()}
         />
         <div class="actions">

@@ -511,6 +511,7 @@
   letter-spacing: 0.06em;
   color: var(--t3);
   overflow: hidden;
+  container-type: inline-size;
 }
 .dfooter .counts { display: flex; gap: 12px; flex-shrink: 0; }
 .dfooter .actions-r { flex-shrink: 0; }
@@ -553,9 +554,13 @@
   letter-spacing: 0.04em;
 }
 .drawer.size-compact .keymap-hint { display: none; }
-/* Below ~480px drawer width, the 4-hint strip overflows. Drop the labels and keep only the keys. */
-@media (max-width: 520px) { .keymap-hint .hint-l { display: none; } }
-@container (max-width: 520px) { .keymap-hint .hint-l { display: none; } }
+/* When the footer is too narrow to fit hint labels, drop them and show only kbd boxes */
+@container (max-width: 460px) {
+  .keymap-hint .hint-l { display: none; }
+}
+@container (max-width: 360px) {
+  .keymap-hint { display: none; }
+}
 .footer-btn {
   background: transparent;
   border: 1px solid var(--rule-2);
@@ -865,4 +870,24 @@
   color: var(--t4);
   margin-left: 6px;
   font-weight: 500;
+}
+
+/* Mobile / tight viewport: drawer goes full-screen unless collapsed to strip.
+   Position controls + width slider become irrelevant here. The user can toggle
+   between strip (32px) and full-screen via the size cycle. */
+@media (max-width: 640px) {
+  .drawer.pos-right:not(.size-strip),
+  .drawer.pos-left:not(.size-strip),
+  .drawer.pos-floating:not(.size-strip) {
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .drawer:not(.size-strip) .resize-handle { display: none !important; }
 }

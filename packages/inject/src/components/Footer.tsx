@@ -8,7 +8,6 @@ function contextualHints(): Hint[] {
   return [
     { keys: ['↵'], label: 'LOOKS_GOOD' },
     { keys: ['C'], label: 'COMMENT' },
-    { keys: ['J'], label: 'NEXT' },
     { keys: ['?'], label: 'KEYS', action: () => setHelpOpen(true) },
   ];
 }
