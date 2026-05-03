@@ -9,6 +9,8 @@ type Shortcut = {
   action?: () => void;
   /** Keep the overlay open after the action runs (e.g. layout/theme cycles so user sees the change). */
   keepOpen?: boolean;
+  /** When true, keys are joined with `+` (chord). When false (default), `/` (alternates). */
+  chord?: boolean;
 };
 type Group = { title: string; shortcuts: Shortcut[] };
 
@@ -42,7 +44,7 @@ const GROUPS: Group[] = [
     shortcuts: [
       { keys: ['↵'], label: 'LOOKS_GOOD · ADVANCE', action: approveAndAdvance },
       { keys: ['C'], label: 'FOCUS_COMMENT' },
-      { keys: ['⌘', '↵'], label: 'SEND_COMMENT' },
+      { keys: ['⌘', '↵'], label: 'SEND_COMMENT', chord: true },
       { keys: ['ESC'], label: 'BLUR_COMMENT · CLOSE_OVERLAY' },
     ],
   },
@@ -109,7 +111,7 @@ export const KeymapOverlay: Component = () => {
                         <For each={s.keys}>
                           {(key, i) => (
                             <>
-                              {i() > 0 && <span class="keymap-plus">+</span>}
+                              {i() > 0 && <span class="keymap-plus">{s.chord ? '+' : '/'}</span>}
                               <kbd class="keymap-key">{key}</kbd>
                             </>
                           )}
