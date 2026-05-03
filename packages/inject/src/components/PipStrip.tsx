@@ -1,5 +1,5 @@
 import { type Component, For, Show, createEffect, createMemo, createSignal } from 'solid-js';
-import type { Item } from '@walkthrough/shared';
+import type { Item } from '@pitstop/shared';
 import { session, currentItemIdx, setCurrentItemIdx } from '../state/store';
 import { ItemListSheet } from './ItemListSheet';
 

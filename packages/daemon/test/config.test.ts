@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { loadConfig, DEFAULT_CONFIG } from '../src/config';
 
 test('loadConfig returns defaults when file does not exist', async () => {
-  const cfg = await loadConfig('/tmp/nonexistent-walkthrough-config.json');
+  const cfg = await loadConfig('/tmp/nonexistent-pitstop-config.json');
   expect(cfg).toEqual(DEFAULT_CONFIG);
 });
 

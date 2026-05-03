@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { Forwarder } from './forward';
 
-const port = Number(process.env.WALKTHROUGH_PORT ?? 7773);
+const port = Number(process.env.PITSTOP_PORT ?? 7773);
 const baseUrl = `http://localhost:${port}`;
 const clientSessionId = process.env.CLAUDE_SESSION_ID;
 const fwd = new Forwarder({ baseUrl, clientSessionId });
@@ -12,7 +12,7 @@ const fwd = new Forwarder({ baseUrl, clientSessionId });
 const tools = [
   {
     name: 'start_review',
-    description: 'Start a walkthrough review session with N items. Returns { sessionId, url }.',
+    description: 'Start a pitstop review session with N items. Returns { sessionId, url }.',
     inputSchema: {
       type: 'object',
       required: ['projectRoot', 'items'],
@@ -43,7 +43,7 @@ const tools = [
   { name: 'complete_review', description: 'End the review session.', inputSchema: { type: 'object', required: ['sessionId'], properties: { sessionId: { type: 'string' } } } },
 ];
 
-const server = new Server({ name: 'walkthrough', version: '0.0.1' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'pitstop', version: '0.0.1' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {

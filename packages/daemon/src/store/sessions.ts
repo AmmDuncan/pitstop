@@ -2,7 +2,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { nanoid } from 'nanoid';
-import { type Session, SessionZ, type Item } from '@walkthrough/shared';
+import { type Session, SessionZ, type Item } from '@pitstop/shared';
 import { writeAtomic } from './atomic';
 
 type CreateInput = {

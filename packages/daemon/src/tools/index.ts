@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ItemZ, type Session } from '@walkthrough/shared';
+import { ItemZ, type Session } from '@pitstop/shared';
 import type { Store } from '../store/sessions';
 import type { Bus } from '../http/sse';
 

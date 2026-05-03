@@ -1,6 +1,6 @@
 import { createMemo, createSignal } from 'solid-js';
 import { createStore, produce } from 'solid-js/store';
-import type { Session, SseEvent } from '@walkthrough/shared';
+import type { Session, SseEvent } from '@pitstop/shared';
 import { fetchActiveSession, openEventStream } from './client';
 
 export const [session, setSession] = createStore<{ s: Session | null }>({ s: null });

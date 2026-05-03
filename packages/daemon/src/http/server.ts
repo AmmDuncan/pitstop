@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { spawn as NodeSpawn } from 'node:child_process';
-import type { PokeKind } from '@walkthrough/shared';
+import type { PokeKind } from '@pitstop/shared';
 import { mountRoutes } from './routes';
 
 export type DaemonOpts = {

@@ -33,7 +33,7 @@ export class Forwarder {
     const child = spawn('bun', ['run', new URL('../../daemon/src/index.ts', import.meta.url).pathname], {
       detached: true,
       stdio: 'ignore',
-      env: { ...process.env, WALKTHROUGH_PORT: String(new URL(this.opts.baseUrl).port) },
+      env: { ...process.env, PITSTOP_PORT: String(new URL(this.opts.baseUrl).port) },
     });
     child.unref();
     // Wait up to 3s for the daemon to bind

@@ -1,5 +1,5 @@
 import { type Component, createResource } from 'solid-js';
-import type { Attachment } from '@walkthrough/shared';
+import type { Attachment } from '@pitstop/shared';
 import { fetchConfig } from '../state/client';
 
 const SCHEMES: Record<string, string> = {

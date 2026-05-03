@@ -1,4 +1,4 @@
-import type { SseEvent } from '@walkthrough/shared';
+import type { SseEvent } from '@pitstop/shared';
 
 type Listener = (event: SseEvent) => void;
 

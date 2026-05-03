@@ -57,13 +57,13 @@ export const Drawer: Component = () => {
         <aside class={modeClasses()} style={floatStyle()}>
           <Show when={size() !== 'strip'} fallback={
             <div class="strip" onClick={() => setSize('standard')} title="Click to expand">
-              <span class="v-label">WALKTHROUGH</span>
+              <span class="v-label">PITSTOP</span>
               <span class="v-num">{String(session.s?.items.length ?? 0).padStart(2, '0')}</span>
               <span class="v-dot" />
             </div>
           }>
             <div class="metabar">
-              <span>~/.claude/walkthrough/sessions/{session.s?.id}.json</span>
+              <span>~/.claude/pitstop/sessions/{session.s?.id}.json</span>
               <span class="center">S#{session.s?.id}</span>
               <span class="right">T=…</span>
             </div>

@@ -4,7 +4,7 @@ type Position = 'right' | 'left' | 'floating';
 type Size = 'standard' | 'compact' | 'strip';
 export type Theme = 'auto' | 'dark' | 'light';
 
-const KEY = 'walkthrough.modes.v1';
+const KEY = 'pitstop.modes.v1';
 
 type Modes = {
   position: Position;

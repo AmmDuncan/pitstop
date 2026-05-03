@@ -13,7 +13,7 @@ import {
 import { submitResponse } from '../state/client';
 import { FileRef } from './FileRef';
 import { ImageAttachment } from './ImageAttachment';
-import type { Attachment } from '@walkthrough/shared';
+import type { Attachment } from '@pitstop/shared';
 
 export const Detail: Component = () => {
   const item = () => session.s?.items[currentItemIdx()];

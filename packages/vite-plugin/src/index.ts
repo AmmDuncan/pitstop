@@ -1,6 +1,6 @@
 import type { Plugin } from 'vite';
 
-export type WalkthroughPluginOpts = {
+export type PitstopPluginOpts = {
   /** Daemon port. Defaults to 7773. */
   port?: number;
   /** Project root override. Defaults to the Vite config's root. */
@@ -10,13 +10,13 @@ export type WalkthroughPluginOpts = {
 };
 
 /**
- * Vite/Nuxt plugin that injects the walkthrough drawer's inject.js into the dev app.
+ * Vite/Nuxt plugin that injects the pitstop drawer's inject.js into the dev app.
  * Production builds drop the script unless `alsoInProduction: true`.
  */
-export default function walkthrough(opts: WalkthroughPluginOpts = {}): Plugin {
+export default function pitstop(opts: PitstopPluginOpts = {}): Plugin {
   const port = opts.port ?? 7773;
   return {
-    name: '@walkthrough/vite-plugin',
+    name: '@pitstop/vite-plugin',
     apply: opts.alsoInProduction ? undefined : 'serve',
     transformIndexHtml: {
       order: 'pre',
@@ -24,7 +24,7 @@ export default function walkthrough(opts: WalkthroughPluginOpts = {}): Plugin {
         // Skip during production builds unless explicitly opted in
         if (!opts.alsoInProduction && ctx.bundle) return;
         const projectRoot = opts.projectRoot ?? (ctx.server?.config.root ?? '');
-        const params = projectRoot ? `?walkthrough-project=${encodeURIComponent(projectRoot)}` : '';
+        const params = projectRoot ? `?pitstop-project=${encodeURIComponent(projectRoot)}` : '';
         return [
           {
             tag: 'script',
@@ -36,7 +36,7 @@ export default function walkthrough(opts: WalkthroughPluginOpts = {}): Plugin {
           },
           {
             tag: 'script',
-            children: `window.__WALKTHROUGH_PROJECT__ = ${JSON.stringify(projectRoot)};`,
+            children: `window.__PITSTOP_PROJECT__ = ${JSON.stringify(projectRoot)};`,
             injectTo: 'body-prepend',
           },
         ];

@@ -2,9 +2,9 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { WalkthroughConfig } from '@walkthrough/shared';
+import type { PitstopConfig } from '@pitstop/shared';
 
-const DEFAULT_CONFIG: WalkthroughConfig = {
+const DEFAULT_CONFIG: PitstopConfig = {
   port: 7773,
   poke: { kind: 'claude-resume' },
   editor: 'cursor',
@@ -13,12 +13,12 @@ const DEFAULT_CONFIG: WalkthroughConfig = {
   session: { retentionDays: 30 },
 };
 
-export async function loadConfig(configPath?: string): Promise<WalkthroughConfig> {
-  const path = configPath ?? join(homedir(), '.claude', 'walkthrough', 'config.json');
+export async function loadConfig(configPath?: string): Promise<PitstopConfig> {
+  const path = configPath ?? join(homedir(), '.claude', 'pitstop', 'config.json');
   if (!existsSync(path)) return DEFAULT_CONFIG;
   try {
     const raw = await readFile(path, 'utf8');
-    const parsed = JSON.parse(raw) as Partial<WalkthroughConfig>;
+    const parsed = JSON.parse(raw) as Partial<PitstopConfig>;
     return {
       ...DEFAULT_CONFIG,
       ...parsed,

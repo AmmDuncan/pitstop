@@ -78,7 +78,7 @@ export type PokeKind =
   | { kind: 'webhook'; url: string }
   | { kind: 'script'; command: string; args?: string[] };
 
-export type WalkthroughConfig = {
+export type PitstopConfig = {
   port: number;
   poke: PokeKind;
   editor: 'cursor' | 'vscode' | 'jetbrains' | 'none';

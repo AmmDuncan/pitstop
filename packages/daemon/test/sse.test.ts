@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { Bus } from '../src/http/sse';
-import type { SseEvent } from '@walkthrough/shared';
+import type { SseEvent } from '@pitstop/shared';
 
 test('Bus delivers events to subscribers, drops them on unsubscribe', () => {
   const bus = new Bus();

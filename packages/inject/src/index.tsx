@@ -3,7 +3,7 @@ import { createEffect, createRoot } from 'solid-js';
 import { App } from './components/App';
 import { theme, resolvedTheme } from './state/modes';
 
-class WalkthroughDrawer extends HTMLElement {
+class PitstopDrawer extends HTMLElement {
   connectedCallback() {
     const root = this.attachShadow({ mode: 'open' });
     render(() => <App />, root);
@@ -25,11 +25,11 @@ class WalkthroughDrawer extends HTMLElement {
   }
 }
 
-if (!customElements.get('walkthrough-drawer')) {
-  customElements.define('walkthrough-drawer', WalkthroughDrawer);
+if (!customElements.get('pitstop-drawer')) {
+  customElements.define('pitstop-drawer', PitstopDrawer);
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => document.body.appendChild(new WalkthroughDrawer()));
+    document.addEventListener('DOMContentLoaded', () => document.body.appendChild(new PitstopDrawer()));
   } else {
-    document.body.appendChild(new WalkthroughDrawer());
+    document.body.appendChild(new PitstopDrawer());
   }
 }

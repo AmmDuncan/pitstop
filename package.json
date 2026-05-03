@@ -1,5 +1,5 @@
 {
-  "name": "walkthrough-monorepo",
+  "name": "pitstop-monorepo",
   "private": true,
   "type": "module",
   "workspaces": ["packages/*"],

@@ -69,7 +69,7 @@ export const Header: Component = () => {
     <header class="dheader" onMouseDown={onHeaderMouseDown} classList={{ draggable: position() === 'floating' }}>
       <div class="mark">W</div>
       <div>
-        <div class="name">WALKTHROUGH</div>
+        <div class="name">PITSTOP</div>
         <div class="ctx">{session.s?.branch ?? session.s?.projectRoot ?? '—'}</div>
       </div>
       <Show when={total() > 0}>

@@ -1,11 +1,11 @@
-# @walkthrough/vite-plugin
+# @pitstop/vite-plugin
 
-Auto-injects the walkthrough review drawer's `inject.js` into Vite/Nuxt dev pages. Drops it in production.
+Auto-injects the pitstop review drawer's `inject.js` into Vite/Nuxt dev pages. Drops it in production.
 
 ## Install
 
 ```bash
-bun add -d @walkthrough/vite-plugin
+bun add -d @pitstop/vite-plugin
 ```
 
 ## Usage
@@ -14,21 +14,21 @@ bun add -d @walkthrough/vite-plugin
 
 ```ts
 import { defineConfig } from 'vite';
-import walkthrough from '@walkthrough/vite-plugin';
+import pitstop from '@pitstop/vite-plugin';
 
 export default defineConfig({
-  plugins: [walkthrough()],
+  plugins: [pitstop()],
 });
 ```
 
 ### Nuxt (`nuxt.config.ts`)
 
 ```ts
-import walkthrough from '@walkthrough/vite-plugin';
+import pitstop from '@pitstop/vite-plugin';
 
 export default defineNuxtConfig({
   vite: {
-    plugins: [walkthrough()],
+    plugins: [pitstop()],
   },
 });
 ```

@@ -7,14 +7,14 @@ export const App: Component = () => {
   const [closer, setCloser] = createSignal<() => void>(() => {});
   onMount(async () => {
     const projectRoot =
-      (window as unknown as { __WALKTHROUGH_PROJECT__?: string }).__WALKTHROUGH_PROJECT__ ??
-      new URLSearchParams(window.location.search).get('walkthrough-project') ??
+      (window as unknown as { __PITSTOP_PROJECT__?: string }).__PITSTOP_PROJECT__ ??
+      new URLSearchParams(window.location.search).get('pitstop-project') ??
       window.location.origin;
     const close = await bootstrap(projectRoot);
     setCloser(() => close);
 
     installKeyboard(() => {
-      const host = document.querySelector('walkthrough-drawer');
+      const host = document.querySelector('pitstop-drawer');
       const root = (host as unknown as { shadowRoot: ShadowRoot | null } | null)?.shadowRoot ?? null;
       return (root?.querySelector('textarea.cbox') ?? null) as HTMLTextAreaElement | null;
     });

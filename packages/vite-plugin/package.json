@@ -1,5 +1,5 @@
 {
-  "name": "@walkthrough/vite-plugin",
+  "name": "@pitstop/vite-plugin",
   "type": "module",
   "version": "0.0.1",
   "main": "./src/index.ts",

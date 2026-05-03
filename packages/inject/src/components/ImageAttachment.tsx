@@ -1,5 +1,5 @@
 import { type Component, createSignal, Show } from 'solid-js';
-import type { Attachment } from '@walkthrough/shared';
+import type { Attachment } from '@pitstop/shared';
 import { Lightbox } from './Lightbox';
 
 type ImageAtt = Extract<Attachment, { kind: 'image' }>;

@@ -1,5 +1,5 @@
 import { type Component, Show } from 'solid-js';
-import type { Session } from '@walkthrough/shared';
+import type { Session } from '@pitstop/shared';
 
 export type PillState = 'idle' | 'working' | 'addressing' | 'writing' | 'failed' | 'complete';
 

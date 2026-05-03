@@ -1,4 +1,4 @@
-import type { Session, SseEvent, WalkthroughConfig } from '@walkthrough/shared';
+import type { Session, SseEvent, PitstopConfig } from '@pitstop/shared';
 
 const baseUrl = (() => {
   if (typeof window === 'undefined') return 'http://localhost:7773';
@@ -38,13 +38,13 @@ export async function submitResponse(
   if (!r.ok) throw new Error(`submit failed: ${r.status}`);
 }
 
-let cachedConfig: WalkthroughConfig | null = null;
+let cachedConfig: PitstopConfig | null = null;
 
-export async function fetchConfig(): Promise<WalkthroughConfig> {
+export async function fetchConfig(): Promise<PitstopConfig> {
   if (cachedConfig) return cachedConfig;
   const r = await fetch(`${baseUrl}/api/config`);
   if (!r.ok) throw new Error(`config fetch failed: ${r.status}`);
-  cachedConfig = (await r.json()) as WalkthroughConfig;
+  cachedConfig = (await r.json()) as PitstopConfig;
   return cachedConfig;
 }
 
