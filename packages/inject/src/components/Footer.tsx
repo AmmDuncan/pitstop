@@ -1,16 +1,6 @@
 import { type Component, createMemo } from 'solid-js';
-import { session, setHelpOpen } from '../state/store';
+import { session } from '../state/store';
 import { baseUrl } from '../state/client';
-
-type Hint = { keys: string[]; label: string; action?: () => void };
-
-function contextualHints(): Hint[] {
-  return [
-    { keys: ['↵'], label: 'LOOKS_GOOD' },
-    { keys: ['C'], label: 'COMMENT' },
-    { keys: ['?'], label: 'KEYS', action: () => setHelpOpen(true) },
-  ];
-}
 
 export const Footer: Component = () => {
   const counts = createMemo(() => {
@@ -21,8 +11,6 @@ export const Footer: Component = () => {
     const left = items.length - approved - commented;
     return { approved, commented, left };
   });
-
-  const hints = contextualHints();
 
   const isPaused = () => session.s?.status === 'paused';
 
@@ -57,14 +45,6 @@ export const Footer: Component = () => {
         <span>
           <span class="v">{String(counts().left).padStart(2, '0')}</span>_LEFT
         </span>
-      </div>
-      <div class="keymap-hint">
-        {hints.map((h) => (
-          <span class="hint" onClick={h.action} style={h.action ? 'cursor:pointer' : undefined}>
-            {h.keys.map((k) => <kbd class="hint-k">{k}</kbd>)}
-            <span class="hint-l">{h.label}</span>
-          </span>
-        ))}
       </div>
       <div class="actions-r">
         <button class="footer-btn" onClick={togglePause}>

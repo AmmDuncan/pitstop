@@ -76,7 +76,7 @@ export const Detail: Component = () => {
         </Show>
         <textarea
           class="cbox"
-          placeholder="optional comment · leave blank if it's good as-is"
+          placeholder="optional comment · press C to focus · ⌘↵ to send"
           value={comment()}
           onInput={(e) => setDraft(itemId(), e.currentTarget.value)}
           disabled={submitting()}
