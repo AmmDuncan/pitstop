@@ -1,4 +1,4 @@
-import { type Component, For } from 'solid-js';
+import { type Component, For, createEffect } from 'solid-js';
 import { session, currentItemIdx, setCurrentItemIdx } from '../state/store';
 
 type PipState = 'approved' | 'commented' | 'focused' | 'pending';
@@ -8,6 +8,7 @@ function glyphFor(state: PipState): string {
 }
 
 export const PipStrip: Component = () => {
+  let stripEl: HTMLDivElement | undefined;
   const items = () => session.s?.items ?? [];
   const responsesByItem = () => {
     const m = new Map<string, 'approved' | 'commented'>();
@@ -18,8 +19,20 @@ export const PipStrip: Component = () => {
     }
     return m;
   };
+
+  createEffect(() => {
+    const idx = currentItemIdx();
+    if (!stripEl) return;
+    requestAnimationFrame(() => {
+      const focused = stripEl?.querySelector(`.pip[data-idx="${idx}"]`) as HTMLElement | null;
+      if (focused) {
+        focused.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    });
+  });
+
   return (
-    <div class="pips">
+    <div class="pips" ref={stripEl}>
       <For each={items()}>
         {(item, i) => {
           const state = (): PipState => {
@@ -27,7 +40,7 @@ export const PipStrip: Component = () => {
             return responsesByItem().get(item.id) ?? 'pending';
           };
           return (
-            <div class={`pip ${state()}`} onClick={() => setCurrentItemIdx(i())}>
+            <div class={`pip ${state()}`} data-idx={i()} onClick={() => setCurrentItemIdx(i())}>
               <span class="glyph">{glyphFor(state())}</span>
               <span class="num">{String(item.index ?? i() + 1).padStart(2, '0')}</span>
             </div>

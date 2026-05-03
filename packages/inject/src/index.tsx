@@ -3,7 +3,7 @@ import { App } from './components/App';
 
 class WalkthroughDrawer extends HTMLElement {
   connectedCallback() {
-    const root = this.attachShadow({ mode: 'closed' });
+    const root = this.attachShadow({ mode: 'open' });
     render(() => <App />, root);
   }
 }
