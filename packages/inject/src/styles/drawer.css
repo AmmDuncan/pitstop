@@ -709,11 +709,6 @@
   0%   { background: color-mix(in oklab, var(--amber) 28%, transparent); }
   100% { background: transparent; }
 }
-/* Fade only applies when the feed has hidden older entries — and only on the
-   last two visible lines, so the bulk of the feed stays fully readable and
-   the fade reads as "more behind this" instead of an overlay on everything. */
-.agent-feed.has-older .agent-feed-line[data-rank="3"] { opacity: 0.70; }
-.agent-feed.has-older .agent-feed-line[data-rank="4"] { opacity: 0.45; }
 /* Expanded state inherits the same max-height as the collapsed list — the
    only difference is how many entries are *in* the list. The container size
    doesn't grow on expand. */
