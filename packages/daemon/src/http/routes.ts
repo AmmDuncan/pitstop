@@ -138,6 +138,25 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     );
   });
 
+  app.get('/api/sessions/:id/responses', async (c) => {
+    const id = c.req.param('id');
+    const session = await store.get(id);
+    if (!session) return c.json({ error: 'not found' }, 404);
+
+    const since = c.req.query('since');
+    const unaddressed = c.req.query('unaddressed') === 'true';
+
+    const sinceTs = since ? Number(since) : null;
+    let list = session.responses.slice().sort((a, b) => a.at - b.at);
+    if (sinceTs !== null && Number.isFinite(sinceTs)) {
+      list = list.filter((r) => r.at > sinceTs);
+    }
+    if (unaddressed) {
+      list = list.filter((r) => !r.addressed);
+    }
+    return c.json(list);
+  });
+
   app.post('/api/sessions/:id/responses', async (c) => {
     const id = c.req.param('id');
     const parsed = ResponseInZ.safeParse(await c.req.json());
