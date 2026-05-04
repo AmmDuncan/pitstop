@@ -1,60 +1,25 @@
 # pitstop
 
-**Pause-and-walk-through review for AI coding agents.** Your agent finishes a chunk of work, calls `start_review`, and a drawer mounts in your dev app's browser with the items to review. You walk through them with `j/k`, hit `⏎` for "looks good," or type a comment that re-engages the agent via `claude --resume`. No more typing "looks good" / "actually fix X" into the chat.
+A drawer in your dev app where the agent leaves you items to review. You answer with one keystroke. The agent acts on your answers — driving your browser tab through each surface, in order, with the work right in front of you.
 
-> **Status:** Alpha (v0.0.1, untagged). Built for personal use; shared with friends. Expect rough edges. Tested on macOS with Bun + Claude Code + Cursor/VS Code. Linux should work; Windows untested. API may change between commits.
+> Agents can smoke-test their own implementations. But that's not the same as a human looking. Humans catch UX feel, taste calls, off-by-one visual bugs, "technically works but wrong" judgements that don't surface in agent reasoning. Pitstop's job is to make the *human* review process easier and friendlier — and the agent driving the tour is what makes it friendly.
 
----
+## What it is
 
-## Why
+Four pieces:
 
-Reviewing AI-written code by re-typing *"looks good"* / *"fix X"* / *"now do Y"* into a chat window is high-friction. You lose track of where you are, comments arrive out of context, and the agent doesn't know what's "done" until you tell it. Pitstop turns the back-and-forth into a structured walkthrough:
-
-- Agent emits all review items in **one** turn.
-- You navigate locally — *looks-good* never blocks on the agent.
-- Comments fire **one** targeted re-engagement, not a stream of small ones.
-- Pause/resume is first-class; the agent stays out of the way until you're done.
-
-Optimized for the late-stage feedback loop *inside* a Claude Code session — not for collaborative review or PR-style approval gates.
-
----
-
-## How it works
-
-```
-   Claude Code
-        │
-        │ stdio
-        ▼
-  ┌─────────────┐    HTTP     ┌──────────────────────┐
-  │ mcp-adapter │ ──────────► │ daemon (port 7773)   │ ─── spawns
-  └─────────────┘             │  • session state     │     claude --resume
-                              │  • serves            │     when you comment
-                              │    /inject.js        │
-                              └──────────┬───────────┘
-                                         │ HTTP / SSE
-                                         ▼
-  ┌──────────────────┐  <script>   ┌──────────────────────┐
-  │ Your dev server  │ injected by │ Drawer running in    │
-  │ (Vite or Nuxt)   │ ──────────► │ your browser via     │
-  │                  │ vite-plugin │ Shadow DOM           │
-  └──────────────────┘             └──────────────────────┘
-```
-
-- **mcp-adapter** — stdio bridge that Claude Code spawns per session. Forwards MCP tool calls to the daemon over HTTP.
-- **daemon** — Hono HTTP server that owns session state and serves the bundled drawer at `/inject.js`. Spawns `claude --resume` to wake the agent when you comment.
-- **vite-plugin** — adds a `<script src="http://localhost:7773/inject.js">` tag to every HTML response your dev server returns. Dev-only; production builds drop it.
-- **inject** — the Solid.js drawer that mounts in your dev app's browser via Shadow DOM (so it can't conflict with your styles).
-
----
+- **drawer** — a custom element with Shadow DOM that mounts in your dev app's browser. Renders items, takes keystrokes, sends responses to the daemon, updates live via SSE.
+- **daemon** — tiny HTTP server on `:7773`. Holds session state, serves `inject.js`, broadcasts SSE updates.
+- **mcp-adapter** — stdio bridge Claude Code spawns per session. Exposes 7 MCP tools.
+- **agent (Claude)** — drives your tab through each surface. Reads your drawer responses via MCP. Updates the drawer cursor as it goes.
 
 ## Prerequisites
 
 - [Bun](https://bun.sh) ≥ 1.0
 - [Claude Code](https://claude.com/claude-code) (the CLI)
-- A Vite or Nuxt dev project to review work in
-
----
+- A dev app to review work in (any framework that can host one `<script>` tag)
+- `curl` and `jq` (for the watcher and hook scripts)
+- A browser-driving toolbelt for Claude — **either** [Claude in Chrome](https://www.anthropic.com/claude-in-chrome) (drives your real Chrome tabs) **or** [agent-browser](https://www.npmjs.com/package/agent-browser) (Playwright-managed Chrome you run headed). Pitstop is toolbelt-neutral; pick whichever fits your setup.
 
 ## Install
 
@@ -66,203 +31,147 @@ cd ~/pitstop
 bun install
 ```
 
-### 2. Register the MCP adapter with Claude Code
+### 2. Build the mcp-adapter dist
+
+```bash
+bun build packages/mcp-adapter/src/index.ts --outfile packages/mcp-adapter/dist/index.js --target=node --format=esm
+```
+
+Pinned to `--target=node` deliberately — Claude Code's MCP plumbing has issues with bun-targeted builds in some versions.
+
+### 3. Register the MCP adapter with Claude Code
 
 Open `~/.claude.json`. Find the top-level `"mcpServers"` key (create it as `{}` if it doesn't exist) and add:
 
 ```json
 "pitstop": {
   "type": "stdio",
-  "command": "bun",
-  "args": ["run", "/Users/YOU/pitstop/packages/mcp-adapter/src/index.ts"]
+  "command": "node",
+  "args": ["/Users/YOU/pitstop/packages/mcp-adapter/dist/index.js"]
 }
 ```
 
-> ⚠️ Use an **absolute path**. `~` doesn't expand inside `~/.claude.json`.
+Use an absolute path. Replace `/Users/YOU/pitstop` with where you cloned.
 
 Restart Claude Code, then verify:
 
 ```bash
 claude mcp list | grep pitstop
-# pitstop: bun run /Users/YOU/pitstop/... - ✓ Connected
+# pitstop: node /Users/YOU/pitstop/... - ✓ Connected
 ```
 
-### 3. Wire it into your dev app
+### 4. Wire the drawer into your dev app
 
-Pitstop needs two things in your app's HTML during dev:
-1. A `window.__PITSTOP_PROJECT__` value pointing at your project's absolute path.
-2. A `<script src="http://localhost:7773/inject.js">` tag.
+The drawer needs one `<script>` tag in your dev app's HTML during dev. Tell your agent:
 
-For **Vite** and **Nuxt** there's a one-line plugin that does both. For everything else, paste a 5-line snippet into your layout.
+> *"Set up the pitstop drawer in this project."*
 
-#### Vite / Nuxt (one-line setup)
+The agent will pick the right file for your stack and add this tag (or its equivalent for your framework):
 
-In the project you want to review work on:
-
-```bash
-bun add -d /Users/YOU/pitstop/packages/vite-plugin
+```html
+<script src="http://localhost:7773/inject.js?pitstop-project=<absolute-project-path>" defer></script>
 ```
 
-**Vite** (`vite.config.ts`):
-```ts
-import { defineConfig } from 'vite';
-import pitstop from '@pitstop/vite-plugin';
+The script reads its own URL's `?pitstop-project=` query param to know which session to bind to. Vite, Nuxt, Next.js, SvelteKit, Astro, plain HTML — wherever the tag fits.
 
-export default defineConfig({
-  plugins: [pitstop()],
-});
-```
+### 5. Install the UserPromptSubmit hook
 
-**Nuxt** (`nuxt.config.ts`):
-```ts
-import pitstop from '@pitstop/vite-plugin';
+This makes pitstop responses visible to Claude on every prompt you type, so the agent stays current with your drawer state without you having to ask.
 
-export default defineNuxtConfig({
-  vite: { plugins: [pitstop()] },
-});
-```
+Add to `~/.claude/settings.json`:
 
-The plugin is dev-only by default. Production builds drop the inject script automatically.
-
-#### Other frameworks (manual snippet)
-
-There's no plugin for non-Vite frameworks yet, but the snippet is small. The shape is identical everywhere — set the project root, then load the inject script.
-
-**Next.js (App Router)** — `app/layout.tsx`:
-```tsx
-import Script from 'next/script';
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html>
-      <body>
-        {process.env.NODE_ENV === 'development' && (
-          <>
-            <Script id="pitstop-project" strategy="beforeInteractive">
-              {`window.__PITSTOP_PROJECT__ = "/Users/YOU/your-next-project";`}
-            </Script>
-            <Script src="http://localhost:7773/inject.js" strategy="afterInteractive" />
-          </>
-        )}
-        {children}
-      </body>
-    </html>
-  );
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{
+      "hooks": [{
+        "type": "command",
+        "command": "/Users/YOU/pitstop/packages/scripts/pitstop-context.sh"
+      }]
+    }]
+  }
 }
 ```
 
-**Next.js (Pages Router)** — same idea in `pages/_document.tsx` or `pages/_app.tsx`.
+The hook is read-only — it surfaces unread responses without consuming them. The agent calls `get_unread_responses` to atomically drain the queue.
 
-**Anywhere else** — paste this into whatever file holds your dev HTML, gated on dev mode if your framework supports it:
+## Running a review
 
-```html
-<script>window.__PITSTOP_PROJECT__ = "/Users/YOU/your-project";</script>
-<script src="http://localhost:7773/inject.js"></script>
-```
+Once installed, here's what you type to start a driven review:
 
-Where to put it, by framework:
+> *"Start a pitstop review of [the work]. Drive me through each item using whichever browser-driving MCP you have loaded (Claude in Chrome or agent-browser). After `start_review`, invoke `Monitor` with the parameters in the returned `watcher` block. On each notification, call `get_unread_responses`, navigate me to the relevant surface, then `set_current_item` and `mark_addressing`."*
 
-| Framework | File |
+You can shorten this once Claude has done it a few times — it learns the pattern.
+
+What happens:
+
+1. Claude calls `start_review` with the items it wants you to look at. The drawer paints; the daemon returns a `watcher` block.
+2. Claude immediately invokes `Monitor` with that `watcher` (live heartbeat — fires whenever you click in the drawer).
+3. Claude navigates your tab to item 0 using its browser-driving toolbelt, calls `set_current_item(0)` and `mark_addressing(0, "...")`. Drawer pill: `ADDRESSING · ...`.
+4. You review item 0 on its actual surface. Press `⏎` to approve, or `c` then comment then `⌘⏎`.
+5. Drawer pill flips `SENDING…` → `POKED_CLAUDE · WAITING`. The watcher emits a stdout line. Claude wakes up here, drains responses via `get_unread_responses`, drives your tab to the next surface, repeat.
+6. When done, `complete_review` flips the pill green. Or click `DONE` in the drawer footer.
+
+## MCP tools
+
+The agent has 7 tools:
+
+| Setup | Conversation |
 |---|---|
-| Vite / Nuxt | `@pitstop/vite-plugin` (above) |
-| Next.js | `app/layout.tsx` (App Router) or `pages/_document.tsx` (Pages Router) |
-| Remix | `app/root.tsx` inside the `<Scripts />` block |
-| SvelteKit | `src/app.html` |
-| CRA / webpack | `public/index.html` |
-| Astro | `src/layouts/Layout.astro` |
-| Plain HTML | wherever your `<body>` is |
+| `start_review(items)` — open session; returns `watcher` for Monitor | `get_state()` — read everything |
+| `add_items(items)` — append items mid-review | `get_unread_responses()` — drain unread queue (atomic) |
+| `complete_review()` — terminal | `mark_addressing(itemId, narration)` — pill update |
+| | `set_current_item(itemId)` — move drawer cursor |
 
-> ⚠️ **Tested setups**: Vite + Nuxt on macOS. Next.js / Remix / SvelteKit / CRA / Astro snippets are derived from how their script-injection mechanisms work but aren't yet smoke-tested. If something doesn't work, [open an issue](https://github.com/AmmDuncan/pitstop/issues).
+## Architecture
 
----
+See `docs/superpowers/specs/2026-05-04-pitstop-agent-driven-flow-design.md` for the full architecture.
 
-## Run
+Briefly:
 
-Two terminals for now (daemon auto-start is on the roadmap):
-
-**Terminal A — pitstop daemon (long-running):**
-```bash
-cd ~/pitstop
-bun run packages/daemon/src/index.ts
-```
-
-**Terminal B — your dev project:**
-```bash
-cd ~/your-project
-bun dev
-```
-
-Open your dev app in the browser. The drawer is mounted but empty, waiting for a session.
-
-In your Claude Code session, ask the agent:
-
-> Use the `start_review` MCP tool to walk me through the work you just did. `projectRoot` is `/Users/YOU/your-project`.
-
-The drawer fills with items. Walk through them.
-
----
-
-## Use
-
-| Key | Action |
-|---|---|
-| `j` / `↓` | Next item |
-| `k` / `↑` | Previous item |
-| `⏎` | Mark *looks-good* + auto-advance (local — agent not contacted) |
-| `c` | Focus comment textarea |
-| `⌘⏎` | Send comment (wakes the agent via `claude --resume`) |
-| `esc` | Blur comment / close help overlay |
-| `[` / `]` | Cycle drawer position (right / left / floating) |
-| `=` | Cycle size (standard / compact / strip) |
-| `t` | Cycle theme (auto / dark / light) |
-| `?` | Toggle full keymap overlay |
-
-Position, size, and theme persist per-browser via `localStorage`.
-
----
-
-## Known limitations
-
-- **Daemon doesn't auto-start.** You have to keep Terminal A running.
-- **Only Vite / Nuxt have a one-line plugin.** Everything else needs the manual snippet above. No browser extension yet.
-- **One review per browser tab.** Sessions are bound to the project root the agent passes in.
-- **No session cleanup.** Old sessions accumulate in `~/.claude/pitstop/sessions/`.
-- **Smoke-tested on macOS with Bun + Claude Code + Vite/Nuxt.** Test suite passes (30/30); daemon endpoints (`/health`, `/inject.js`, `/demo`) verified. Other framework snippets are derived from each framework's normal script-injection mechanism but aren't yet smoke-tested end-to-end.
-- **Pre-1.0.** Tool names, ports, and config shape can change between commits. Pin to a tag once they exist.
-
----
-
-## Updating
-
-```bash
-cd ~/pitstop
-git pull
-cd packages/inject && bun run build   # rebuild the drawer if its source changed
-```
-
-Pin to a specific release if you want stability over latest:
-```bash
-git checkout v0.1.0
-```
-
-Latest release: **v0.1.0** (initial public release).
-
----
+- Drawer is agent-passive. It sends responses, renders state, never navigates.
+- Agent is the cursor. It decides what's next and drives via the browser toolbelt.
+- `Monitor` (started once at session top) is the live heartbeat. Each new drawer response wakes the agent in this conversation as a chat-level notification.
+- UserPromptSubmit hook covers the case where you happen to be typing.
 
 ## Repo layout
 
 ```
 packages/
-  daemon/        — HTTP server, session store, /inject.js, claude-resume spawner
+  daemon/        — HTTP server, session store, /inject.js, SSE broadcaster
   mcp-adapter/   — stdio↔HTTP bridge that Claude Code spawns
   inject/        — Solid.js drawer (Shadow DOM); pre-built into dist/
-  vite-plugin/   — Vite/Nuxt plugin that injects the <script> tag
+  scripts/       — pitstop-context.sh (hook), pitstop-watch.sh (watcher)
   shared/        — types and zod schemas
 docs/            — design brief, specs, plans
 ```
 
----
+## Limitations
+
+- The daemon-spawned `claude --resume` is a fallback for offline sessions. It often no-ops in active sessions; that's expected. The live MCP path is the load-bearing one.
+- Single-tab assumption. Multi-tab handling is out of scope for v0.2.
+- The drawer's `kind: 'navigate'` skip-ahead response is not implemented yet. Approves and comments are the only response kinds.
+
+## Development
+
+The repo is a Bun monorepo. Tests:
+
+```bash
+bun --cwd packages/daemon test
+```
+
+Build inject bundle:
+
+```bash
+bun --cwd packages/inject run build
+```
+
+Build mcp-adapter (after edits):
+
+```bash
+bun build packages/mcp-adapter/src/index.ts --outfile packages/mcp-adapter/dist/index.js --target=node --format=esm
+```
 
 ## License
 
-[MIT](LICENSE)
+MIT.
