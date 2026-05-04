@@ -1,8 +1,10 @@
 {
   "name": "@pitstop/mcp-adapter",
   "type": "module",
-  "version": "0.2.0",
-  "bin": { "pitstop-mcp": "./src/index.ts" },
+  "version": "0.2.1",
+  "bin": {
+    "pitstop-mcp": "./src/index.ts"
+  },
   "dependencies": {
     "@pitstop/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.0",
