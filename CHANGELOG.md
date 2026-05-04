@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.16 — 2026-05-04
+
+### Added
+
+- **Auto-scroll to lifecycle strip on submit.** When the action area transitions from idle (buttons or PendingQuestion) to sending/poked (status strip), the detail-scroll container auto-scrolls smoothly to its bottom so the strip is in view. Previously, if you submitted via keyboard while scrolled up reading the item body, you'd get no visual confirmation — the strip would appear off-screen below the fold.
+
 ## v0.3.15 — 2026-05-04
 
 ### Changed

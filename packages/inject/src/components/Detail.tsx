@@ -1,4 +1,4 @@
-import { type Component, createSignal, For, Show } from 'solid-js';
+import { type Component, createEffect, createSignal, For, Show } from 'solid-js';
 import { marked } from 'marked';
 import {
   session,
@@ -23,6 +23,23 @@ export const Detail: Component = () => {
   const item = () => session.s?.items[currentItemIdx()];
   const itemId = () => item()?.id ?? '';
   const comment = () => getDraft(itemId());
+
+  // When the user submits (via mouse or keyboard), the action area is
+  // replaced by a status strip. If they were scrolled up reading the item
+  // body, the strip lands off-screen and they get no visual confirmation.
+  // Scroll the detail-scroll container to its bottom so the strip is in view.
+  let prevSubmitState: 'idle' | 'sending' | 'poked' = 'idle';
+  createEffect(() => {
+    const ss = submitState();
+    if (prevSubmitState === 'idle' && (ss === 'sending' || ss === 'poked')) {
+      requestAnimationFrame(() => {
+        const host = document.querySelector('pitstop-drawer') as unknown as { shadowRoot: ShadowRoot | null } | null;
+        const scroll = host?.shadowRoot?.querySelector('.detail-scroll');
+        if (scroll) scroll.scrollTo({ top: scroll.scrollHeight, behavior: 'smooth' });
+      });
+    }
+    prevSubmitState = ss;
+  });
   const [submitting, setSubmitting] = createSignal(false);
 
   const onApprove = async () => {
