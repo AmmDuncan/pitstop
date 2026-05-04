@@ -75,7 +75,7 @@ const tools = [
     description: `Start a pitstop review session with N items. Returns { sessionId, url, drawerStatus, watcher }.
 
 After calling this you MUST:
-(0) Inspect 'drawerStatus'. If 'connected' is false, STOP — the drawer is not wired into the dev app yet, so the user can't see anything you do. Surface drawerStatus.hint to them (it includes a copy-paste script-tag snippet). Wait until the user confirms they've added it and reloaded their dev page; the next start_review call will report connected=true.
+(0) Inspect 'drawerStatus'. If 'connected' is false, STOP and self-heal: call wire_drawer({ projectRoot }) using the SAME projectRoot you just passed to start_review. wire_drawer returns the framework + two wiring options. Surface those options to the user via AskUserQuestion ("Wire pitstop into <framework>: committed conditional snippet, or local-only gitignored file?"). After the user picks, perform the file edit yourself (paste the option's snippet into the option's file, append option.gitignoreLine to .gitignore if set), then ask the user to reload their dev page and call start_review again. Do NOT ask the user to manually paste anything — wire_drawer + your file write covers it.
 (1) Read the returned 'watcher' block and immediately invoke the Monitor tool with its command/description/persistent fields verbatim — that's the live channel the user's drawer responses arrive on.
 (2) Use a browser-driving toolbelt (Claude in Chrome or agent-browser) to drive the user's tab to the first item's surface.
 (3) Call set_current_item + mark_addressing so the drawer cursor matches what the user is looking at.
@@ -158,20 +158,27 @@ ${AUTHORING_HINT}`,
   },
   {
     name: 'wire_drawer',
-    description: `Inspect the user's project, detect its framework, and return the two wiring options (committed vs local-only) for getting the pitstop drawer into their dev pages. The agent should call this before the first start_review on a fresh project, surface the options to the user via AskUserQuestion (committed = team-visible, local-only = gitignored), then perform the actual file edit using the returned snippet + file path.
+    description: `Inspect the user's project, detect its framework, and return the two wiring options (committed vs local-only) for getting the pitstop drawer into their dev pages.
+
+When to call (you should not need the user to spell this out):
+- start_review returned drawerStatus.connected === false. Use the SAME projectRoot you just used for start_review.
+- The user asks any variant of "wire pitstop", "set up the drawer", "install the drawer". You don't need a path from them — default projectRoot to the current working directory (use Bash 'pwd' if you don't already have it in conversation context).
+
+What you do with the result:
+1. Surface the two options to the user via AskUserQuestion. Use the option's 'label' as the AskUserQuestion option label and 'description' as the option description. Mark the one matching result.recommended with "(Recommended)". Surface result.notes (e.g. ".gitignore needs an extra line") as additional context.
+2. After the user picks, YOU perform the file edit: paste option.snippet into option.file (creating the file if it doesn't exist; modifying in place if it does — be smart about merging if a config file already has the relevant section). If option.gitignoreLine is set, append that line to .gitignore (skip if already present).
+3. Tell the user to reload their dev page, then re-run start_review.
 
 Returns: { framework, projectRoot, options: [{id, label, description, file, snippet, gitignoreLine?}, ...], recommended: 'committed'|'local-only', notes: string[] }.
 
-The agent OWNS the file write — wire_drawer never touches files. After the user picks, paste 'snippet' into 'file' (creating it if needed) and, if 'gitignoreLine' is set on the chosen option, append that line to .gitignore. The 'notes' array carries hints worth surfacing to the user (missing gitignore lines, unknown framework, etc.).
-
-When to call: (1) before the first start_review on a project — the drawerStatus check on start_review tells you when wiring is missing; (2) the user explicitly asks to wire pitstop into a project. Do NOT call this on every start_review; once wired, it's wired.`,
+wire_drawer NEVER writes files — that's your job, so the user can review your edit before it lands.`,
     inputSchema: {
       type: 'object',
       required: ['projectRoot'],
       properties: {
         projectRoot: {
           type: 'string',
-          description: 'Absolute path to the project to inspect. Same shape as start_review.projectRoot.',
+          description: "Absolute path to the project to inspect. If the user just said 'wire drawer' without a path, default to the current working directory (Bash 'pwd' resolves it). Same shape as start_review.projectRoot.",
         },
       },
     },

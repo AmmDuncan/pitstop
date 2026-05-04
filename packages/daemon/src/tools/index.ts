@@ -51,9 +51,8 @@ export const tools = {
       : {
           connected: false as const,
           hint:
-            'No /inject.js fetch seen for this projectRoot in the last 10 minutes — the drawer is probably not wired into the dev app yet. ' +
-            'Surface this snippet to the user before driving the review (drop it into the dev app\'s HTML, defer-load, then refresh):\n' +
-            `<script src="${ctx.baseUrl}/inject.js?pitstop-project=${encodeURIComponent(p.projectRoot)}" defer></script>`,
+            'No /inject.js fetch seen for this projectRoot in the last 10 minutes — the drawer probably is not wired into the dev app yet. ' +
+            `Call wire_drawer({ projectRoot: ${JSON.stringify(p.projectRoot)} }) — it returns the framework + two wiring options (committed conditional snippet vs local-only gitignored file) with exact snippets and file paths. Surface the options to the user via AskUserQuestion, then perform the file edit yourself. Do NOT paste raw snippets into the conversation and ask the user to do it.`,
         };
 
     return {
