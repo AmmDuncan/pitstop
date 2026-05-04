@@ -53,3 +53,13 @@ Restart Claude Code so the new MCP schema is registered.
 
 Initial public release. Drawer + daemon + mcp-adapter + browser-driving
 toolbelt agnosticism. See `README.md`.
+
+## v0.2.1 — 2026-05-04
+
+### Added
+
+- **AgentFeed expander** — when more than 5 narrations exist, a `… +N older` line appears beneath the feed. Click expands to a scrollable history of all narrations (capped at the daemon's 50-entry ring buffer), with the newest still amber-chevron-highlighted and the older ones at full readability. `SHOW LESS` collapses back.
+
+### Note
+
+Tracks the MCP server version string in `packages/mcp-adapter/src/index.ts` alongside the workspace package versions.
