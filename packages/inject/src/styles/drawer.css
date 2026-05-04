@@ -674,7 +674,9 @@
 .agent-feed.has-older .agent-feed-line[data-rank="3"] { opacity: 0.45; }
 .agent-feed.has-older .agent-feed-line[data-rank="4"] { opacity: 0.30; }
 .agent-feed.expanded .agent-feed-list {
-  max-height: 180px;
+  /* Roughly the same height as the collapsed 5-line feed — expanding adds
+     scrollability without displacing the detail content above. */
+  max-height: 90px;
   overflow-y: auto;
 }
 .agent-feed-more {
