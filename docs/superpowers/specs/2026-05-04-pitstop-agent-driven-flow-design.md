@@ -14,6 +14,14 @@ The intended experience is different: every item is anchored to a surface in the
 
 The drawer is the cursor in the user's app. The agent is the one moving the cursor and driving the user's tab to match. Pitstop becomes a guided walkthrough machine, not a reading list.
 
+### Why this matters (the soul of pitstop)
+
+Agents can smoke-test their own implementations. But that's not the same as a human looking. Humans catch things agents miss — UX feel, taste calls, off-by-one visual bugs, "this technically works but it's wrong" judgements that don't surface in the agent's own reasoning. Pitstop exists because there's no replacement for the human actually seeing the surface.
+
+The job of pitstop is to make that human review process *easier and more friendly* — to lower the friction of "ok, but did I actually look at all of this?" The agent doing the navigation is what makes it friendly: instead of the human chasing down every change in their app, the agent takes them on a tour. The human's job becomes *seeing*, not *finding*.
+
+This is why the agent must drive. A static review queue is a checklist of things the agent thinks the human should look at. A driven review is the agent showing the human each surface in context, in order, with the work right in front of them. That's the difference pitstop is reaching for.
+
 ## 2. Substrate Assumptions
 
 The agent is the driver. Always. This spec assumes the agent has *some* browser-driving toolbelt at its disposal that targets the same browser instance the user is reviewing in. Concrete options the user might pick:
