@@ -40,6 +40,18 @@ const tools = [
   { name: 'get_state', description: 'Read the full session state.', inputSchema: { type: 'object', required: ['sessionId'], properties: { sessionId: { type: 'string' } } } },
   { name: 'get_unread_responses', description: 'Get all unread responses; marks them addressed atomically.', inputSchema: { type: 'object', required: ['sessionId'], properties: { sessionId: { type: 'string' } } } },
   { name: 'mark_addressing', description: 'Update the status pill so the user sees what the agent is doing.', inputSchema: { type: 'object', required: ['sessionId', 'narration'], properties: { sessionId: { type: 'string' }, itemId: { type: 'string' }, narration: { type: 'string' } } } },
+  {
+    name: 'set_current_item',
+    description: "Move the drawer's focused item to the given itemId. Call this after navigating the user's tab to a new item's surface so the drawer cursor matches the agent's chosen view.",
+    inputSchema: {
+      type: 'object',
+      required: ['sessionId', 'itemId'],
+      properties: {
+        sessionId: { type: 'string' },
+        itemId: { type: 'string' },
+      },
+    },
+  },
   { name: 'complete_review', description: 'End the review session.', inputSchema: { type: 'object', required: ['sessionId'], properties: { sessionId: { type: 'string' } } } },
 ];
 
