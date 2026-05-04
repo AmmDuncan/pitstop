@@ -4,8 +4,8 @@
 
 - **Branch**: `feat/v0.2-richer-items` (parent: `feat/agent-driven-flow-spec`)
 - **Origin**: pushed (commit `b17bc09`)
-- **Last checkpoint**: 2026-05-04 — task #3 done: `AgentFeed` mounted above `Footer`, `StatusTag` slimmed to dot-only during narration so it doesn't duplicate the feed
-- **Next step**: task #5 — expand MCP tool descriptions in `packages/mcp-adapter/src` so any agent fills `lookFor` / `tested` / `concerns` correctly without needing user prompts
+- **Last checkpoint**: 2026-05-04 — task #6 done: README has an "Authoring items" section with worked example; CHANGELOG.md added; all `packages/*/package.json` bumped to `0.2.0`.
+- **Next step**: task #7 — run daemon tests, rebuild mcp-adapter + inject bundles, tag `v0.2.0`
 - **Owner laptop**: dvla-idtms macOS (battery low, may hand off mid-flight)
 
 ## Theme of v0.2
@@ -20,7 +20,7 @@ The 2026-05-04 smoke test against DIMOS surfaced that pitstop items were too thi
 | 2 | ✅ done | Render the three sections in `Detail.tsx` | Color-coded labels (amber / ok / err). CSS in `drawer.css` under `.detail-list`. |
 | 3 | ✅ done | `AgentFeed` above `Footer`, `StatusTag` slim during narration | Component at `packages/inject/src/components/AgentFeed.tsx`. Reads last 5 narrations, oldest fades via `data-rank` opacity. Header shows just a pulse dot during `addressing`/`working`/`writing`. |
 | 4 | ✅ done | Daemon ring buffer for narrations | Already wired — `mark_addressing` writes to `agentActivity`, capped at 50, broadcasts `state-changed`. |
-| 5 | ⏳ pending | Self-documenting MCP tool descriptions | In `packages/mcp-adapter/src`, expand `start_review` + `add_items` description / param descriptions so any agent fills in `body`, `lookFor`, `tested`, `concerns`, `question` without needing user prompts. |
+| 5 | ✅ done | Self-documenting MCP tool descriptions | `packages/mcp-adapter/src/index.ts` — every tool now has a verbose description, every item field has a `description` in the JSON schema, and an `AUTHORING_HINT` block is embedded in `start_review` + `add_items`. Server version → `0.2.0`. |
 | 6 | ⏳ pending | README "Authoring items" section + `CHANGELOG.md` entry + version bump | Bump root and all `packages/*` to `0.2.0`. |
 | 7 | ⏳ pending | Build, test, tag `v0.2.0` | `bun --cwd packages/daemon test`; rebuild both bundles; tag and push; restart Claude Code. |
 

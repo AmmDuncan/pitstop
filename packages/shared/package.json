@@ -1,7 +1,7 @@
 {
   "name": "@pitstop/shared",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "exports": { ".": "./src/index.ts" },
   "dependencies": { "zod": "^3.23.0" }
 }

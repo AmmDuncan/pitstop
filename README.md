@@ -112,6 +112,45 @@ What happens:
 5. Drawer pill flips `SENDING…` → `POKED_CLAUDE · WAITING`. The watcher emits a stdout line. Claude wakes up here, drains responses via `get_unread_responses`, drives your tab to the next surface, repeat.
 6. When done, `complete_review` flips the pill green. Or click `DONE` in the drawer footer.
 
+## Authoring items
+
+Each item is a tiny handoff document the reviewer reads on the surface where the change lives. Thin items waste the round-trip; rich items pay back tenfold. Pitstop's MCP tool descriptions bake the convention in — your agent will follow it without you having to ask — but the shape, for reference:
+
+| Field | What goes here |
+|---|---|
+| `title` | Short, scannable headline (~6 words). |
+| `body` | **Why** this changed. 1–3 sentences, markdown allowed. Not a recap of the diff. |
+| `lookFor` | `string[]` — UX/visual things the reviewer should specifically watch for. |
+| `tested` | `string[]` — what the agent already exercised, so the reviewer doesn't repeat work. |
+| `concerns` | `string[]` — open trade-offs the agent is unsure about. |
+| `question` | The single decision the reviewer is being asked. One sentence, ends in `?`. |
+
+Worked example:
+
+```json
+{
+  "id": "01",
+  "title": "Wizard split into section components",
+  "body": "Each step used to live in a single 600-line `SuspensionWizard.vue`. Extracted per-step components (`BasicInfoStep`, `IdentityStep`, `ContactStep`, …) so each section is independently navigable and testable. No behaviour change.",
+  "lookFor": [
+    "Step transitions feel snappy — no flash of empty content between steps.",
+    "Focus lands on the first input of each step on mount.",
+    "Header progress bar advances cleanly; the step number matches the heading."
+  ],
+  "tested": [
+    "Happy path: filled all steps, hit Submit, saw the success modal.",
+    "Back-button mid-wizard preserves entered data.",
+    "Tabbed through with keyboard only — no traps."
+  ],
+  "concerns": [
+    "Used `provide`/`inject` for cross-step shared state; could be a Pinia store instead. Open to either."
+  ],
+  "question": "Does the per-step component cut feel right, or would you rather a single wizard file with computed sections?"
+}
+```
+
+Lists beat prose. One bullet per thing beats a paragraph.
+
 ## MCP tools
 
 The agent has 7 tools:
