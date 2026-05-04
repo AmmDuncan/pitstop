@@ -68,6 +68,11 @@ export const ActivityEntryZ = z.object({
    *  here so the drawer can tell whether the *current* item has been
    *  addressed yet (ergo buttons can show), vs the agent still driving. */
   itemId: z.string().optional(),
+  /** Set on mark_addressing entries. `false` = mid-drive narration, drawer
+   *  keeps buttons hidden (AWAITING CLAUDE strip stays). Missing or `true`
+   *  = the user can now act on this item; buttons appear. Default true for
+   *  backwards compat with v0.3.13–v0.3.20 callers. */
+  arrived: z.boolean().optional(),
 });
 
 export const SessionStatusZ = z.enum(['idle', 'active', 'paused', 'complete']);

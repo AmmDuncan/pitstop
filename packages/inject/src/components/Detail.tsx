@@ -151,8 +151,11 @@ export const Detail: Component = () => {
           const pending = () => session.s?.pendingQuestion ?? null;
           const itemAddressed = () => {
             const id = item()!.id;
+            // Buttons appear once we've seen an `arrived !== false` entry for
+            // this item. Mid-drive narrations passed with arrived: false keep
+            // the AWAITING CLAUDE strip up.
             return (session.s?.agentActivity ?? []).some(
-              (e) => e.tool === 'mark_addressing' && e.itemId === id,
+              (e) => e.tool === 'mark_addressing' && e.itemId === id && e.arrived !== false,
             );
           };
           const stripState = () => {

@@ -129,10 +129,22 @@ export const tools = {
   },
 
   async mark_addressing(ctx: Ctx, params: unknown) {
-    const P = z.object({ sessionId: z.string(), itemId: z.string().nullable(), narration: z.string() });
-    const { sessionId, itemId, narration } = P.parse(params);
+    const P = z.object({
+      sessionId: z.string(),
+      itemId: z.string().nullable(),
+      narration: z.string(),
+      arrived: z.boolean().optional(),
+    });
+    const { sessionId, itemId, narration, arrived } = P.parse(params);
     const at = Date.now();
-    const entry = { at, tool: 'mark_addressing', narration, itemId: itemId ?? undefined };
+    const entry = {
+      at,
+      tool: 'mark_addressing',
+      narration,
+      itemId: itemId ?? undefined,
+      // Default true keeps v0.3.13–v0.3.20 callers working unchanged.
+      arrived: arrived ?? true,
+    };
     const session = await ctx.store.update(sessionId, (s) => ({
       ...s,
       agentActivity: [...s.agentActivity, entry].slice(-50),

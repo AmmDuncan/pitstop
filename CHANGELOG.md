@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.21 — 2026-05-04
+
+### Added
+
+- **`arrived` flag on `mark_addressing`.** Optional boolean (default `true`, for backwards compat with v0.3.13–v0.3.20 callers). Agents narrating progressively during navigation should pass `arrived: false` on intermediate calls — the drawer keeps the `AWAITING CLAUDE` strip up and buttons hidden. The final narration omits the flag (or passes `arrived: true`) to unlock the action buttons. Single-narration items work unchanged. MCP tool description spells out the rule.
+
 ## v0.3.17 — 2026-05-04
 
 ### Added

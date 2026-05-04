@@ -128,7 +128,13 @@ ${AUTHORING_HINT}`,
   },
   {
     name: 'mark_addressing',
-    description: "Append a single human-readable narration line to the agent feed at the bottom of the drawer. The reviewer sees the last ~5 lines, newest first, oldest fades. This is the agent's voice in the UI — keep narrations high-level (one sentence, what you're about to do or just did from the user's perspective). Good: 'Driving you to the rides page so you can see the banner placement.' Bad: 'Calling agent-browser open http://localhost:3000/rides'. Call this AFTER set_current_item when moving to a new item, or anytime you want to update the user on what's happening (e.g. 'Drained your comment, fixing the duplicate heading before moving on').",
+    description: `Append a one-line narration to the CLAUDE feed at the bottom of the drawer. The reviewer sees the last ~5 lines, newest highlighted. Keep narrations one short sentence in plain language ("Driving you to /rides", "Showing the validation banner"). NOT a tool-call log.
+
+ARRIVED FLAG (controls when the action buttons unlock for the user):
+- arrived: false → mid-drive narration. Buttons stay hidden, AWAITING CLAUDE strip persists. Use this for every narration WHILE you're still navigating to / loading / setting up the surface.
+- arrived: true (default) → user can act on this item now. Buttons appear. Use this for the FINAL narration before you wait for the user's review (e.g. "Showing you the per-step wizard split — review now").
+
+If you only narrate once per item (arrive immediately), omit the flag — the default is true. If you narrate multiple times during driving, pass arrived: false on all but the last.`,
     inputSchema: {
       type: 'object',
       required: ['sessionId', 'narration'],
@@ -136,6 +142,7 @@ ${AUTHORING_HINT}`,
         sessionId: { type: 'string' },
         itemId: { type: 'string', description: 'Optional. Item the narration is about; usually the same id you just passed to set_current_item.' },
         narration: { type: 'string', description: 'One sentence in plain language. What the user would say if they were narrating their own screen. NOT a tool-call log line.' },
+        arrived: { type: 'boolean', description: 'Default true. Pass false on mid-drive narrations to keep the action buttons hidden until the final "user can act now" narration.' },
       },
     },
   },
