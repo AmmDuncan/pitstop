@@ -190,7 +190,7 @@ wire_drawer NEVER writes files — that's your job, so the user can review your 
   },
 ];
 
-const server = new Server({ name: 'pitstop', version: '0.3.1' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'pitstop', version: '0.3.2' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
