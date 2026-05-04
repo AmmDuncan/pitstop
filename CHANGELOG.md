@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.24 — 2026-05-04
+
+### Changed
+
+- **Logo: 🏁 emoji → custom SVG (flush 2×2 checker).** v0.3.23 used the checkered-flag emoji as a placeholder, which renders differently across OSes (Apple/Microsoft/Google all draw 🏁 their own way). v0.3.24 replaces it with an inline SVG mark — variant A1 from the 2026-05-04 visual brainstorm — so the drawer header looks identical everywhere. Spec at `docs/superpowers/specs/2026-05-04-pitstop-logo-design.md`.
+
 ## v0.3.21 — 2026-05-04
 
 ### Added
