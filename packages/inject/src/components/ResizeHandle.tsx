@@ -1,4 +1,4 @@
-import { type Component, createSignal, onCleanup } from 'solid-js';
+import { type Component } from 'solid-js';
 
 type Direction = 'edge-left' | 'edge-right' | 'corner-se' | 'corner-sw' | 'corner-ne' | 'corner-nw';
 
@@ -16,41 +16,43 @@ const cursors: Record<Direction, string> = {
   'corner-nw': 'nwse-resize',
 };
 
+/** Resize handle with pointer-event capture. Same shape as the floating-
+ *  drawer header drag — mouse* events on `window` could miss the up event
+ *  when the cursor left the viewport, leaving the drawer following the
+ *  pointer. Pointer capture guarantees the release fires. */
 export const ResizeHandle: Component<Props> = (props) => {
-  const [dragging, setDragging] = createSignal(false);
-  let lastX = 0;
-  let lastY = 0;
+  const onPointerDown = (e: PointerEvent) => {
+    e.preventDefault();
+    const el = e.currentTarget as HTMLElement;
+    el.setPointerCapture(e.pointerId);
 
-  const onMove = (e: MouseEvent) => {
-    if (!dragging()) return;
-    props.onDrag(e.clientX - lastX, e.clientY - lastY);
-    lastX = e.clientX;
-    lastY = e.clientY;
-  };
+    let lastX = e.clientX;
+    let lastY = e.clientY;
 
-  const onUp = () => {
-    setDragging(false);
-    window.removeEventListener('mousemove', onMove);
-    window.removeEventListener('mouseup', onUp);
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-  };
-
-  const onDown = (e: MouseEvent) => {
-    setDragging(true);
-    lastX = e.clientX;
-    lastY = e.clientY;
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId !== e.pointerId) return;
+      const dx = ev.clientX - lastX;
+      const dy = ev.clientY - lastY;
+      lastX = ev.clientX;
+      lastY = ev.clientY;
+      props.onDrag(dx, dy);
+    };
+    const release = () => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', release);
+      el.removeEventListener('pointercancel', release);
+      el.removeEventListener('lostpointercapture', release);
+      try { el.releasePointerCapture(e.pointerId); } catch {}
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', release);
+    el.addEventListener('pointercancel', release);
+    el.addEventListener('lostpointercapture', release);
     document.body.style.cursor = cursors[props.direction];
     document.body.style.userSelect = 'none';
-    e.preventDefault();
   };
 
-  onCleanup(() => {
-    window.removeEventListener('mousemove', onMove);
-    window.removeEventListener('mouseup', onUp);
-  });
-
-  return <div class={`resize-handle ${props.direction}`} onMouseDown={onDown} />;
+  return <div class={`resize-handle ${props.direction}`} onPointerDown={onPointerDown} />;
 };
