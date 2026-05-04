@@ -17,6 +17,8 @@ async function createSessionWithResponses(app: any) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ itemId: '01', kind: 'approve' }),
   }));
+  // Ensure distinct `at` timestamps so the since= filter test isn't flaky on fast hardware.
+  await new Promise((r) => setTimeout(r, 2));
   await app.fetch(new Request(`http://localhost/api/sessions/${session.id}/responses`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
