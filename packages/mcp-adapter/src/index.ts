@@ -94,6 +94,11 @@ ${AUTHORING_HINT}`,
           type: 'string',
           description: 'Optional git branch label shown in the drawer header. Pass the current feature branch name.',
         },
+        devUrls: {
+          type: 'array',
+          items: { type: 'string' },
+          description: "Origins (e.g. ['http://localhost:3000']) where this review's surfaces live. PASS THIS WHEN THE DEV URL IS KNOWN — without it, the pitstop browser extension can't tell which localhost tab to show the drawer on, and may surface this review on unrelated localhost pages. You usually know the dev URL because you just drove the user there. Pass an array even for a single origin.",
+        },
         items: {
           type: 'array',
           description: 'The review items to put in front of the reviewer. See ITEM AUTHORING above. Order matters — item 0 is shown first.',
@@ -158,7 +163,7 @@ ${AUTHORING_HINT}`,
   },
 ];
 
-const server = new Server({ name: 'pitstop', version: '0.2.2' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'pitstop', version: '0.3.0' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {

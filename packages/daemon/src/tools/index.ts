@@ -19,6 +19,9 @@ const DRAWER_FRESHNESS_MS = 10 * 60 * 1000;
 const StartReviewZ = z.object({
   projectRoot: z.string(),
   branch: z.string().optional(),
+  /** Origins (e.g. http://localhost:3000) where this review's surfaces live.
+   *  Lets the browser-extension drawer scope itself to the right tabs. */
+  devUrls: z.array(z.string()).optional(),
   items: z.array(ItemZ.omit({ index: true }).partial({ id: true, attachments: true })),
 });
 
@@ -29,7 +32,11 @@ export const tools = {
     if (existing && existing.status !== 'idle') {
       throw new Error(`ALREADY_ACTIVE:${existing.id}`);
     }
-    const session = await ctx.store.create({ ...p, clientSessionId: ctx.clientSessionId } as any);
+    const session = await ctx.store.create({
+      ...p,
+      devUrls: p.devUrls ?? [],
+      clientSessionId: ctx.clientSessionId,
+    } as any);
     ctx.bus.publish(session.id, { type: 'state-snapshot', session });
 
     // Drawer-wiring sniff: if /inject.js has not been requested for this

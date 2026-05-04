@@ -43,21 +43,62 @@ claude mcp list | grep pitstop
 # pitstop: node /Users/YOU/pitstop/packages/mcp-adapter/dist/index.js - ✓ Connected
 ```
 
-### 3. Wire the drawer into your dev app
+### 3. Wire the drawer into your dev page
 
-The drawer needs one `<script>` tag in your dev app's HTML during dev. Tell your agent:
+Pick the option that fits how you'll use pitstop. **The Chrome extension is recommended for daily use** — install once, every project's drawer just appears.
 
-> *"Set up the pitstop drawer in this project."*
+#### Option A — Chrome extension (recommended)
 
-The agent will pick the right file for your stack and add this tag (or its equivalent for your framework):
+Zero code in any dev app. The drawer appears on every `localhost:*` tab where you have an active pitstop session.
+
+1. Open `chrome://extensions/`.
+2. Toggle **Developer mode** (top-right).
+3. Click **Load unpacked** and select `~/pitstop/packages/extension/`.
+
+That's it — works across every project, every port, every browser restart. The extension only mounts the drawer when an agent has actually started a review for that origin (so quiet localhost tabs stay quiet).
+
+> ⚠️ Extensions don't load in Playwright-driven Chromium (e.g. agent-browser). If your reviews are agent-driven (smoke tests, CI), use Option B or C below instead — or in addition.
+
+#### Option B — Local-only plugin file (no commit, but per-project)
+
+For when you want zero source touch but the extension isn't an option (Playwright sessions, headless CI, browser restrictions).
+
+Create a plugin file your team `.gitignore`s and only you have. Nuxt example:
+
+```ts
+// app/plugins/pitstop.client.local.ts (add `*.client.local.ts` to .gitignore)
+export default defineNuxtPlugin(() => {
+  if (process.dev) {
+    const s = document.createElement('script')
+    s.src = 'http://localhost:7773/inject.js'
+    s.defer = true
+    document.head.appendChild(s)
+  }
+})
+```
+
+Equivalent patterns work for Vite (`vite.config.local.ts` import), Next.js (`_app.local.tsx`), etc.
+
+#### Option C — Committed script tag (when the team wants it on by default)
+
+If your whole team uses pitstop and you want it baked into the dev workflow, add the tag to your dev config so it's there on every developer's machine without per-laptop setup:
 
 ```html
 <script src="http://localhost:7773/inject.js?pitstop-project=<absolute-project-path>" defer></script>
 ```
 
-`?pitstop-project=` binds the drawer to the active session for that project root. Vite, Nuxt, Next.js, SvelteKit, Astro, plain HTML — wherever the tag fits.
+Or wired conditionally via your framework config (Nuxt example, dev-only):
 
-If you forget this step, `start_review` will warn the agent that the drawer isn't connected and suggest the snippet for your stack — so you'll find out immediately instead of staring at a blank screen.
+```ts
+// nuxt.config.ts
+script: process.env.NODE_ENV === 'development'
+  ? [{ src: `http://localhost:7773/inject.js?pitstop-project=${encodeURIComponent(rootDir)}`, defer: true, tagPosition: 'bodyClose' }]
+  : []
+```
+
+`?pitstop-project=` binds the drawer to a session for that project root. Without it (Options A and B), the drawer asks the daemon for the most recently active session matching the page's origin — that's why agents should pass `devUrls` on `start_review` so the extension shows on the right tabs.
+
+If neither the extension nor a script tag is wired, `start_review` warns the agent and suggests the snippet — so you find out immediately instead of staring at a blank screen.
 
 <details>
 <summary>What <code>bun run setup</code> writes (manual fallback)</summary>

@@ -8,6 +8,7 @@ import { writeAtomic } from './atomic';
 type CreateInput = {
   projectRoot: string;
   branch?: string;
+  devUrls?: string[];
   items: Array<Omit<Item, 'index'> & { index?: number }>;
   clientSessionId?: string;
 };
@@ -30,6 +31,7 @@ export class Store {
       id: nanoid(8),
       projectRoot: input.projectRoot,
       branch: input.branch,
+      devUrls: input.devUrls ?? [],
       createdAt: now,
       updatedAt: now,
       status: 'idle',

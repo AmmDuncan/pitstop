@@ -17,6 +17,7 @@ const DEFAULT_SCRIPTS_DIR = (() => {
 const CreateZ = z.object({
   projectRoot: z.string(),
   branch: z.string().optional(),
+  devUrls: z.array(z.string()).optional(),
   items: z.array(ItemZ.omit({ index: true }).partial({ id: true, attachments: true })),
   clientSessionId: z.string().optional(),
 });
@@ -74,6 +75,30 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     const session = await store.create(parsed.data as Parameters<typeof store.create>[0]);
     bus.publish(session.id, { type: 'state-snapshot', session });
     return c.json(session, 201);
+  });
+
+  // Fallback for "no projectRoot in URL" wiring (browser extension, bookmarklet,
+  // proxy). Returns the most-recently-updated non-complete session, optionally
+  // scoped by `?origin=` so the extension only matches sessions whose `devUrls`
+  // include the page's location.origin.
+  //
+  // Resolution order:
+  //   1. If origin given: prefer active sessions whose devUrls include it.
+  //   2. Otherwise (or if none of the above): any active session with empty
+  //      devUrls (loose mode — backwards-compatible with v0.2.x).
+  //   3. Otherwise: 404.
+  app.get('/api/sessions/most-recent-active', async (c) => {
+    const origin = c.req.query('origin');
+    const all = await store.list();
+    const active = all.filter((s) => s.status !== 'complete');
+    active.sort((a, b) => b.updatedAt - a.updatedAt);
+    if (origin) {
+      const scoped = active.find((s) => s.devUrls?.includes(origin));
+      if (scoped) return c.json(scoped);
+    }
+    const loose = active.find((s) => !s.devUrls || s.devUrls.length === 0);
+    if (loose) return c.json(loose);
+    return c.json({ error: 'NO_ACTIVE_SESSION' }, 404);
   });
 
   app.get('/api/sessions/active', async (c) => {

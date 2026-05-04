@@ -1,7 +1,7 @@
 import { createMemo, createSignal } from 'solid-js';
 import { createStore, produce } from 'solid-js/store';
 import type { Session, SseEvent } from '@pitstop/shared';
-import { fetchActiveSession, openEventStream } from './client';
+import { fetchActiveSession, fetchMostRecentActiveSession, openEventStream } from './client';
 
 export const [session, setSession] = createStore<{ s: Session | null }>({ s: null });
 export const [currentItemIdx, setCurrentItemIdx] = createSignal(0);
@@ -75,9 +75,14 @@ export function applyEvent(e: SseEvent): void {
   }
 }
 
-/** Fetches the active session and opens an SSE stream. Returns a cleanup function. */
-export async function bootstrap(projectRoot: string): Promise<() => void> {
-  const initial = await fetchActiveSession(projectRoot);
+/** Fetches the active session and opens an SSE stream. Returns a cleanup function.
+ *  Pass `null` for `projectRoot` when the drawer is wired without a project hint
+ *  (browser extension, bookmarklet, proxy) — bootstrap will then fall back to
+ *  the most-recently-updated non-complete session across all roots. */
+export async function bootstrap(projectRoot: string | null): Promise<() => void> {
+  const initial = projectRoot
+    ? await fetchActiveSession(projectRoot)
+    : await fetchMostRecentActiveSession();
   if (initial) {
     setSession('s', initial);
     return openEventStream(initial.id, applyEvent);

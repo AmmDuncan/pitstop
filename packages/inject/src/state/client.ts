@@ -18,6 +18,21 @@ export async function fetchActiveSession(projectRoot: string): Promise<Session |
   return r.json();
 }
 
+/** Fallback for "no projectRoot wired" wiring — browser extension / bookmarklet
+ *  / proxy. Sends `location.origin` so the daemon only returns sessions whose
+ *  devUrls include this tab; falls back to a loose match (no devUrls set) if
+ *  no scoped session matches. */
+export async function fetchMostRecentActiveSession(): Promise<Session | null> {
+  const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
+  const url = origin
+    ? `${baseUrl}/api/sessions/most-recent-active?origin=${encodeURIComponent(origin)}`
+    : `${baseUrl}/api/sessions/most-recent-active`;
+  const r = await fetch(url);
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`most-recent-active fetch failed: ${r.status}`);
+  return r.json();
+}
+
 export function openEventStream(sessionId: string, on: (e: SseEvent) => void): () => void {
   const es = new EventSource(`${baseUrl}/api/sessions/${sessionId}/events`);
   for (const t of ['state-snapshot', 'state-changed', 'item-added', 'agent-activity', 'complete'] as const) {

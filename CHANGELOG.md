@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.3.0 — 2026-05-04
+
+The "wire it from anywhere" release. v0.2 still required every dev app to commit a `<script>` tag (or have a teammate add one). v0.3 introduces three wiring paths so you can pick the one that fits your workflow.
+
+### Added
+
+- **Browser extension** at `packages/extension/` (Manifest V3, unpacked-loadable). Install once in Chrome, drawer appears on every `localhost:*` tab where an active session matches. Zero edits to any dev app, ever. Survives browser restarts. Recommended for daily human review.
+- **`devUrls: string[]`** on `start_review` (and on the session schema). Agents pass the dev URL(s) where the review's surfaces live (e.g. `["http://localhost:3000"]`). The drawer's "no project hint" fallback uses this to scope itself to the right tab — without `devUrls`, the extension can't tell which localhost tab is yours and may surface the review on unrelated pages. The MCP `start_review` description tells agents to always include this when known.
+- **`GET /api/sessions/most-recent-active?origin=…`** — daemon endpoint backing the extension's "no projectRoot wired" fallback. Prefers sessions whose `devUrls` include the origin; falls back to a loose match (no devUrls set) when no scoped session matches.
+- **Polling fallback in inject** — when the drawer is loaded with no project hint and no session is yet active, it stays invisible and polls the daemon every 12s. The drawer auto-mounts the moment an agent starts a review. Quiet localhost tabs stay quiet.
+
+### Changed
+
+- README's "wire the drawer" section is now three explicit options (extension / local-only plugin / committed script tag) with the extension marked recommended. Each option calls out its trade-off (e.g. extensions don't load in Playwright-driven Chromium).
+- Inject's `bootstrap()` now accepts `null` for the project root, signalling "extension mode" — falls back to the `most-recent-active` endpoint.
+
+### Migration
+
+`v0.2` sessions on disk still load (`devUrls` defaults to `[]`, treated as loose mode). After pulling, run `bun run setup` again to rebuild both bundles. Reload your dev app pages.
+
 ## v0.2.2 — 2026-05-04
 
 ### Added

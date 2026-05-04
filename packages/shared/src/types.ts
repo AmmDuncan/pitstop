@@ -47,6 +47,11 @@ export const SessionZ = z.object({
   id: z.string(),
   projectRoot: z.string(),
   branch: z.string().optional(),
+  /** Origins (e.g. `http://localhost:3000`) where this review's surfaces live.
+   *  When set, the drawer (loaded via extension on any localhost tab) only
+   *  shows on tabs whose `location.origin` is in this list. Empty = loose
+   *  mode: the drawer matches any localhost tab. */
+  devUrls: z.array(z.string()).default([]),
   createdAt: z.number(),
   updatedAt: z.number(),
   status: SessionStatusZ,
