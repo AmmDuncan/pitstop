@@ -576,6 +576,45 @@
   border: 1px solid var(--rule-1);
 }
 
+.detail-list {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-1);
+  background: color-mix(in oklab, var(--bg-input) 60%, transparent);
+}
+.detail-list-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--t4);
+  margin: 0 0 6px;
+}
+.detail-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--t2);
+}
+.detail-list li {
+  position: relative;
+  padding-left: 14px;
+  margin-bottom: 4px;
+}
+.detail-list li::before {
+  content: '·';
+  position: absolute;
+  left: 4px;
+  color: var(--t4);
+}
+.detail-list.lookfor .detail-list-label { color: var(--amber-text); }
+.detail-list.tested .detail-list-label { color: var(--ok); }
+.detail-list.concerns .detail-list-label { color: var(--err); }
+
 .fileref {
   display: grid;
   grid-template-columns: 1fr auto;

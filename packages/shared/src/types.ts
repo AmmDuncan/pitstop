@@ -15,7 +15,14 @@ export const ItemZ = z.object({
   id: z.string(),
   index: z.number().int().positive(),
   title: z.string().min(1),
+  /** Markdown-rendered prose body. Lead with WHY this changed, in 1–3 sentences. */
   body: z.string(),
+  /** UX/visual things the reviewer should specifically watch for on this surface. */
+  lookFor: z.array(z.string()).default([]),
+  /** What the agent already exercised before pinging the user (happy path, mobile, keyboard, etc.). */
+  tested: z.array(z.string()).default([]),
+  /** Open trade-offs or things the agent is unsure about — flag for the reviewer. */
+  concerns: z.array(z.string()).default([]),
   question: z.string().optional(),
   attachments: z.array(AttachmentZ).default([]),
 });

@@ -75,6 +75,30 @@ export const Detail: Component = () => {
         </div>
         <h2 class="detail-title">{item()!.title}</h2>
         <div class="detail-body" innerHTML={marked.parse(item()!.body) as string} />
+        <Show when={item()!.lookFor.length}>
+          <section class="detail-list lookfor">
+            <h3 class="detail-list-label">LOOK_OUT_FOR</h3>
+            <ul>
+              <For each={item()!.lookFor}>{(line) => <li>{line}</li>}</For>
+            </ul>
+          </section>
+        </Show>
+        <Show when={item()!.tested.length}>
+          <section class="detail-list tested">
+            <h3 class="detail-list-label">TESTED</h3>
+            <ul>
+              <For each={item()!.tested}>{(line) => <li>{line}</li>}</For>
+            </ul>
+          </section>
+        </Show>
+        <Show when={item()!.concerns.length}>
+          <section class="detail-list concerns">
+            <h3 class="detail-list-label">KNOWN_CONCERNS</h3>
+            <ul>
+              <For each={item()!.concerns}>{(line) => <li>{line}</li>}</For>
+            </ul>
+          </section>
+        </Show>
         <For each={item()!.attachments.filter((a) => a.kind === 'file-ref')}>
           {(att) => <FileRef att={att as any} />}
         </For>
