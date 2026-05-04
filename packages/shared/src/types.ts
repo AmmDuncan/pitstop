@@ -56,6 +56,10 @@ export const SessionZ = z.object({
   pokeFailed: z.boolean().default(false).optional(),
   /** Timestamp of the most recent MCP/RPC tool call landing for this session. */
   lastAgentActivityAt: z.number().optional(),
+  /** The agent's authoritative cursor — which item should the drawer focus.
+   *  When unset (legacy sessions), the drawer falls back to its local cursor.
+   *  Updated by the agent via the (Phase B) `set_current_item` MCP tool. */
+  currentItemId: z.string().optional(),
 });
 
 export type Attachment = z.infer<typeof AttachmentZ>;
