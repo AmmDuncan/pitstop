@@ -3,7 +3,18 @@ import { ItemZ, type Session } from '@pitstop/shared';
 import type { Store } from '../store/sessions';
 import type { Bus } from '../http/sse';
 
-type Ctx = { store: Store; bus: Bus; baseUrl: string; clientSessionId?: string; scriptsDir: string };
+type Ctx = {
+  store: Store;
+  bus: Bus;
+  baseUrl: string;
+  clientSessionId?: string;
+  scriptsDir: string;
+  /** projectRoot → epoch ms of the last `/inject.js` GET seen for it. Lets
+   *  start_review tell the agent if the drawer probably isn't wired yet. */
+  drawerSeen?: Map<string, number>;
+};
+
+const DRAWER_FRESHNESS_MS = 10 * 60 * 1000;
 
 const StartReviewZ = z.object({
   projectRoot: z.string(),
@@ -20,9 +31,27 @@ export const tools = {
     }
     const session = await ctx.store.create({ ...p, clientSessionId: ctx.clientSessionId } as any);
     ctx.bus.publish(session.id, { type: 'state-snapshot', session });
+
+    // Drawer-wiring sniff: if /inject.js has not been requested for this
+    // projectRoot in the last 10 min, the agent should warn the user before
+    // driving anything — they'll otherwise sit watching a session URL that
+    // 404s with no clue why.
+    const lastSeen = ctx.drawerSeen?.get(p.projectRoot);
+    const drawerLikelyConnected = lastSeen !== undefined && Date.now() - lastSeen < DRAWER_FRESHNESS_MS;
+    const drawerStatus = drawerLikelyConnected
+      ? { connected: true as const, lastSeenAt: lastSeen! }
+      : {
+          connected: false as const,
+          hint:
+            'No /inject.js fetch seen for this projectRoot in the last 10 minutes — the drawer is probably not wired into the dev app yet. ' +
+            'Surface this snippet to the user before driving the review (drop it into the dev app\'s HTML, defer-load, then refresh):\n' +
+            `<script src="${ctx.baseUrl}/inject.js?pitstop-project=${encodeURIComponent(p.projectRoot)}" defer></script>`,
+        };
+
     return {
       sessionId: session.id,
       url: `${ctx.baseUrl}/?session=${session.id}`,
+      drawerStatus,
       watcher: {
         command: `${ctx.scriptsDir}/pitstop-watch.sh ${session.id}`,
         description: `pitstop unread responses · session ${session.id}`,

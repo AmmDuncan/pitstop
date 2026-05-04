@@ -23,44 +23,27 @@ Four pieces:
 
 ## Install
 
-### 1. Clone and install
+### 1. Clone, install, set up
 
 ```bash
 git clone https://github.com/AmmDuncan/pitstop.git ~/pitstop
 cd ~/pitstop
 bun install
+bun run setup
 ```
 
-### 2. Build the mcp-adapter dist
+`bun run setup` builds both bundles, registers the MCP adapter in `~/.claude.json`, and installs the `UserPromptSubmit` hook in `~/.claude/settings.json`. Idempotent — safe to re-run after a `git pull`. Edits are dedup-aware; existing config in those files is preserved.
 
-```bash
-bun build packages/mcp-adapter/src/index.ts --outfile packages/mcp-adapter/dist/index.js --target=node --format=esm
-```
+### 2. Restart Claude Code
 
-Pinned to `--target=node` deliberately — Claude Code's MCP plumbing has issues with bun-targeted builds in some versions.
-
-### 3. Register the MCP adapter with Claude Code
-
-Open `~/.claude.json`. Find the top-level `"mcpServers"` key (create it as `{}` if it doesn't exist) and add:
-
-```json
-"pitstop": {
-  "type": "stdio",
-  "command": "node",
-  "args": ["/Users/YOU/pitstop/packages/mcp-adapter/dist/index.js"]
-}
-```
-
-Use an absolute path. Replace `/Users/YOU/pitstop` with where you cloned.
-
-Restart Claude Code, then verify:
+So it loads the freshly registered MCP server. Verify:
 
 ```bash
 claude mcp list | grep pitstop
-# pitstop: node /Users/YOU/pitstop/... - ✓ Connected
+# pitstop: node /Users/YOU/pitstop/packages/mcp-adapter/dist/index.js - ✓ Connected
 ```
 
-### 4. Wire the drawer into your dev app
+### 3. Wire the drawer into your dev app
 
 The drawer needs one `<script>` tag in your dev app's HTML during dev. Tell your agent:
 
@@ -72,28 +55,39 @@ The agent will pick the right file for your stack and add this tag (or its equiv
 <script src="http://localhost:7773/inject.js?pitstop-project=<absolute-project-path>" defer></script>
 ```
 
-The script reads its own URL's `?pitstop-project=` query param to know which session to bind to. Vite, Nuxt, Next.js, SvelteKit, Astro, plain HTML — wherever the tag fits.
+`?pitstop-project=` binds the drawer to the active session for that project root. Vite, Nuxt, Next.js, SvelteKit, Astro, plain HTML — wherever the tag fits.
 
-### 5. Install the UserPromptSubmit hook
+If you forget this step, `start_review` will warn the agent that the drawer isn't connected and suggest the snippet for your stack — so you'll find out immediately instead of staring at a blank screen.
 
-This makes pitstop responses visible to Claude on every prompt you type, so the agent stays current with your drawer state without you having to ask.
+<details>
+<summary>What <code>bun run setup</code> writes (manual fallback)</summary>
 
-Add to `~/.claude/settings.json`:
+If you'd rather edit the files yourself, the entries are:
+
+`~/.claude.json` → `mcpServers.pitstop`:
 
 ```json
 {
-  "hooks": {
-    "UserPromptSubmit": [{
-      "hooks": [{
-        "type": "command",
-        "command": "/Users/YOU/pitstop/packages/scripts/pitstop-context.sh"
-      }]
-    }]
-  }
+  "type": "stdio",
+  "command": "node",
+  "args": ["/Users/YOU/pitstop/packages/mcp-adapter/dist/index.js"]
 }
 ```
 
-The hook is read-only — it surfaces unread responses without consuming them. The agent calls `get_unread_responses` to atomically drain the queue.
+`~/.claude/settings.json` → `hooks.UserPromptSubmit`:
+
+```json
+[{
+  "hooks": [{
+    "type": "command",
+    "command": "/Users/YOU/pitstop/packages/scripts/pitstop-context.sh"
+  }]
+}]
+```
+
+The hook is read-only — it surfaces unread drawer responses on every prompt; `get_unread_responses` is what actually drains the queue.
+
+</details>
 
 ## Running a review
 

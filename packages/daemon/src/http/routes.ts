@@ -39,6 +39,13 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
   const pokeWatch = new PokeWatch({ store, bus });
   const scriptsDir = process.env.PITSTOP_SCRIPTS_DIR ?? opts.scriptsDir ?? DEFAULT_SCRIPTS_DIR;
 
+  // Tracks the most recent /inject.js fetch per projectRoot. Lets start_review
+  // warn the agent when the drawer hasn't been wired into the dev app — without
+  // it, the agent would otherwise drive a tab full of items the user can't see.
+  // /inject.js is served with `Cache-Control: no-cache`, so the browser
+  // revalidates on every reload and we get a fresh signal each time.
+  const drawerSeen = new Map<string, number>();
+
   // Permissive CORS — drawer is injected into arbitrary local dev hosts.
   app.use('*', async (c, next) => {
     if (c.req.method === 'OPTIONS') {
@@ -281,7 +288,7 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     try {
       const clientSessionId = c.req.header('x-client-session-id') ?? undefined;
       const baseUrl = `http://localhost:${opts.port}`;
-      const result = await fn({ store, bus, baseUrl, clientSessionId, scriptsDir }, parsed.data.params);
+      const result = await fn({ store, bus, baseUrl, clientSessionId, scriptsDir, drawerSeen }, parsed.data.params);
       return c.json(result);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -290,7 +297,9 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     }
   });
 
-  app.get('/inject.js', async () => {
+  app.get('/inject.js', async (c) => {
+    const projectRoot = c.req.query('pitstop-project');
+    if (projectRoot) drawerSeen.set(projectRoot, Date.now());
     const file = Bun.file(new URL('../../../inject/dist/inject.js', import.meta.url));
     return new Response(file, { headers: { 'content-type': 'application/javascript', 'cache-control': 'no-cache' } });
   });

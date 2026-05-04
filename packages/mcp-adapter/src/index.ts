@@ -72,9 +72,14 @@ Lists beat prose. One-bullet-per-thing beats a paragraph. Don't pad — but don'
 const tools = [
   {
     name: 'start_review',
-    description: `Start a pitstop review session with N items. Returns { sessionId, url, watcher }.
+    description: `Start a pitstop review session with N items. Returns { sessionId, url, drawerStatus, watcher }.
 
-After calling this you MUST: (1) read the returned 'watcher' block and immediately invoke the Monitor tool with its command/description/persistent fields verbatim — that's the live channel the user's drawer responses arrive on; (2) use a browser-driving toolbelt (Claude in Chrome or agent-browser) to drive the user's tab to the first item's surface; (3) call set_current_item + mark_addressing so the drawer cursor matches what the user is looking at; (4) wait. On every Monitor notification, call get_unread_responses, decide what's next, drive the tab there, repeat.
+After calling this you MUST:
+(0) Inspect 'drawerStatus'. If 'connected' is false, STOP — the drawer is not wired into the dev app yet, so the user can't see anything you do. Surface drawerStatus.hint to them (it includes a copy-paste script-tag snippet). Wait until the user confirms they've added it and reloaded their dev page; the next start_review call will report connected=true.
+(1) Read the returned 'watcher' block and immediately invoke the Monitor tool with its command/description/persistent fields verbatim — that's the live channel the user's drawer responses arrive on.
+(2) Use a browser-driving toolbelt (Claude in Chrome or agent-browser) to drive the user's tab to the first item's surface.
+(3) Call set_current_item + mark_addressing so the drawer cursor matches what the user is looking at.
+(4) Wait. On every Monitor notification, call get_unread_responses, decide what's next, drive the tab there, repeat.
 
 ${AUTHORING_HINT}`,
     inputSchema: {
@@ -153,7 +158,7 @@ ${AUTHORING_HINT}`,
   },
 ];
 
-const server = new Server({ name: 'pitstop', version: '0.2.1' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'pitstop', version: '0.2.2' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
