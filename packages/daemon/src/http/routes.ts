@@ -21,6 +21,10 @@ const ResponseInZ = z.object({
   body: z.string().optional(),
 });
 
+const CurrentItemInZ = z.object({
+  itemId: z.string().min(1),
+});
+
 export function mountRoutes(app: Hono, opts: DaemonOpts) {
   const store = new Store(opts.dataDir);
   const bus = new Bus();
@@ -104,6 +108,24 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     }
 
     return c.json(session);
+  });
+
+  app.post('/api/sessions/:id/current-item', async (c) => {
+    const id = c.req.param('id');
+    const session = await store.get(id);
+    if (!session) return c.json({ error: 'NOT_FOUND' }, 404);
+
+    const parsed = CurrentItemInZ.safeParse(await c.req.json());
+    if (!parsed.success) return c.json({ error: parsed.error.format() }, 400);
+
+    const { itemId } = parsed.data;
+    if (!session.items.some((it) => it.id === itemId)) {
+      return c.json({ error: `unknown itemId: ${itemId}` }, 400);
+    }
+
+    const updated = await store.update(id, (s) => ({ ...s, currentItemId: itemId }));
+    bus.publish(id, { type: 'state-changed', session: updated });
+    return c.json({ ok: true });
   });
 
   app.get('/api/sessions/:id/events', (c) => {
