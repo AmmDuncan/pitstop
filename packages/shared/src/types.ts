@@ -19,7 +19,10 @@ export const ItemZ = z.object({
   body: z.string(),
   /** UX/visual things the reviewer should specifically watch for on this surface. */
   lookFor: z.array(z.string()).default([]),
-  /** What the agent already exercised before pinging the user (happy path, mobile, keyboard, etc.). */
+  /** @deprecated Removed in v0.3.5 — agents now mention test info inline in
+   *  `body` ("Already tested: <thing>.") when non-obvious. Retained in the
+   *  schema for backwards compat with v0.2/v0.3 sessions on disk; the drawer
+   *  no longer renders it. */
   tested: z.array(z.string()).default([]),
   /** Open trade-offs or things the agent is unsure about — flag for the reviewer. */
   concerns: z.array(z.string()).default([]),

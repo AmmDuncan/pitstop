@@ -9,6 +9,7 @@ import {
   getDraft,
   setDraft,
   clearDraft,
+  submitState,
   setSubmitState,
   flagSent,
 } from '../state/store';
@@ -83,14 +84,6 @@ export const Detail: Component = () => {
             </ul>
           </section>
         </Show>
-        <Show when={item()!.tested.length}>
-          <section class="detail-list tested">
-            <h3 class="detail-list-label">TESTED</h3>
-            <ul>
-              <For each={item()!.tested}>{(line) => <li>{line}</li>}</For>
-            </ul>
-          </section>
-        </Show>
         <Show when={item()!.concerns.length}>
           <section class="detail-list concerns">
             <h3 class="detail-list-label">KNOWN_CONCERNS</h3>
@@ -129,10 +122,22 @@ export const Detail: Component = () => {
           }}
           disabled={submitting()}
         />
-        <div class="actions">
-          <button class="btn btn-primary" onClick={onApprove} disabled={submitting()}>LOOKS_GOOD <span class="kbd">↵</span></button>
-          <button class="btn btn-secondary" onClick={onComment} disabled={submitting() || !comment().trim()}>SEND_COMMENT <span class="kbd">⌘↵</span></button>
-        </div>
+        <Show
+          when={submitState() === 'idle'}
+          fallback={
+            <div class="lifecycle-strip" data-state={submitState()}>
+              <span class="lifecycle-dot" />
+              <span class="lifecycle-label">
+                {submitState() === 'sending' ? 'SENDING…' : 'POKED · WAITING'}
+              </span>
+            </div>
+          }
+        >
+          <div class="actions">
+            <button class="btn btn-primary" onClick={onApprove} disabled={submitting()}>LOOKS_GOOD <span class="kbd">↵</span></button>
+            <button class="btn btn-secondary" onClick={onComment} disabled={submitting() || !comment().trim()}>SEND_COMMENT <span class="kbd">⌘↵</span></button>
+          </div>
+        </Show>
       </div>
     </Show>
   );

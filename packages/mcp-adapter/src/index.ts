@@ -13,73 +13,66 @@ const ITEM_SCHEMA = {
   type: 'object',
   required: ['title', 'body'],
   description:
-    'A single review item. Aim for *useful* — not minimal. Each item is a small handoff document the human reviewer reads on the surface where the change lives. Fill every applicable field; lists with one bullet each are far more useful than a single paragraph cramming everything together.',
+    'A review item. The reviewer reads it on the surface. Bias toward empty fields over filler.',
   properties: {
     id: {
       type: 'string',
-      description:
-        "Optional stable identifier (e.g. '01'). If omitted the daemon assigns a zero-padded index. Use stable ids when you'll later call set_current_item.",
+      description: "Optional stable id (e.g. '01'). Daemon assigns one if omitted. Use stable ids when you'll later call set_current_item.",
     },
     title: {
       type: 'string',
-      description:
-        'Short, scannable headline of what this item is about. Imperative or noun phrase, ~6 words. Example: "Wizard split into section components".',
+      description: 'Short headline. ~6 words. Example: "Wizard split into section components".',
     },
     body: {
       type: 'string',
       description:
-        'WHY this changed, in 1–3 sentences. Markdown is rendered. This is the prose lede, not a recap of the diff. The reviewer will already see the surface — they want motivation: what problem was being solved, what trade-off was taken. Save lists for the lookFor/tested/concerns arrays.',
+        'WHY this changed. 1–3 sentences. Markdown supported. Don\'t recap the diff. If you exercised something concrete the reviewer would otherwise repeat (mobile, error path, edge case), close with one sentence: "Already tested: <thing>." Skip when obvious.',
     },
     lookFor: {
       type: 'array',
       items: { type: 'string' },
       description:
-        "Bulleted things the reviewer should specifically watch for on the surface. UX, visual, edge-case behaviour — anything that wouldn't show up in unit tests or a code diff. Example entries: 'spacing between the two new sub-sections feels even', 'focus ring lands on the first input when modal opens', 'on mobile the chip wraps gracefully'. Empty array is fine when there's nothing visual.",
-    },
-    tested: {
-      type: 'array',
-      items: { type: 'string' },
-      description:
-        "Bulleted things the agent already exercised before pinging the reviewer, so they don't repeat work. Be specific. Examples: 'Happy path: filled form, hit Submit, saw success toast', 'Refreshed page mid-wizard — state restored from query params', 'Tabbed through with keyboard only — no traps'. Empty array when nothing was tested (uncommon — name what you actually did).",
+        'Up to 3 bullets — visual/UX behaviour the diff doesn\'t show. Empty unless non-obvious. Each bullet names ONE thing the reviewer can verify in <3 seconds. Good: "focus ring lands on the first input on modal mount". Bad: "spacing looks fine" — delete it.',
     },
     concerns: {
       type: 'array',
       items: { type: 'string' },
       description:
-        "Bulleted open trade-offs you're unsure about — flag them so the reviewer can weigh in. Examples: 'Used a module-scoped ref to avoid flicker; not sure if that's overkill vs. accepting brief flicker', 'Picked react-spring over framer-motion mostly out of bundle size; happy to swap'. Use this instead of burying ambiguity in the body.",
+        'Up to 3 bullets — real open trade-offs you\'re uncertain about. Empty unless genuinely uncertain. Good: "module-scoped ref to avoid flicker; could be ref-in-component + accept brief flicker". Bad: "could be refactored further" — delete it.',
     },
     question: {
       type: 'string',
-      description:
-        'The single decision the reviewer is being asked to make. One sentence, ends in a question mark. Example: "Does the per-step component cut feel right, or would you rather a single wizard file with computed sections?". Pair with concerns: concerns lists the trade-offs, question crystallises the call.',
+      description: 'The single decision the reviewer is being asked. One sentence, ends with "?". Example: "Does the per-step component cut feel right, or would you rather a single wizard file with computed sections?".',
     },
     attachments: { type: 'array' },
   },
 };
 
 const AUTHORING_HINT = `
-ITEM AUTHORING (READ THIS BEFORE CALLING):
-Pitstop is a handoff tool — each item is a tiny document the reviewer reads ON the surface where the change lives. Thin items waste the round-trip; rich items pay back tenfold.
-For every item, fill what applies:
-- title: short scannable headline.
-- body: WHY this changed, 1–3 sentences. Markdown allowed.
-- lookFor: bulleted UX/visual things to watch for. (string[])
-- tested: bulleted things you already exercised. (string[])
-- concerns: bulleted open trade-offs you're unsure about. (string[])
-- question: the single decision the reviewer is being asked.
-Lists beat prose. One-bullet-per-thing beats a paragraph. Don't pad — but don't strip either; aim for *useful*.`.trim();
+ITEM AUTHORING:
+
+COVERAGE — split items by *testable unit surface*: ONE screen, modal, or wizard step the user can land on and form a single review judgment about. If forming a judgment requires the user to navigate elsewhere, split. If multiple sub-changes share one surface and one judgment, keep them together. Five items each pointing at one screen beat one item that covers seven; one item per pixel is too many.
+
+PER ITEM:
+- title: short headline (~6 words).
+- body: WHY this changed (1–3 sentences). Optionally close with "Already tested: <thing>." when you ran something the reviewer would otherwise repeat.
+- lookFor: up to 3 bullets. Empty unless non-obvious.
+- concerns: up to 3 bullets. Empty unless genuinely uncertain.
+- question: the single decision being asked.
+
+SPECIFICITY TEST: each bullet names ONE thing verifiable in <3 seconds. If it starts with "Looks good" / "Could be improved" / "Tested it" — delete it.`.trim();
 
 const tools = [
   {
     name: 'start_review',
-    description: `Start a pitstop review session with N items. Returns { sessionId, url, drawerStatus, watcher }.
+    description: `Start a pitstop review session. Returns { sessionId, url, drawerStatus, watcher }.
 
-After calling this you MUST:
-(0) Inspect 'drawerStatus'. If 'connected' is false, STOP and self-heal: call wire_drawer({ projectRoot }) using the SAME projectRoot you just passed to start_review. wire_drawer returns the framework + two wiring options. Surface those options to the user via AskUserQuestion ("Wire pitstop into <framework>: committed conditional snippet, or local-only gitignored file?"). After the user picks, perform the file edit yourself (paste the option's snippet into the option's file, append option.gitignoreLine to .gitignore if set), then ask the user to reload their dev page and call start_review again. Do NOT ask the user to manually paste anything — wire_drawer + your file write covers it.
-(1) Read the returned 'watcher' block and immediately invoke the Monitor tool with its command/description/persistent fields verbatim — that's the live channel the user's drawer responses arrive on.
-(2) Use a browser-driving toolbelt (Claude in Chrome or agent-browser) to drive the user's tab to the first item's surface.
-(3) Call set_current_item + mark_addressing so the drawer cursor matches what the user is looking at.
-(4) Wait. On every Monitor notification, call get_unread_responses, decide what's next, drive the tab there, repeat.
+AFTER CALLING, in order:
+0. If drawerStatus.connected === false: STOP. Call wire_drawer({ projectRoot }) (same projectRoot), surface its options via AskUserQuestion, perform the file edit yourself, ask user to reload, retry start_review.
+1. Invoke Monitor with watcher.command / watcher.description / watcher.persistent verbatim.
+2. Drive the user's tab to item 1's surface (Claude in Chrome or agent-browser).
+3. Call set_current_item + mark_addressing for that item.
+4. Wait. On every Monitor notification: get_unread_responses → decide → drive next surface → repeat.
 
 ${AUTHORING_HINT}`,
     inputSchema: {
@@ -198,7 +191,7 @@ wire_drawer NEVER writes files — that's you, so the user can review your edit.
   },
 ];
 
-const server = new Server({ name: 'pitstop', version: '0.3.4' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'pitstop', version: '0.3.5' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {

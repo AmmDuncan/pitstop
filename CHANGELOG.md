@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.3.5 — 2026-05-04
+
+The "less chore, more signal" release. Drawn from feedback that v0.3.x's items felt verbose to author and the "Claude is cooking" silence after submit was hard to see.
+
+### Added
+
+- **COVERAGE RULE on `start_review`** — items must split by *testable unit surface* (one screen / modal / wizard step the user can land on and form a single review judgment about). Five small items each pointing at one screen beat one item that asks the user to navigate themselves; one item per pixel is too many. Baked into the MCP tool description.
+- **Lifecycle status strip** on the action area. When you click `LOOKS_GOOD` or `SEND_COMMENT`, both buttons are replaced by a single status strip (`SENDING…` then `POKED · WAITING`) with a pulsing dot. Cooking-state feedback now lands where your eye just was, not at the top of the drawer.
+
+### Changed
+
+- **AUTHORING_HINT and per-field schema descriptions cut by ~60%.** Examples retained as anchors (one positive + one negative per field). The "uncommon to leave empty" framing on `tested` removed — replaced with explicit "bias toward empty" guidance on every list field.
+- **`tested` field deprecated.** The drawer no longer renders a TESTED section. Agents now mention what they exercised inline in `body` ("Already tested: <thing>.") only when non-obvious. The schema still accepts `tested` for backwards compat with v0.2/v0.3 sessions on disk.
+- **Cap of 3 bullets** on `lookFor` / `concerns` baked into per-field descriptions. Forces prioritization.
+- **Specificity test** added: each bullet must name ONE thing the reviewer can verify in <3 seconds. Filler ("Looks good", "Tested it", "Could be improved") is called out as deletable.
+
+### Migration
+
+No code changes for consumers. Existing sessions still parse. Re-run `bun run setup` to rebuild bundles.
+
 ## v0.3.1 — 2026-05-04
 
 ### Added
