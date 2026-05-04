@@ -158,27 +158,35 @@ ${AUTHORING_HINT}`,
   },
   {
     name: 'wire_drawer',
-    description: `Inspect the user's project, detect its framework, and return the two wiring options (committed vs local-only) for getting the pitstop drawer into their dev pages.
+    description: `Inspect a known project path, detect its framework, and return the two wiring options (committed vs local-only) for getting the pitstop drawer into the dev pages. The daemon is deliberately dumb: pass it a precise project root, get back snippets. Resolving WHICH path is the project is YOUR job — you have pwd, ls, and the user.
 
-When to call (you should not need the user to spell this out):
+When to call (the user should not need to spell this out):
 - start_review returned drawerStatus.connected === false. Use the SAME projectRoot you just used for start_review.
-- The user asks any variant of "wire pitstop", "set up the drawer", "install the drawer". You don't need a path from them — default projectRoot to the current working directory (use Bash 'pwd' if you don't already have it in conversation context).
+- The user asks any variant of "wire pitstop", "set up the drawer", "install the drawer".
 
-What you do with the result:
-1. Surface the two options to the user via AskUserQuestion. Use the option's 'label' as the AskUserQuestion option label and 'description' as the option description. Mark the one matching result.recommended with "(Recommended)". Surface result.notes (e.g. ".gitignore needs an extra line") as additional context.
-2. After the user picks, YOU perform the file edit: paste option.snippet into option.file (creating the file if it doesn't exist; modifying in place if it does — be smart about merging if a config file already has the relevant section). If option.gitignoreLine is set, append that line to .gitignore (skip if already present).
+Resolving projectRoot when the user didn't give you one:
+1. Start at Bash pwd. Look at it: does it have package.json / nuxt.config.* / vite.config.* / index.html etc.? If yes, that's the projectRoot.
+2. If not, it's probably a workspace wrapper. ls one level down: each subdirectory that has a recognisable framework config is a candidate.
+   - Exactly one candidate → use it. Tell the user which path you picked, in case you guessed wrong.
+   - Multiple candidates → ask the user via AskUserQuestion which one. Don't guess.
+   - Zero candidates → ask the user where the project actually lives.
+3. Once you have the path, call wire_drawer({ projectRoot }).
+
+What to do with the result:
+1. Surface the two options via AskUserQuestion. Use option.label as the AskUserQuestion option label, option.description as its description. Mark the option matching result.recommended with "(Recommended)". Surface result.notes (e.g. missing .gitignore line) as context.
+2. After the user picks, YOU perform the file edit: paste option.snippet into option.file (creating the file if it doesn't exist; merging cleanly if it does — read the file first, find the right insertion point). If option.gitignoreLine is set and not already in .gitignore, append it.
 3. Tell the user to reload their dev page, then re-run start_review.
 
 Returns: { framework, projectRoot, options: [{id, label, description, file, snippet, gitignoreLine?}, ...], recommended: 'committed'|'local-only', notes: string[] }.
 
-wire_drawer NEVER writes files — that's your job, so the user can review your edit before it lands.`,
+wire_drawer NEVER writes files — that's you, so the user can review your edit.`,
     inputSchema: {
       type: 'object',
       required: ['projectRoot'],
       properties: {
         projectRoot: {
           type: 'string',
-          description: "Absolute path to the project to inspect. If the user just said 'wire drawer' without a path, default to the current working directory (Bash 'pwd' resolves it). Same shape as start_review.projectRoot.",
+          description: "Absolute path to the project. You're responsible for resolving this — see the tool description's 'Resolving projectRoot' section. Same shape as start_review.projectRoot.",
         },
       },
     },
