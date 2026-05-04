@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.12 — 2026-05-04
+
+### Added
+
+- **CSP guidance.** Drawer not appearing because a dev app's CSP blocked `localhost:7773` is the kind of bug that gives users a blank screen with no obvious cause. `wire_drawer` now always returns a CSP note in `notes` with a concrete copy-pastable spread snippet (`...(process.env.NODE_ENV !== 'production' ? ['http://localhost:7773'] : []),`) for adding to `script-src` AND `connect-src`. The README has a Troubleshooting section showing the same pattern in nuxt-security and other typical config shapes.
+
 ## v0.3.11 — 2026-05-04
 
 ### Changed

@@ -182,6 +182,42 @@ The agent has 8 tools:
 | `add_items(items)` — append items mid-review | `mark_addressing(itemId, narration)` — feed update |
 | `complete_review()` — terminal | `set_current_item(itemId)` — move drawer cursor |
 
+## Troubleshooting
+
+### Drawer doesn't appear and the browser console mentions CSP
+
+Your dev app sets a Content Security Policy that blocks the drawer's script tag (`script-src`) or its API + SSE calls (`connect-src`). You need to allowlist `http://localhost:7773` in both — dev only.
+
+Concrete pattern, spread into each CSP source list:
+
+```js
+...(process.env.NODE_ENV !== 'production' ? ['http://localhost:7773'] : []),
+```
+
+For example, in a `nuxt-security` config:
+
+```ts
+// nuxt.config.ts
+security: {
+  headers: {
+    contentSecurityPolicy: {
+      'script-src': [
+        "'self'",
+        ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:7773'] : []),
+      ],
+      'connect-src': [
+        "'self'",
+        ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:7773'] : []),
+      ],
+    },
+  },
+},
+```
+
+Same shape for Next.js headers, helmet middleware, or `<meta http-equiv="Content-Security-Policy">` tags.
+
+Production builds drop the localhost entry entirely, so your prod CSP stays strict.
+
 ## Architecture
 
 See `docs/superpowers/specs/2026-05-04-pitstop-agent-driven-flow-design.md` for the full architecture.

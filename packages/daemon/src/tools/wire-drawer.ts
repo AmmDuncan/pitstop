@@ -300,5 +300,12 @@ export async function wire_drawer(params: unknown): Promise<WireResult> {
     }
   }
 
+  // CSP is a common gotcha — drawer never appears, browser console shows a
+  // CSP error, user has no obvious cause. Surface it preemptively with a
+  // concrete copy-pastable snippet.
+  notes.push(
+    "If the user's dev app sets a Content Security Policy (nuxt-security, Next.js headers, helmet middleware, or a <meta http-equiv=\"Content-Security-Policy\"> tag), allowlist `http://localhost:7773` in BOTH `script-src` AND `connect-src`. Dev-only — production CSPs stay strict. Concrete pattern (spread into each list):\n\n  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:7773'] : []),\n\nMention this preemptively when the user is using nuxt-security / helmet / strict CSP, OR if they report 'drawer doesn't appear' after wiring.",
+  );
+
   return { framework, projectRoot, options, recommended, notes };
 }
