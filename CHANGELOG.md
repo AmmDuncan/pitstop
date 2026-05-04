@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.2.2 — 2026-05-04
+
+### Added
+
+- **`bun run setup`** — one-shot installer. Builds both bundles, registers the MCP adapter in `~/.claude.json`, installs the `UserPromptSubmit` hook in `~/.claude/settings.json`. Idempotent and dedup-safe; existing config in those files is preserved. Trims the install path from 8 manual steps to 3.
+- **Drawer-wiring detection** — `start_review` now returns a `drawerStatus` field. The daemon tracks `/inject.js` fetches per `projectRoot` and tells the agent whether the drawer is wired into the dev app. When not, the response carries a copy-paste script-tag snippet for the user. The `start_review` MCP tool description tells the agent to surface this hint *before* driving anything, so users no longer stare at a blank screen wondering why the drawer never appeared.
+
+### Changed
+
+- **README install section** trimmed from 5 numbered steps to 3 (clone + `bun run setup`, restart Claude Code, wire drawer). The manual fallback for the JSON edits remains in a collapsed `<details>` block.
+
+## v0.2.1 — 2026-05-04
+
+### Added
+
+- **AgentFeed expander** — when more than 5 narrations exist, a `… +N older` line appears beneath the feed. Click expands to a scrollable history of all narrations (capped at the daemon's 50-entry ring buffer), with the newest still amber-chevron-highlighted and the older ones at full readability. `SHOW LESS` collapses back.
+
 ## v0.2.0 — 2026-05-04
 
 The "richer handoff" release. Pitstop items used to be a one-line summary
@@ -53,13 +70,3 @@ Restart Claude Code so the new MCP schema is registered.
 
 Initial public release. Drawer + daemon + mcp-adapter + browser-driving
 toolbelt agnosticism. See `README.md`.
-
-## v0.2.1 — 2026-05-04
-
-### Added
-
-- **AgentFeed expander** — when more than 5 narrations exist, a `… +N older` line appears beneath the feed. Click expands to a scrollable history of all narrations (capped at the daemon's 50-entry ring buffer), with the newest still amber-chevron-highlighted and the older ones at full readability. `SHOW LESS` collapses back.
-
-### Note
-
-Tracks the MCP server version string in `packages/mcp-adapter/src/index.ts` alongside the workspace package versions.
