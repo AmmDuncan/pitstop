@@ -750,6 +750,121 @@
 
 .actions { display: flex; gap: 6px; margin-top: 12px; align-items: center; }
 
+/* PendingQuestion — banner that replaces the action area when the agent calls
+   `ask_user`. Item content above stays untouched; question demands attention
+   without being shouty. */
+.pq {
+  margin-top: 14px;
+  padding: 12px 14px 14px;
+  border-left: 2px solid var(--amber);
+  background: color-mix(in oklab, var(--bg-input) 35%, transparent);
+}
+.pq.is-fresh {
+  animation: agent-feed-flash 1.5s ease-out;
+}
+.pq-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--amber-text);
+  margin-bottom: 8px;
+}
+.pq-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--amber);
+  color: var(--amber-text);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1;
+}
+.pq-text {
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--t1);
+  margin: 0 0 10px;
+}
+.pq-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+  /* Cap the height; long lists scroll inside this container. ~3 cards visible
+     before scroll kicks in, depending on whether they have descriptions. */
+  max-height: 240px;
+  overflow-y: auto;
+}
+.pq-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  text-align: left;
+  background: var(--bg-paper);
+  border: 1px solid var(--rule-2);
+  cursor: pointer;
+  transition: border-color 80ms ease, background 80ms ease;
+}
+.pq-opt:hover:not(:disabled) {
+  border-color: var(--amber);
+  background: color-mix(in oklab, var(--amber) 6%, var(--bg-paper));
+}
+.pq-opt:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: -2px;
+}
+.pq-opt:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.pq-opt-label {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t1);
+}
+.pq-opt-desc {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--t3);
+  letter-spacing: normal;
+  text-transform: none;
+}
+.pq-other {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--t4);
+  text-align: left;
+}
+.pq-other:hover { color: var(--amber-text); }
+.pq-freeform {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.pq-send {
+  align-self: flex-start;
+}
+
 /* In-flight status strip — replaces the action buttons during sending/poked
    so the cooking-state feedback lands where the user's eye just was. */
 .lifecycle-strip {

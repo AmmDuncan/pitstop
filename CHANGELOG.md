@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.3.14 — 2026-05-04
+
+### Added
+
+- **`ask_user` MCP tool.** Lets the agent put a question in the drawer instead of hijacking chat with `AskUserQuestion`. Pitstop sessions are an active flow — the user is already looking at the drawer; pulling them into a modal is jarring. `ask_user` surfaces the question as a banner that replaces the action area, the user picks an option (or types free-form), the answer comes back via the existing Monitor → `get_unread_responses` loop with `kind: 'answer'`.
+- **Rich option cards.** Options aren't just strings anymore — `{ label, description? }`. Labels are short ALL-CAPS button text; descriptions are full sentences underneath, useful when a one-word label is ambiguous. Cards are full-width clickable rectangles, scrollable when the list exceeds 240px.
+- **`AskUserQuestion` override rule.** `start_review`'s tool description tells the agent: while a pitstop session is active, prefer `ask_user` over `AskUserQuestion` for review-related questions. Wiring/setup questions in step 0 are the only exception.
+- **Schema extensions:** `Session.pendingQuestion` (cleared when an `answer` response is received), `Response.kind` adds `'answer'`, `Response.questionText` carries the original question for agent correlation, `ActivityEntry.itemId` (also adopted by `mark_addressing` in v0.3.13).
+
+### Fixed
+
+- **State desync on `pendingQuestion` clear.** Solid's `setStore('s', newSession)` doesn't always remove keys that disappeared from the new object — the banner stayed in the DOM after submitting an answer. Switched to `reconcile(e.session)` so deep-diff replacement properly removes stale keys.
+
 ## v0.3.13 — 2026-05-04
 
 ### Added

@@ -1,5 +1,5 @@
 import { createMemo, createSignal } from 'solid-js';
-import { createStore, produce } from 'solid-js/store';
+import { createStore, produce, reconcile } from 'solid-js/store';
 import type { Session, SseEvent } from '@pitstop/shared';
 import { fetchActiveSession, fetchMostRecentActiveSession, openEventStream } from './client';
 
@@ -41,7 +41,11 @@ export function applyEvent(e: SseEvent): void {
   switch (e.type) {
     case 'state-snapshot':
     case 'state-changed':
-      setSession('s', e.session);
+      // `reconcile` does a deep diff against the existing store value and
+      // properly REMOVES keys that disappeared (e.g. pendingQuestion when an
+      // answer is submitted). Plain `setSession('s', e.session)` keeps the
+      // current key in the store; reconcile fixes that.
+      setSession('s', reconcile(e.session));
       // Agent-authoritative cursor: when the daemon's session has a
       // currentItemId, snap the local cursor to match. This is how the
       // agent moves the user via set_current_item (Phase B).

@@ -32,10 +32,32 @@ export const ItemZ = z.object({
 
 export const ResponseZ = z.object({
   itemId: z.string(),
-  kind: z.enum(['approve', 'comment']),
+  kind: z.enum(['approve', 'comment', 'answer']),
   body: z.string().optional(),
+  /** Set when kind === 'answer' — the question text the user was responding
+   *  to. Helps the agent correlate without relying on session-state ordering. */
+  questionText: z.string().optional(),
   at: z.number(),
   addressed: z.boolean(),
+});
+
+/** A single preset answer for a pending question. The user clicks the card
+ *  to submit `label` as their answer. `description` is optional secondary
+ *  text below the label, useful when the choice needs more context than
+ *  fits in a button label. */
+export const PendingQuestionOptionZ = z.object({
+  label: z.string().min(1),
+  description: z.string().optional(),
+});
+
+/** A question the agent has posed to the user via `ask_user`. The drawer
+ *  surfaces this as a banner replacing the action area. Cleared when the
+ *  user submits an answer. */
+export const PendingQuestionZ = z.object({
+  question: z.string().min(1),
+  options: z.array(PendingQuestionOptionZ).default([]),
+  itemId: z.string().optional(),
+  askedAt: z.number(),
 });
 
 export const ActivityEntryZ = z.object({
@@ -79,6 +101,9 @@ export const SessionZ = z.object({
    *  When unset (legacy sessions), the drawer falls back to its local cursor.
    *  Updated by the agent via the (Phase B) `set_current_item` MCP tool. */
   currentItemId: z.string().optional(),
+  /** Set by `ask_user`; cleared when an `answer` response is received. The
+   *  drawer renders this as a prominent banner replacing the action area. */
+  pendingQuestion: PendingQuestionZ.optional(),
 });
 
 export type Attachment = z.infer<typeof AttachmentZ>;
@@ -87,6 +112,8 @@ export type Response = z.infer<typeof ResponseZ>;
 export type ActivityEntry = z.infer<typeof ActivityEntryZ>;
 export type SessionStatus = z.infer<typeof SessionStatusZ>;
 export type Session = z.infer<typeof SessionZ>;
+export type PendingQuestion = z.infer<typeof PendingQuestionZ>;
+export type PendingQuestionOption = z.infer<typeof PendingQuestionOptionZ>;
 
 /** SSE event payloads pushed from daemon → browser. */
 export type SseEvent =

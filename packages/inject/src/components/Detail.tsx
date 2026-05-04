@@ -16,6 +16,7 @@ import {
 import { submitResponse } from '../state/client';
 import { FileRef } from './FileRef';
 import { ImageAttachment } from './ImageAttachment';
+import { PendingQuestion } from './PendingQuestion';
 import type { Attachment } from '@pitstop/shared';
 
 export const Detail: Component = () => {
@@ -98,36 +99,39 @@ export const Detail: Component = () => {
         <For each={item()!.attachments.filter((a) => a.kind === 'image')}>
           {(att) => <ImageAttachment att={att as Extract<Attachment, { kind: 'image' }>} />}
         </For>
-        <Show when={item()!.question}>
+        <Show when={item()!.question && !session.s?.pendingQuestion}>
           <div class="qline">{item()!.question}</div>
         </Show>
-        <textarea
-          class="cbox"
-          placeholder="optional comment · press C to focus · ⌘↵ to send"
-          value={comment()}
-          onInput={(e) => setDraft(itemId(), e.currentTarget.value)}
-          onKeyDown={(e) => {
-            // Handle textarea shortcuts locally and stop every keydown from
-            // bubbling out of the drawer. Letting events leak meant typing
-            // letters triggered drawer shortcuts (t flipped the theme, ?
-            // opened help) AND Escape closed any open modal in the host app.
-            if (e.metaKey && e.key === 'Enter') {
-              e.preventDefault();
-              onComment();
-            } else if (e.key === 'Escape') {
-              e.preventDefault();
-              e.currentTarget.blur();
-            }
-            e.stopPropagation();
-          }}
-          disabled={submitting()}
-        />
+        <Show when={!session.s?.pendingQuestion}>
+          <textarea
+            class="cbox"
+            placeholder="optional comment · press C to focus · ⌘↵ to send"
+            value={comment()}
+            onInput={(e) => setDraft(itemId(), e.currentTarget.value)}
+            onKeyDown={(e) => {
+              // Handle textarea shortcuts locally and stop every keydown from
+              // bubbling out of the drawer. Letting events leak meant typing
+              // letters triggered drawer shortcuts (t flipped the theme, ?
+              // opened help) AND Escape closed any open modal in the host app.
+              if (e.metaKey && e.key === 'Enter') {
+                e.preventDefault();
+                onComment();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+              e.stopPropagation();
+            }}
+            disabled={submitting()}
+          />
+        </Show>
         {(() => {
-          // Buttons only render when the agent has explicitly addressed this
-          // item (mark_addressing with this itemId). Before that, Claude is
-          // either still booting up or driving the user's tab toward this
-          // surface — approving prematurely would be approving something the
-          // user hasn't actually seen yet.
+          // Render priority for the action area:
+          //   1. PendingQuestion (ask_user is the agent's active prompt)
+          //   2. Lifecycle strip (sending / poked / awaiting Claude)
+          //   3. Action buttons (LOOKS_GOOD / SEND_COMMENT)
+          // Each subsumes the one below it — no two of these stack.
+          const pending = () => session.s?.pendingQuestion ?? null;
           const itemAddressed = () => {
             const id = item()!.id;
             return (session.s?.agentActivity ?? []).some(
@@ -141,16 +145,18 @@ export const Detail: Component = () => {
             return null;
           };
           return (
-            <Show when={!stripState()} fallback={
-              <div class="lifecycle-strip" data-state={stripState()!.kind}>
-                <span class="lifecycle-dot" />
-                <span class="lifecycle-label">{stripState()!.label}</span>
-              </div>
-            }>
-              <div class="actions">
-                <button class="btn btn-primary" onClick={onApprove} disabled={submitting()}>LOOKS_GOOD <span class="kbd">↵</span></button>
-                <button class="btn btn-secondary" onClick={onComment} disabled={submitting() || !comment().trim()}>SEND_COMMENT <span class="kbd">⌘↵</span></button>
-              </div>
+            <Show when={!pending()} fallback={<PendingQuestion question={pending()!} />}>
+              <Show when={!stripState()} fallback={
+                <div class="lifecycle-strip" data-state={stripState()!.kind}>
+                  <span class="lifecycle-dot" />
+                  <span class="lifecycle-label">{stripState()!.label}</span>
+                </div>
+              }>
+                <div class="actions">
+                  <button class="btn btn-primary" onClick={onApprove} disabled={submitting()}>LOOKS_GOOD <span class="kbd">↵</span></button>
+                  <button class="btn btn-secondary" onClick={onComment} disabled={submitting() || !comment().trim()}>SEND_COMMENT <span class="kbd">⌘↵</span></button>
+                </div>
+              </Show>
             </Show>
           );
         })()}

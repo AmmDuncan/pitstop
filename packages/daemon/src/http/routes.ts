@@ -26,8 +26,9 @@ const StatusBodyZ = z.object({ status: SessionStatusZ });
 
 const ResponseInZ = z.object({
   itemId: z.string(),
-  kind: z.enum(['approve', 'comment']),
+  kind: z.enum(['approve', 'comment', 'answer']),
   body: z.string().optional(),
+  questionText: z.string().optional(),
 });
 
 const CurrentItemInZ = z.object({
@@ -235,16 +236,22 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     if (!parsed.success) return c.json({ error: parsed.error.format() }, 400);
 
     const r = { ...parsed.data, at: Date.now(), addressed: false };
-    const session = await store.update(id, (s) => ({ ...s, responses: [...s.responses, r] }));
+    const session = await store.update(id, (s) => ({
+      ...s,
+      responses: [...s.responses, r],
+      // Answers clear the pending question that prompted them. The agent gets
+      // the answer body via get_unread_responses on the next poke.
+      pendingQuestion: r.kind === 'answer' ? undefined : s.pendingQuestion,
+    }));
     bus.publish(id, { type: 'state-changed', session });
 
     // Poke policy:
     //   - looks-good (kind === 'approve'): never poke
-    //   - comment + paused: never poke (queues for resume)
-    //   - comment + in-flight poke: piggy-back on existing
-    //   - comment otherwise: spawn one poke; on exit, drain any queued comments
+    //   - comment / answer + paused: never poke (queues for resume)
+    //   - comment / answer + in-flight poke: piggy-back on existing
+    //   - comment / answer otherwise: spawn one poke; on exit, drain any queued
     const shouldPoke =
-      r.kind === 'comment' &&
+      (r.kind === 'comment' || r.kind === 'answer') &&
       session.status !== 'paused' &&
       !session.pokePid;
 

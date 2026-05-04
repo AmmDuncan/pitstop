@@ -164,6 +164,38 @@ export const tools = {
     return wire_drawer(params);
   },
 
+  async ask_user(ctx: Ctx, params: unknown) {
+    const P = z.object({
+      sessionId: z.string(),
+      question: z.string().min(1),
+      options: z.array(z.object({
+        label: z.string().min(1),
+        description: z.string().optional(),
+      })).optional(),
+      itemId: z.string().optional(),
+    });
+    const { sessionId, question, options, itemId } = P.parse(params);
+    const at = Date.now();
+    const session = await ctx.store.update(sessionId, (s) => ({
+      ...s,
+      pendingQuestion: { question, options: options ?? [], itemId, askedAt: at },
+      // Push a feed entry so the question shows in the AgentFeed history too.
+      agentActivity: [
+        ...s.agentActivity,
+        { at, tool: 'ask_user', narration: `❓ ${question}`, itemId },
+      ].slice(-50),
+      lastAgentActivityAt: at,
+      pokeFailed: false,
+    }));
+    ctx.bus.publish(sessionId, {
+      type: 'agent-activity',
+      sessionId,
+      entry: { at, tool: 'ask_user', narration: `❓ ${question}`, itemId },
+    });
+    ctx.bus.publish(sessionId, { type: 'state-changed', session });
+    return { ok: true };
+  },
+
   async complete_review(ctx: Ctx, params: unknown) {
     const { sessionId } = z.object({ sessionId: z.string() }).parse(params);
     const session = await ctx.store.update(sessionId, (s) => ({

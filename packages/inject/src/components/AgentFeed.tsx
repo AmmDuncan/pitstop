@@ -15,7 +15,7 @@ export const AgentFeed: Component = () => {
 
   const all = () => {
     const entries = (session.s?.agentActivity ?? [])
-      .filter((e) => e.tool === 'mark_addressing' && e.narration);
+      .filter((e) => e.narration && (e.tool === 'mark_addressing' || e.tool === 'ask_user'));
     return entries.slice().reverse();
   };
 

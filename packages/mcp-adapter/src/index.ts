@@ -74,6 +74,8 @@ AFTER CALLING, in order:
 3. Call set_current_item + mark_addressing for that item.
 4. Wait. On every Monitor notification: get_unread_responses → decide → drive next surface → repeat.
 
+WHILE THIS SESSION IS ACTIVE: prefer pitstop's ask_user tool over AskUserQuestion for any review-related question. The user is already looking at the drawer; AskUserQuestion would hijack the chat with a modal and pull them out. The ONLY exception is wiring/setup questions in step 0 above (because the drawer isn't connected yet).
+
 ${AUTHORING_HINT}`,
     inputSchema: {
       type: 'object',
@@ -150,6 +152,46 @@ ${AUTHORING_HINT}`,
     },
   },
   {
+    name: 'ask_user',
+    description: `Ask the human reviewer a question that needs an answer before you can continue. Renders as a banner in the drawer (replaces the action area) — the user picks an option button or types a free-form answer; the response arrives via the Monitor → get_unread_responses loop with kind: 'answer'.
+
+WHEN TO USE THIS INSTEAD OF AskUserQuestion:
+While ANY pitstop session is active, prefer ask_user over AskUserQuestion for questions related to the work in progress. AskUserQuestion hijacks the chat with a modal and pulls the user out of the flow they're already in (the drawer). ask_user surfaces the question where the user's eye already is.
+
+ALSO: when you call ask_user, also write a one-line plain-text mention of the question in your chat output (e.g. "I'm asking via the drawer: <question>") so the chat history reflects what was asked. Don't use AskUserQuestion for the same question — that would double-prompt and hijack the modal anyway.
+
+If you're certain there's no active pitstop session for this projectRoot, fall back to AskUserQuestion as normal.
+
+Returns: { ok: true }. The answer comes back asynchronously through the responses queue. Drain via get_unread_responses; the answer entry will have kind: 'answer', body: <user's answer>, questionText: <the question you asked>.`,
+    inputSchema: {
+      type: 'object',
+      required: ['sessionId', 'question'],
+      properties: {
+        sessionId: { type: 'string' },
+        question: {
+          type: 'string',
+          description: 'The question to put in front of the user. One sentence. End with "?". Plain text, no markdown.',
+        },
+        options: {
+          type: 'array',
+          description: "Optional preset answers, rendered as full-width clickable cards (the list is scrollable when long). Each option has a `label` (short, ALL CAPS in the UI) and an optional `description` (longer explanation rendered under the label). Use description for choices that need context. Example: [{label:'Create one', description:'Spin up a fresh test order with default totals'}, {label:'Use existing', description:'Find one in /tmp/orders.json'}]. The user can also click 'Type a different answer' to fall through to free-form.",
+          items: {
+            type: 'object',
+            required: ['label'],
+            properties: {
+              label: { type: 'string', description: 'Short tag for the choice. Becomes the answer body when the user clicks. Keep under ~30 chars.' },
+              description: { type: 'string', description: 'Optional sentence under the label that explains the choice. Use when the label alone is ambiguous.' },
+            },
+          },
+        },
+        itemId: {
+          type: 'string',
+          description: 'Optional review item this question is about. Persisted on the response so you can correlate.',
+        },
+      },
+    },
+  },
+  {
     name: 'wire_drawer',
     description: `Inspect a known project path, detect its framework, and return the two wiring options (committed vs local-only) for getting the pitstop drawer into the dev pages. The daemon is deliberately dumb: pass it a precise project root, get back snippets. Resolving WHICH path is the project is YOUR job — you have pwd, ls, and the user.
 
@@ -191,7 +233,7 @@ wire_drawer NEVER writes files — that's you, so the user can review your edit.
   },
 ];
 
-const server = new Server({ name: 'pitstop', version: '0.3.13' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'pitstop', version: '0.3.14' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
