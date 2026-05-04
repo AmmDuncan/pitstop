@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.3.1 — 2026-05-04
+
+### Added
+
+- **`wire_drawer` MCP tool.** Inspects a project's framework (Nuxt / Vite / Next / SvelteKit / Astro / Remix / plain HTML), returns two wiring options (committed conditional snippet or local-only gitignored file) with the exact snippet, target file, and `.gitignore` line to add. The agent surfaces the choices through `AskUserQuestion`; the user picks; the agent does the file edit. Recommendation defaults to `local-only` for solo projects and `committed` for repos with team-style files (CODEOWNERS, CONTRIBUTING.md).
+
+### Fixed
+
+- **Floating-drawer drag handler not releasing.** When the drawer was in floating mode and you dragged it via the header, releasing the mouse outside the browser window — or sometimes inside, due to Shadow DOM event retargeting — left the drawer following the cursor as if you were still dragging. Switched from `mousedown`/`mousemove`/`mouseup` on `window` to pointer events on the header element with `setPointerCapture`. Implicit pointer capture guarantees the release fires even when the cursor leaves the viewport; `pointercancel` and `lostpointercapture` are listened to as backup exit paths.
+
+### Changed
+
+- **README repositioned.** Driven-mode wiring (committed conditional snippet OR local-only file) is now the default recommendation, since pitstop's headline flow is agent-driven and the browser extension doesn't load in agent-browser's Playwright Chromium. Extension is documented as Option C for free-form review only.
+- **MCP tool count: 8** (was 7) — `wire_drawer` is the new entry.
+
 ## v0.3.0 — 2026-05-04
 
 The "wire it from anywhere" release. v0.2 still required every dev app to commit a `<script>` tag (or have a teammate add one). v0.3 introduces three wiring paths so you can pick the one that fits your workflow.

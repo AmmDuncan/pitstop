@@ -157,13 +157,33 @@ ${AUTHORING_HINT}`,
     },
   },
   {
+    name: 'wire_drawer',
+    description: `Inspect the user's project, detect its framework, and return the two wiring options (committed vs local-only) for getting the pitstop drawer into their dev pages. The agent should call this before the first start_review on a fresh project, surface the options to the user via AskUserQuestion (committed = team-visible, local-only = gitignored), then perform the actual file edit using the returned snippet + file path.
+
+Returns: { framework, projectRoot, options: [{id, label, description, file, snippet, gitignoreLine?}, ...], recommended: 'committed'|'local-only', notes: string[] }.
+
+The agent OWNS the file write — wire_drawer never touches files. After the user picks, paste 'snippet' into 'file' (creating it if needed) and, if 'gitignoreLine' is set on the chosen option, append that line to .gitignore. The 'notes' array carries hints worth surfacing to the user (missing gitignore lines, unknown framework, etc.).
+
+When to call: (1) before the first start_review on a project — the drawerStatus check on start_review tells you when wiring is missing; (2) the user explicitly asks to wire pitstop into a project. Do NOT call this on every start_review; once wired, it's wired.`,
+    inputSchema: {
+      type: 'object',
+      required: ['projectRoot'],
+      properties: {
+        projectRoot: {
+          type: 'string',
+          description: 'Absolute path to the project to inspect. Same shape as start_review.projectRoot.',
+        },
+      },
+    },
+  },
+  {
     name: 'complete_review',
     description: 'End the review session. Flips the drawer status pill to REVIEW_COMPLETE. Call this only after every item has at least one response (approve or comment).',
     inputSchema: { type: 'object', required: ['sessionId'], properties: { sessionId: { type: 'string' } } },
   },
 ];
 
-const server = new Server({ name: 'pitstop', version: '0.3.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'pitstop', version: '0.3.1' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ItemZ, type Session } from '@pitstop/shared';
 import type { Store } from '../store/sessions';
 import type { Bus } from '../http/sse';
+import { wire_drawer } from './wire-drawer';
 
 type Ctx = {
   store: Store;
@@ -146,6 +147,10 @@ export const tools = {
     }));
     ctx.bus.publish(sessionId, { type: 'state-changed', session });
     return { ok: true };
+  },
+
+  async wire_drawer(_ctx: Ctx, params: unknown) {
+    return wire_drawer(params);
   },
 
   async complete_review(ctx: Ctx, params: unknown) {

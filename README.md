@@ -45,60 +45,45 @@ claude mcp list | grep pitstop
 
 ### 3. Wire the drawer into your dev page
 
-Pick the option that fits how you'll use pitstop. **The Chrome extension is recommended for daily use** — install once, every project's drawer just appears.
+The first time you start a review on a fresh project, ask the agent to call `wire_drawer({ projectRoot: <abs path> })`. The tool detects the framework, returns two snippets, and the agent surfaces them through `AskUserQuestion`. You pick how the wiring lives:
 
-#### Option A — Chrome extension (recommended)
+#### Option A — Local-only file (gitignored, recommended for solo / individual use)
 
-Zero code in any dev app. The drawer appears on every `localhost:*` tab where you have an active pitstop session.
+A plugin or override file the team's `.gitignore` excludes — wiring stays on your laptop, not in the team's history. The agent creates the file with the snippet, and (if needed) adds one line to `.gitignore`. Examples per framework:
 
-1. Open `chrome://extensions/`.
-2. Toggle **Developer mode** (top-right).
-3. Click **Load unpacked** and select `~/pitstop/packages/extension/`.
+| Framework | File the agent creates | `.gitignore` addition |
+|---|---|---|
+| Nuxt | `app/plugins/pitstop.client.local.ts` | `*.client.local.ts` |
+| Vite | `vite.config.local.ts` (run with `vite --config vite.config.local.ts`) | `vite.config.local.ts` |
+| Plain HTML | `index.local.html` | `index.local.html` |
+| Astro / SvelteKit / Next / Remix | (see Option B — local-only is awkward) | — |
 
-That's it — works across every project, every port, every browser restart. The extension only mounts the drawer when an agent has actually started a review for that origin (so quiet localhost tabs stay quiet).
+#### Option B — Committed conditional snippet (recommended when the whole team uses pitstop)
 
-> ⚠️ Extensions don't load in Playwright-driven Chromium (e.g. agent-browser). If your reviews are agent-driven (smoke tests, CI), use Option B or C below instead — or in addition.
-
-#### Option B — Local-only plugin file (no commit, but per-project)
-
-For when you want zero source touch but the extension isn't an option (Playwright sessions, headless CI, browser restrictions).
-
-Create a plugin file your team `.gitignore`s and only you have. Nuxt example:
+A NODE_ENV-gated script tag in the team config. Visible to everyone, dev-only, dropped from prod builds. Cleanest if pitstop is part of the team workflow.
 
 ```ts
-// app/plugins/pitstop.client.local.ts (add `*.client.local.ts` to .gitignore)
-export default defineNuxtPlugin(() => {
-  if (process.dev) {
-    const s = document.createElement('script')
-    s.src = 'http://localhost:7773/inject.js'
-    s.defer = true
-    document.head.appendChild(s)
-  }
-})
-```
-
-Equivalent patterns work for Vite (`vite.config.local.ts` import), Next.js (`_app.local.tsx`), etc.
-
-#### Option C — Committed script tag (when the team wants it on by default)
-
-If your whole team uses pitstop and you want it baked into the dev workflow, add the tag to your dev config so it's there on every developer's machine without per-laptop setup:
-
-```html
-<script src="http://localhost:7773/inject.js?pitstop-project=<absolute-project-path>" defer></script>
-```
-
-Or wired conditionally via your framework config (Nuxt example, dev-only):
-
-```ts
-// nuxt.config.ts
+// nuxt.config.ts (Nuxt example — wire_drawer returns the right shape per framework)
 script: process.env.NODE_ENV === 'development'
-  ? [{ src: `http://localhost:7773/inject.js?pitstop-project=${encodeURIComponent(rootDir)}`, defer: true, tagPosition: 'bodyClose' }]
+  ? [{
+      src: `http://localhost:7773/inject.js?pitstop-project=${encodeURIComponent(rootDir)}`,
+      defer: true,
+      tagPosition: 'bodyClose',
+    }]
   : []
 ```
 
-`?pitstop-project=` binds the drawer to a session for that project root. Without it (Options A and B), the drawer asks the daemon for the most recently active session matching the page's origin — that's why agents should pass `devUrls` on `start_review` so the extension shows on the right tabs.
+Both options work in any browser context — your real Chrome, Claude in Chrome, agent-browser's Playwright Chromium, or CI.
 
-If neither the extension nor a script tag is wired, `start_review` warns the agent and suggests the snippet — so you find out immediately instead of staring at a blank screen.
+#### Option C — Browser extension (alt path for free-form review only)
+
+If you don't want any source touch *and* you'll only review in your real Chrome (no agent-browser involved):
+
+1. Open `chrome://extensions/`, toggle **Developer mode**, click **Load unpacked**, select `~/pitstop/packages/extension/`.
+
+Works across every localhost port forever; auto-mounts only when an active session matches the page's origin (so quiet tabs stay quiet). **Tradeoff:** extensions don't load in Playwright-driven Chromium, so if any of your reviews are agent-driven via agent-browser, the agent will be looking at a tab that has no drawer. For pitstop's headline driven flow, stick to A or B.
+
+If neither A/B nor the extension is wired, `start_review` warns the agent that the drawer isn't connected and surfaces the right snippet for you — so you find out immediately instead of staring at a blank screen.
 
 <details>
 <summary>What <code>bun run setup</code> writes (manual fallback)</summary>
@@ -188,14 +173,14 @@ Lists beat prose. One bullet per thing beats a paragraph.
 
 ## MCP tools
 
-The agent has 7 tools:
+The agent has 8 tools:
 
 | Setup | Conversation |
 |---|---|
-| `start_review(items)` — open session; returns `watcher` for Monitor | `get_state()` — read everything |
-| `add_items(items)` — append items mid-review | `get_unread_responses()` — drain unread queue (atomic) |
-| `complete_review()` — terminal | `mark_addressing(itemId, narration)` — pill update |
-| | `set_current_item(itemId)` — move drawer cursor |
+| `wire_drawer({ projectRoot })` — detect framework + return snippet options | `get_state()` — read everything |
+| `start_review(items)` — open session; returns `watcher` for Monitor | `get_unread_responses()` — drain unread queue (atomic) |
+| `add_items(items)` — append items mid-review | `mark_addressing(itemId, narration)` — feed update |
+| `complete_review()` — terminal | `set_current_item(itemId)` — move drawer cursor |
 
 ## Architecture
 
