@@ -1,10 +1,18 @@
 import type { Hono } from 'hono';
 import { z } from 'zod';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import type { DaemonOpts } from './server';
 import { Store } from '../store/sessions';
 import { Bus } from './sse';
 import { PokeWatch } from '../lifecycle/poke-watch';
 import { ItemZ, SessionStatusZ } from '@pitstop/shared';
+
+const DEFAULT_SCRIPTS_DIR = (() => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  // routes.ts is at packages/daemon/src/http/. Walk up to packages/, then into scripts/.
+  return join(here, '..', '..', '..', 'scripts');
+})();
 
 const CreateZ = z.object({
   projectRoot: z.string(),
@@ -29,6 +37,7 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
   const store = new Store(opts.dataDir);
   const bus = new Bus();
   const pokeWatch = new PokeWatch({ store, bus });
+  const scriptsDir = process.env.PITSTOP_SCRIPTS_DIR ?? opts.scriptsDir ?? DEFAULT_SCRIPTS_DIR;
 
   // Permissive CORS — drawer is injected into arbitrary local dev hosts.
   app.use('*', async (c, next) => {
@@ -272,7 +281,7 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     try {
       const clientSessionId = c.req.header('x-client-session-id') ?? undefined;
       const baseUrl = `http://localhost:${opts.port}`;
-      const result = await fn({ store, bus, baseUrl, clientSessionId }, parsed.data.params);
+      const result = await fn({ store, bus, baseUrl, clientSessionId, scriptsDir }, parsed.data.params);
       return c.json(result);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

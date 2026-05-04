@@ -3,7 +3,7 @@ import { ItemZ, type Session } from '@pitstop/shared';
 import type { Store } from '../store/sessions';
 import type { Bus } from '../http/sse';
 
-type Ctx = { store: Store; bus: Bus; baseUrl: string; clientSessionId?: string };
+type Ctx = { store: Store; bus: Bus; baseUrl: string; clientSessionId?: string; scriptsDir: string };
 
 const StartReviewZ = z.object({
   projectRoot: z.string(),
@@ -20,7 +20,15 @@ export const tools = {
     }
     const session = await ctx.store.create({ ...p, clientSessionId: ctx.clientSessionId } as any);
     ctx.bus.publish(session.id, { type: 'state-snapshot', session });
-    return { sessionId: session.id, url: `${ctx.baseUrl}/?session=${session.id}` };
+    return {
+      sessionId: session.id,
+      url: `${ctx.baseUrl}/?session=${session.id}`,
+      watcher: {
+        command: `${ctx.scriptsDir}/pitstop-watch.sh ${session.id}`,
+        description: `pitstop unread responses · session ${session.id}`,
+        persistent: true,
+      },
+    };
   },
 
   async add_items(ctx: Ctx, params: unknown) {

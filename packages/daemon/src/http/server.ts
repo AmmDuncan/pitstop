@@ -8,6 +8,7 @@ export type DaemonOpts = {
   dataDir: string;
   spawn?: typeof NodeSpawn;
   pokeKind?: PokeKind;
+  scriptsDir?: string;
 };
 
 export function buildApp(opts: DaemonOpts) {
