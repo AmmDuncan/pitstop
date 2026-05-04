@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.6 — 2026-05-04
+
+### Fixed
+
+- **Footer `_LEFT` counter could go negative.** When an item received both an approve and a comment, both were counted toward "addressed", so `items.length - approved - commented` over-subtracted. Now counts distinct addressed item IDs once.
+- **AgentFeed fade looked like an overlay** when no narrations were hidden. The rank-based opacity that signals "older fades out" only applies now when `…+N older` would actually be shown — i.e. when there ARE hidden entries. With ≤5 visible narrations and nothing hidden, every line renders at full opacity. Position alone carries the recency signal.
+
 ## v0.3.5 — 2026-05-04
 
 The "less chore, more signal" release. Drawn from feedback that v0.3.x's items felt verbose to author and the "Claude is cooking" silence after submit was hard to see.

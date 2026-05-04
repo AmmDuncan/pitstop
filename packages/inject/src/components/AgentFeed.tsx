@@ -24,7 +24,7 @@ export const AgentFeed: Component = () => {
     <Show when={visible().length}>
       <div
         class="agent-feed"
-        classList={{ expanded: expanded() }}
+        classList={{ expanded: expanded(), 'has-older': olderCount() > 0 }}
         aria-live="polite"
       >
         <div class="agent-feed-label">CLAUDE</div>

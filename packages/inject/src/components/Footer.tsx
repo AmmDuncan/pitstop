@@ -8,7 +8,11 @@ export const Footer: Component = () => {
     const responses = session.s?.responses ?? [];
     const approved = items.filter((i) => responses.some((r) => r.itemId === i.id && r.kind === 'approve')).length;
     const commented = items.filter((i) => responses.some((r) => r.itemId === i.id && r.kind === 'comment')).length;
-    const left = items.length - approved - commented;
+    // Pre-v0.3.6 this was `items.length - approved - commented` which double-
+    // counted any item carrying both an approve AND a comment, so `left`
+    // could go negative. Count distinct addressed item IDs once.
+    const addressedIds = new Set(responses.map((r) => r.itemId));
+    const left = Math.max(0, items.length - addressedIds.size);
     return { approved, commented, left };
   });
 

@@ -666,10 +666,13 @@
 }
 .agent-feed-line[data-rank="0"] { color: var(--t1); }
 .agent-feed-line[data-rank="0"]::before { color: var(--amber); }
-.agent-feed-line[data-rank="1"] { opacity: 0.85; }
-.agent-feed-line[data-rank="2"] { opacity: 0.65; }
-.agent-feed-line[data-rank="3"] { opacity: 0.45; }
-.agent-feed-line[data-rank="4"] { opacity: 0.30; }
+/* Rank-based fade only applies when the feed has hidden older entries —
+   when nothing is hidden the fade adds no signal and reads as an overlay
+   sitting on top of the lines. */
+.agent-feed.has-older .agent-feed-line[data-rank="1"] { opacity: 0.85; }
+.agent-feed.has-older .agent-feed-line[data-rank="2"] { opacity: 0.65; }
+.agent-feed.has-older .agent-feed-line[data-rank="3"] { opacity: 0.45; }
+.agent-feed.has-older .agent-feed-line[data-rank="4"] { opacity: 0.30; }
 .agent-feed.expanded .agent-feed-list {
   max-height: 180px;
   overflow-y: auto;
