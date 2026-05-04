@@ -52,3 +52,12 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
 });
 
 await server.connect(new StdioServerTransport());
+
+// Keep the event loop alive for the lifetime of the process.
+// Listening for stdin 'end'/'close' fires prematurely under Claude Code's stdio
+// plumbing (CC closes the inbound pipe after the initialize handshake but
+// before tools/list, and we'd exit before answering), and bun-run otherwise
+// exits immediately after server.connect() resolves. A never-firing timer is
+// the only mechanism that holds the process open without depending on any
+// external signal — process death is via SIGTERM/SIGINT from the parent.
+setInterval(() => {}, 0x7fffffff);

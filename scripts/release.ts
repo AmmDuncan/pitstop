@@ -61,6 +61,18 @@ console.log('▸ rebuilding inject.js...');
 await $`bun --cwd packages/inject run build`.quiet();
 console.log('  rebuilt.\n');
 
+// 5b. Rebuild mcp-adapter bundle (Claude Code launches this via node)
+//
+// Important: --target=node, not --target=bun. We hit a CC-2.1.126 issue where
+// bun-launched MCP adapters complete the initialize handshake but never receive
+// CC's subsequent tools/list request — bun's stdin handling on CC's anonymous
+// pipe stalls after the first message. Launching the same bundle via node
+// (any v18+) registers tools cleanly. Keep --target=node so a fresh checkout
+// can `node packages/mcp-adapter/dist/index.js` without bun installed.
+console.log('▸ rebuilding mcp-adapter bundle...');
+await $`bun build packages/mcp-adapter/src/index.ts --outfile packages/mcp-adapter/dist/index.js --target=node --format=esm`.quiet();
+console.log('  rebuilt.\n');
+
 // 6. Commit, tag, push
 console.log('▸ committing, tagging, pushing...');
 await $`git add -A`;
