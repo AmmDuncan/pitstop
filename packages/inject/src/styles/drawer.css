@@ -21,7 +21,7 @@
   color: var(--t1);
   font-family: var(--sans);
   display: grid;
-  grid-template-rows: 18px 48px 40px 1fr 42px;
+  grid-template-rows: 18px 48px 40px 1fr auto 42px;
   overflow: hidden;
   z-index: 2147483600;
   pointer-events: auto;
@@ -53,7 +53,8 @@
 }
 .drawer.size-compact .detail-body { display: none; }
 .drawer.size-compact .metabar { display: none; }
-.drawer.size-compact { grid-template-rows: 48px 40px 1fr 42px; }
+.drawer.size-compact { grid-template-rows: 48px 40px 1fr auto 42px; }
+.drawer.size-compact .agent-feed { display: none; }
 
 /* Empty (no active session) — strip ignores any persisted floating state,
    expanded variant shows onboarding copy instead of session UI. */
