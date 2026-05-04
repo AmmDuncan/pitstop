@@ -27,8 +27,10 @@ export const Detail: Component = () => {
     const it = item();
     if (!it || !session.s) return;
     setSubmitting(true);
+    setSubmitState('sending');
     try {
       await submitResponse(session.s.id, { itemId: it.id, kind: 'approve' });
+      flagSent();
       const total = session.s.items.length;
       const wasLast = currentItemIdx() === total - 1;
       if (wasLast) {
@@ -42,6 +44,8 @@ export const Detail: Component = () => {
         return;
       }
       setCurrentItemIdx(Math.min(total - 1, currentItemIdx() + 1));
+    } catch {
+      setSubmitState('idle');
     } finally {
       setSubmitting(false);
     }
