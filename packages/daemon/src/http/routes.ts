@@ -141,7 +141,7 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
   app.get('/api/sessions/:id/responses', async (c) => {
     const id = c.req.param('id');
     const session = await store.get(id);
-    if (!session) return c.json({ error: 'not found' }, 404);
+    if (!session) return c.json({ error: 'NOT_FOUND' }, 404);
 
     const since = c.req.query('since');
     const unaddressed = c.req.query('unaddressed') === 'true';
