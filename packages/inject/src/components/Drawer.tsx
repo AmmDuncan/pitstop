@@ -49,6 +49,54 @@ export const Drawer: Component = () => {
         }
       : { width: `${width()}px` };
 
+  /** Strip mode has no header, so the strip body itself doubles as click-to-
+   *  expand AND (when floating) drag-to-move. Distinguishes drag from click
+   *  by movement threshold; same pointer-capture pattern as the header drag
+   *  so the release fires reliably even when the cursor leaves the viewport. */
+  const onStripPointerDown = (e: PointerEvent) => {
+    e.preventDefault();
+    const el = e.currentTarget as Element;
+    el.setPointerCapture(e.pointerId);
+
+    const isFloating = position() === 'floating';
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startTop = floatingTop();
+    const startLeft = floatingLeft();
+    let dragged = false;
+    const DRAG_THRESHOLD = 3;
+
+    const onMove = (ev: PointerEvent) => {
+      if (!isFloating) return;
+      if (ev.pointerId !== e.pointerId) return;
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      if (!dragged && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+        dragged = true;
+        document.body.style.cursor = 'grabbing';
+      }
+      if (dragged) {
+        setFloatingTop(Math.max(0, startTop + dy));
+        setFloatingLeft(Math.max(0, startLeft + dx));
+      }
+    };
+    const release = () => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', release);
+      el.removeEventListener('pointercancel', release);
+      el.removeEventListener('lostpointercapture', release);
+      try { el.releasePointerCapture(e.pointerId); } catch {}
+      document.body.style.cursor = '';
+      if (!dragged) {
+        setSize('standard');
+      }
+    };
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', release);
+    el.addEventListener('pointercancel', release);
+    el.addEventListener('lostpointercapture', release);
+  };
+
   return (
     <>
       <style>{googleFonts}</style>
@@ -87,7 +135,11 @@ export const Drawer: Component = () => {
       }>
         <aside class={modeClasses()} style={floatStyle()}>
           <Show when={size() !== 'strip'} fallback={
-            <div class="strip" onClick={() => setSize('standard')} title="Click to expand">
+            <div
+              class="strip"
+              onPointerDown={onStripPointerDown}
+              title={position() === 'floating' ? 'Click to expand · drag to move' : 'Click to expand'}
+            >
               <span class="v-label">PITSTOP</span>
               <span class="v-num">{String(session.s?.items.length ?? 0).padStart(2, '0')}</span>
               <span class="v-dot" />

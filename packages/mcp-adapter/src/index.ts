@@ -191,7 +191,7 @@ wire_drawer NEVER writes files — that's you, so the user can review your edit.
   },
 ];
 
-const server = new Server({ name: 'pitstop', version: '0.3.8' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'pitstop', version: '0.3.9' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {

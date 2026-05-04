@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.9 — 2026-05-04
+
+### Fixed
+
+- **Strip mode in floating position had no drag handle.** Strip size doesn't render the header, so the floating drawer was stuck where you collapsed it. The strip body itself now doubles as click-to-expand and (when floating) drag-to-move — distinguishes drag from click by a 3px movement threshold; same pointer-capture pattern as the header drag, so the release fires reliably.
+
 ## v0.3.6 — 2026-05-04
 
 ### Fixed
