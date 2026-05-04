@@ -42,6 +42,15 @@ export function applyEvent(e: SseEvent): void {
     case 'state-snapshot':
     case 'state-changed':
       setSession('s', e.session);
+      // Agent-authoritative cursor: when the daemon's session has a
+      // currentItemId, snap the local cursor to match. This is how the
+      // agent moves the user via set_current_item (Phase B).
+      if (e.session.currentItemId) {
+        const idx = e.session.items.findIndex((it) => it.id === e.session.currentItemId);
+        if (idx >= 0 && idx !== currentItemIdx()) {
+          setCurrentItemIdx(idx);
+        }
+      }
       break;
     case 'item-added':
       setSession(
