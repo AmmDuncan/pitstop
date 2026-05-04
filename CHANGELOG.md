@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.15 — 2026-05-04
+
+### Changed
+
+- **AgentFeed compact + always-scrollable.** Feed used to grow vertically with content — long narrations turned each entry into a 3-5 line paragraph, eating the bottom of the drawer. Now: each line wrap-clamps at 2 visual lines with `…`; the container holds a fixed 120px max-height and scrolls when content exceeds. Same height in both collapsed and expanded states — clicking `+N older` only changes what's IN the list, not the size of it. Hover any line for the full text via title attr.
+
 ## v0.3.14 — 2026-05-04
 
 ### Added
