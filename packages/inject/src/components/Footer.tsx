@@ -51,10 +51,18 @@ export const Footer: Component = () => {
         </span>
       </div>
       <div class="actions-r">
-        <button class="footer-btn" onClick={togglePause}>
-          {isPaused() ? 'RESUME' : 'STOP'}
+        <button
+          class="footer-btn"
+          onClick={togglePause}
+          title={isPaused() ? 'Resume the review (drawer un-dims, agent picks up where it left off)' : 'Pause the review (drawer dims, agent stops driving — reversible)'}
+        >
+          {isPaused() ? 'RESUME' : 'PAUSE'}
         </button>
-        <button class="footer-btn" onClick={onDone}>
+        <button
+          class="footer-btn"
+          onClick={onDone}
+          title="End the review session (final — flips status to REVIEW_COMPLETE)"
+        >
           DONE
         </button>
       </div>
