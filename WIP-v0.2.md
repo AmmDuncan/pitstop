@@ -4,8 +4,8 @@
 
 - **Branch**: `feat/v0.2-richer-items` (parent: `feat/agent-driven-flow-spec`)
 - **Origin**: pushed (commit `b17bc09`)
-- **Last checkpoint**: 2026-05-04 — pushed schema + Detail rendering + CSS for the three lists
-- **Next step**: task #3 — move addressing pill to the bottom of the drawer; add `AgentFeed` component above the footer
+- **Last checkpoint**: 2026-05-04 — task #3 done: `AgentFeed` mounted above `Footer`, `StatusTag` slimmed to dot-only during narration so it doesn't duplicate the feed
+- **Next step**: task #5 — expand MCP tool descriptions in `packages/mcp-adapter/src` so any agent fills `lookFor` / `tested` / `concerns` correctly without needing user prompts
 - **Owner laptop**: dvla-idtms macOS (battery low, may hand off mid-flight)
 
 ## Theme of v0.2
@@ -18,7 +18,7 @@ The 2026-05-04 smoke test against DIMOS surfaced that pitstop items were too thi
 |---|--------|------|-------|
 | 1 | ✅ done | Schema fields `lookFor` / `tested` / `concerns` on `ItemZ` | All optional, default `[]`, backwards-compatible. Persisted by `Store.create`. |
 | 2 | ✅ done | Render the three sections in `Detail.tsx` | Color-coded labels (amber / ok / err). CSS in `drawer.css` under `.detail-list`. |
-| 3 | ⏳ next | Move addressing pill out of `Header`, add `AgentFeed` above `Footer` | Reads last ~5 entries from `session.agentActivity` filtered to `tool === 'mark_addressing'`, oldest fades. Keep a slim dot in `Header` for at-a-glance state. |
+| 3 | ✅ done | `AgentFeed` above `Footer`, `StatusTag` slim during narration | Component at `packages/inject/src/components/AgentFeed.tsx`. Reads last 5 narrations, oldest fades via `data-rank` opacity. Header shows just a pulse dot during `addressing`/`working`/`writing`. |
 | 4 | ✅ done | Daemon ring buffer for narrations | Already wired — `mark_addressing` writes to `agentActivity`, capped at 50, broadcasts `state-changed`. |
 | 5 | ⏳ pending | Self-documenting MCP tool descriptions | In `packages/mcp-adapter/src`, expand `start_review` + `add_items` description / param descriptions so any agent fills in `body`, `lookFor`, `tested`, `concerns`, `question` without needing user prompts. |
 | 6 | ⏳ pending | README "Authoring items" section + `CHANGELOG.md` entry + version bump | Bump root and all `packages/*` to `0.2.0`. |

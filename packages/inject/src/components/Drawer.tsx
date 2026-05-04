@@ -6,6 +6,7 @@ import { Header } from './Header';
 import { PipStrip } from './PipStrip';
 import { Footer } from './Footer';
 import { Detail } from './Detail';
+import { AgentFeed } from './AgentFeed';
 import { ReviewSummary } from './ReviewSummary';
 import { ResizeHandle } from './ResizeHandle';
 import { KeymapOverlay } from './KeymapOverlay';
@@ -102,6 +103,7 @@ export const Drawer: Component = () => {
             <Show when={summaryOpen()} fallback={<Detail />}>
               <ReviewSummary />
             </Show>
+            <AgentFeed />
             <Footer />
           </Show>
           <Show when={helpOpen()}>
