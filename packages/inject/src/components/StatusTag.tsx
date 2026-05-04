@@ -1,5 +1,6 @@
 import { type Component, Show } from 'solid-js';
 import type { Session } from '@pitstop/shared';
+import { submitState } from '../state/store';
 
 export type PillState = 'idle' | 'working' | 'addressing' | 'writing' | 'failed' | 'complete';
 
@@ -12,6 +13,11 @@ export function derivePill(session: Session | null): { state: PillState; label: 
   if (fresh && last.tool === 'mark_addressing') return { state: 'addressing', label: last.narration ?? 'ADDRESSING' };
   if (fresh && last.tool === 'add_items') return { state: 'writing', label: 'WRITING_ITEMS' };
   if (fresh) return { state: 'working', label: 'PREPARING_NEXT' };
+  // No fresh agent activity — show the local submit state so the user sees
+  // "I sent it, the agent is being notified" instead of silence.
+  const ss = submitState();
+  if (ss === 'sending') return { state: 'working', label: 'SENDING…' };
+  if (ss === 'poked') return { state: 'working', label: 'POKED_CLAUDE · WAITING' };
   return { state: 'idle', label: '' };
 }
 

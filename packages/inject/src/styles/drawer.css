@@ -24,6 +24,19 @@
   grid-template-rows: 18px 48px 40px 1fr 42px;
   overflow: hidden;
   z-index: 2147483600;
+  pointer-events: auto;
+}
+
+/* Host element covers the viewport at the top of the document stacking
+   context, but is transparent to clicks (pointer-events: none). Only the
+   drawer panel itself opts back in (pointer-events: auto above). This way
+   the drawer always sits above host-app modal overlays, but transparent
+   areas of the host don't intercept clicks meant for the underlying app. */
+:host {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2147483647;
 }
 
 /* Position variants */
@@ -42,13 +55,96 @@
 .drawer.size-compact .metabar { display: none; }
 .drawer.size-compact { grid-template-rows: 48px 40px 1fr 42px; }
 
-.drawer.empty {
-  display: grid;
-  place-items: center;
+/* Empty (no active session) — strip ignores any persisted floating state,
+   expanded variant shows onboarding copy instead of session UI. */
+.drawer.empty.size-strip {
+  width: 32px !important;
+  height: 100vh;
+  background: var(--bg-rail);
+  background-image: none;
+}
+.drawer.empty .strip { cursor: pointer; }
+.drawer.empty .strip .v-label { color: var(--t3); }
+.drawer.empty .strip .v-dot.waiting {
+  background: var(--t3);
+  animation: none;
+  opacity: 0.55;
+}
+.drawer.empty.size-standard {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  height: 100vh;
+  grid-template-rows: 28px 1fr;
+}
+.drawer.empty .empty-body {
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: var(--sans);
+  color: var(--t1);
+  position: relative;
+  align-self: stretch;
+}
+.drawer.empty .empty-headline {
   font-family: var(--mono);
   font-size: 11px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   color: var(--t3);
+  margin: 8px 0 0;
+}
+.drawer.empty .empty-text {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--t2);
+  margin: 0;
+}
+.drawer.empty .empty-text.empty-hint {
+  color: var(--t3);
+  font-size: 12px;
+}
+.drawer.empty .empty-text kbd {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--bg-rail);
+  border: 1px solid var(--rule-2);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--t1);
+}
+.drawer.empty .empty-prompt {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--t1);
+  background: var(--bg-rail);
+  border: 1px solid var(--rule-2);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.drawer.empty .empty-collapse {
+  position: absolute;
+  bottom: 16px;
+  right: 24px;
+  background: transparent;
+  border: 1px solid var(--rule-2);
+  color: var(--t3);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  padding: 6px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.drawer.empty .empty-collapse:hover {
+  color: var(--t1);
+  border-color: var(--rule-1);
 }
 
 /* Paused state — dim non-essential UI and show banner above the footer */
@@ -235,8 +331,8 @@
 /* Status tag — filing cabinet label */
 .tag {
   display: inline-grid;
-  grid-template-columns: auto 1px 1fr;
-  align-items: stretch;
+  grid-template-columns: auto 1px minmax(0, 1fr);
+  align-items: center;
   border: 1px solid var(--rule-3);
   background: var(--bg-paper);
   font-family: var(--mono);
@@ -245,11 +341,22 @@
   letter-spacing: 0.10em;
   text-transform: uppercase;
   height: 22px;
+  max-width: 220px;
   user-select: none;
+  overflow: hidden;
 }
-.tag .dot-cell { display: grid; place-items: center; padding: 0 7px; }
-.tag .rule-cell { background: var(--rule-3); }
-.tag .label-cell { display: grid; place-items: center; padding: 0 10px; color: var(--t1); }
+.tag .dot-cell { display: grid; place-items: center; padding: 0 7px; height: 100%; }
+.tag .rule-cell { background: var(--rule-3); align-self: stretch; }
+.tag .label-cell {
+  display: block;
+  padding: 0 10px;
+  color: var(--t1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 20px;
+  min-width: 0;
+}
 .tag.working { border-color: var(--amber); }
 .tag.working .rule-cell { background: var(--amber); }
 .tag.working .label-cell { color: var(--amber-text); }

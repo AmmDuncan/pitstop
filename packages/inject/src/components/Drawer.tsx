@@ -53,7 +53,37 @@ export const Drawer: Component = () => {
       <style>{googleFonts}</style>
       <style>{tokensCss}</style>
       <style>{drawerCss}</style>
-      <Show when={session.s} fallback={<aside class={`${modeClasses()} empty`} style={floatStyle()}>…</aside>}>
+      <Show when={session.s} fallback={
+        <Show when={size() === 'strip'} fallback={
+          <aside class="drawer pos-right size-standard empty" style={{ width: `${width()}px` }}>
+            <div class="metabar">
+              <span>pitstop · idle</span>
+              <span class="center">NO SESSION</span>
+              <span class="right">localhost:7773</span>
+            </div>
+            <div class="empty-body">
+              <div class="empty-headline">No active review</div>
+              <p class="empty-text">
+                Pitstop is connected and waiting. To start a review, ask your agent:
+              </p>
+              <pre class="empty-prompt">"Start a pitstop review of the work you just did."</pre>
+              <p class="empty-text empty-hint">
+                The agent will list items it wants you to look at, then wait here for your <kbd>⏎</kbd> approve or <kbd>c</kbd> comment on each one.
+              </p>
+              <button class="empty-collapse" onClick={() => setSize('strip')} title="Collapse to strip">
+                collapse
+              </button>
+            </div>
+          </aside>
+        }>
+          <aside class="drawer pos-right size-strip empty" title="Click to expand — no active review">
+            <div class="strip" onClick={() => setSize('standard')}>
+              <span class="v-label">PITSTOP</span>
+              <span class="v-dot waiting" />
+            </div>
+          </aside>
+        </Show>
+      }>
         <aside class={modeClasses()} style={floatStyle()}>
           <Show when={size() !== 'strip'} fallback={
             <div class="strip" onClick={() => setSize('standard')} title="Click to expand">

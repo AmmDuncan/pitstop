@@ -20,6 +20,23 @@ export const [summaryOpen, setSummaryOpen] = createSignal(false);
 /** Toggled by `?` key or the header `?` button — shows the keymap overlay. */
 export const [helpOpen, setHelpOpen] = createSignal(false);
 
+/**
+ * Local UI state for "what's happening with the comment I just sent."
+ * Agent-side activity (mark_addressing / add_items / etc.) takes priority in
+ * the pill; this only fills the silence between SEND_COMMENT and the agent's
+ * first MCP call.
+ */
+export const [submitState, setSubmitState] = createSignal<'idle' | 'sending' | 'poked'>('idle');
+
+let pokedClearTimer: ReturnType<typeof setTimeout> | null = null;
+export function flagSent(): void {
+  setSubmitState('poked');
+  if (pokedClearTimer) clearTimeout(pokedClearTimer);
+  // Safety: if the agent never wakes (poke silently failed, daemon down),
+  // clear the waiting pill so the drawer doesn't lie indefinitely.
+  pokedClearTimer = setTimeout(() => setSubmitState('idle'), 60_000);
+}
+
 export function applyEvent(e: SseEvent): void {
   switch (e.type) {
     case 'state-snapshot':
@@ -40,6 +57,8 @@ export function applyEvent(e: SseEvent): void {
       break;
     case 'agent-activity':
       setSession('s', produce((s) => { s?.agentActivity.push(e.entry); }));
+      setSubmitState('idle');
+      if (pokedClearTimer) { clearTimeout(pokedClearTimer); pokedClearTimer = null; }
       break;
     case 'complete':
       setSession('s', produce((s) => { if (s) s.status = 'complete'; }));

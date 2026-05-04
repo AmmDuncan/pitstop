@@ -9,6 +9,8 @@ import {
   getDraft,
   setDraft,
   clearDraft,
+  setSubmitState,
+  flagSent,
 } from '../state/store';
 import { submitResponse } from '../state/client';
 import { FileRef } from './FileRef';
@@ -49,9 +51,13 @@ export const Detail: Component = () => {
     const it = item();
     if (!it || !session.s || !comment().trim()) return;
     setSubmitting(true);
+    setSubmitState('sending');
     try {
       await submitResponse(session.s.id, { itemId: it.id, kind: 'comment', body: comment().trim() });
       clearDraft(it.id);
+      flagSent();
+    } catch {
+      setSubmitState('idle');
     } finally {
       setSubmitting(false);
     }
@@ -79,6 +85,20 @@ export const Detail: Component = () => {
           placeholder="optional comment · press C to focus · ⌘↵ to send"
           value={comment()}
           onInput={(e) => setDraft(itemId(), e.currentTarget.value)}
+          onKeyDown={(e) => {
+            // Handle textarea shortcuts locally and stop every keydown from
+            // bubbling out of the drawer. Letting events leak meant typing
+            // letters triggered drawer shortcuts (t flipped the theme, ?
+            // opened help) AND Escape closed any open modal in the host app.
+            if (e.metaKey && e.key === 'Enter') {
+              e.preventDefault();
+              onComment();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
+            e.stopPropagation();
+          }}
           disabled={submitting()}
         />
         <div class="actions">
