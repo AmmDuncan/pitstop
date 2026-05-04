@@ -88,6 +88,22 @@ export const tools = {
     return { ok: true };
   },
 
+  async set_current_item(ctx: Ctx, params: unknown) {
+    const P = z.object({ sessionId: z.string(), itemId: z.string() });
+    const { sessionId, itemId } = P.parse(params);
+    const cur = await ctx.store.get(sessionId);
+    if (!cur) throw new Error('NOT_FOUND');
+    if (!cur.items.some((it) => it.id === itemId)) throw new Error(`UNKNOWN_ITEM_ID:${itemId}`);
+    const session = await ctx.store.update(sessionId, (s) => ({
+      ...s,
+      currentItemId: itemId,
+      lastAgentActivityAt: Date.now(),
+      pokeFailed: false,
+    }));
+    ctx.bus.publish(sessionId, { type: 'state-changed', session });
+    return { ok: true };
+  },
+
   async complete_review(ctx: Ctx, params: unknown) {
     const { sessionId } = z.object({ sessionId: z.string() }).parse(params);
     const session = await ctx.store.update(sessionId, (s) => ({
