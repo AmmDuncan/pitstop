@@ -670,6 +670,25 @@
 .agent-feed-line[data-rank="2"] { opacity: 0.65; }
 .agent-feed-line[data-rank="3"] { opacity: 0.45; }
 .agent-feed-line[data-rank="4"] { opacity: 0.30; }
+.agent-feed.expanded .agent-feed-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+.agent-feed-more {
+  margin-top: 4px;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--t4);
+  text-align: left;
+}
+.agent-feed-more:hover { color: var(--amber-text); }
 
 .fileref {
   display: grid;

@@ -1,33 +1,64 @@
-import { type Component, For, Show } from 'solid-js';
+import { type Component, For, Show, createSignal } from 'solid-js';
 import { session } from '../state/store';
 
 const FEED_SIZE = 5;
 
 /** Bottom-of-drawer feed of the agent's recent narrations.
- *  Reads `session.agentActivity` and surfaces the last few `mark_addressing`
- *  entries so the user can see what Claude has been doing without tabbing
- *  back to the terminal. Newest first; older entries fade. */
+ *  Reads `session.agentActivity`, surfaces the last `FEED_SIZE` `mark_addressing`
+ *  entries newest-first, fades older entries by rank. Beyond that, an inline
+ *  expander reveals the full session history (capped at 50 by the daemon ring
+ *  buffer) in a scrollable list. */
 export const AgentFeed: Component = () => {
-  const recent = () => {
+  const [expanded, setExpanded] = createSignal(false);
+
+  const all = () => {
     const entries = (session.s?.agentActivity ?? [])
-      .filter((e) => e.tool === 'mark_addressing' && e.narration)
-      .slice(-FEED_SIZE);
+      .filter((e) => e.tool === 'mark_addressing' && e.narration);
     return entries.slice().reverse();
   };
 
+  const visible = () => (expanded() ? all() : all().slice(0, FEED_SIZE));
+  const olderCount = () => Math.max(0, all().length - FEED_SIZE);
+
   return (
-    <Show when={recent().length}>
-      <div class="agent-feed" aria-live="polite">
+    <Show when={visible().length}>
+      <div
+        class="agent-feed"
+        classList={{ expanded: expanded() }}
+        aria-live="polite"
+      >
         <div class="agent-feed-label">CLAUDE</div>
         <ol class="agent-feed-list">
-          <For each={recent()}>
+          <For each={visible()}>
             {(entry, i) => (
-              <li class="agent-feed-line" data-rank={i()}>
+              <li
+                class="agent-feed-line"
+                data-rank={expanded() ? (i() === 0 ? 0 : undefined) : Math.min(i(), 4)}
+                title={entry.narration}
+              >
                 {entry.narration}
               </li>
             )}
           </For>
         </ol>
+        <Show when={olderCount() > 0 && !expanded()}>
+          <button
+            type="button"
+            class="agent-feed-more"
+            onClick={() => setExpanded(true)}
+          >
+            … +{olderCount()} older
+          </button>
+        </Show>
+        <Show when={expanded()}>
+          <button
+            type="button"
+            class="agent-feed-more"
+            onClick={() => setExpanded(false)}
+          >
+            show less
+          </button>
+        </Show>
       </div>
     </Show>
   );
