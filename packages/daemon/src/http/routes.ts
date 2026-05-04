@@ -123,6 +123,15 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     const session = await store.update(id, (s) => ({ ...s, status: parsed.data.status }));
     bus.publish(session.id, { type: 'state-changed', session });
 
+    // DONE button or any path that flips status to 'complete' — drop the
+    // file. Subscribers got the SSE update first; nothing reads completed
+    // sessions afterward (responses are already in the agent's context via
+    // get_unread_responses).
+    if (parsed.data.status === 'complete') {
+      bus.publish(session.id, { type: 'complete', sessionId: session.id });
+      await store.delete(id);
+    }
+
     // Resume detection: paused → active with unaddressed responses → fire summarizing poke
     const wasPaused = before?.status === 'paused';
     const nowActive = parsed.data.status === 'active';

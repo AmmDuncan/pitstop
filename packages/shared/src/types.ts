@@ -103,5 +103,4 @@ export type PitstopConfig = {
   editor: 'cursor' | 'vscode' | 'jetbrains' | 'none';
   drawer: { position: 'right' | 'left' | 'floating'; size: 'standard' | 'compact' | 'strip'; width: number };
   theme: 'auto' | 'dark' | 'light';
-  session: { retentionDays: number };
 };

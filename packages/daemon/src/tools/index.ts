@@ -33,6 +33,16 @@ export const tools = {
     if (existing && existing.status !== 'idle') {
       throw new Error(`ALREADY_ACTIVE:${existing.id}`);
     }
+    // If there's an existing idle-and-stale session for this projectRoot
+    // (created but no responses, no agent activity), drop it before creating
+    // the fresh one. Avoids the "graveyard of abandoned start_reviews" file
+    // pile-up. We only do this for stale idle — idle sessions with responses
+    // are real work the user might want preserved.
+    if (existing && existing.status === 'idle' &&
+        existing.responses.length === 0 && existing.agentActivity.length === 0) {
+      await ctx.store.delete(existing.id);
+    }
+
     const session = await ctx.store.create({
       ...p,
       devUrls: p.devUrls ?? [],
@@ -160,8 +170,11 @@ export const tools = {
       lastAgentActivityAt: Date.now(),
       pokeFailed: false,
     }));
+    // Publish events first (subscribers update their UI), THEN drop the file
+    // — completed sessions have no consumer. See CHANGELOG v0.3.11.
     ctx.bus.publish(sessionId, { type: 'complete', sessionId });
     ctx.bus.publish(sessionId, { type: 'state-changed', session });
+    await ctx.store.delete(sessionId);
     return { ok: true };
   },
 };

@@ -1,4 +1,4 @@
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { nanoid } from 'nanoid';
@@ -86,5 +86,12 @@ export class Store {
     SessionZ.parse(next);
     await writeAtomic(this.path(id), JSON.stringify(next, null, 2));
     return next;
+  }
+
+  /** Remove a session's JSON file from disk. No-op if the file isn't there. */
+  async delete(id: string): Promise<void> {
+    const p = this.path(id);
+    if (!existsSync(p)) return;
+    await unlink(p);
   }
 }

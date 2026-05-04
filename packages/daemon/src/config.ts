@@ -10,7 +10,6 @@ const DEFAULT_CONFIG: PitstopConfig = {
   editor: 'cursor',
   drawer: { position: 'right', size: 'standard', width: 504 },
   theme: 'auto',
-  session: { retentionDays: 30 },
 };
 
 export async function loadConfig(configPath?: string): Promise<PitstopConfig> {
@@ -24,7 +23,6 @@ export async function loadConfig(configPath?: string): Promise<PitstopConfig> {
       ...parsed,
       poke: parsed.poke ?? DEFAULT_CONFIG.poke,
       drawer: { ...DEFAULT_CONFIG.drawer, ...(parsed.drawer ?? {}) },
-      session: { ...DEFAULT_CONFIG.session, ...(parsed.session ?? {}) },
     };
   } catch (err) {
     console.error('failed to load config; using defaults', err);

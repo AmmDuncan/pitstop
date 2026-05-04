@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.11 — 2026-05-04
+
+### Changed
+
+- **Session JSON files are deleted when the review ends** — both DONE button (status flips to `complete`) and `complete_review` MCP tool now drop the file from disk after publishing the SSE events. Comments are already in the agent's context via `get_unread_responses`, the drawer's UI flushes via the SSE updates; the file has no consumer afterward, so keeping it was just clutter.
+- **Stale idle sessions are replaced.** When `start_review` is called on a projectRoot that already has an idle session with zero responses and zero agent activity (i.e. someone aborted a `start_review` earlier without doing anything), the stale one is deleted before the fresh one is created. Idle sessions with real responses are preserved (ALREADY_ACTIVE error is unchanged for active/paused).
+- **`session.retentionDays` config removed.** Was a stub that nothing read; with delete-on-complete there's nothing to retain.
+
+### Migration
+
+Existing complete-status JSONs from before this version stay on disk until you manually `rm ~/.claude/pitstop/sessions/*.json`. Going forward, the directory should self-prune.
+
 ## v0.3.9 — 2026-05-04
 
 ### Fixed
