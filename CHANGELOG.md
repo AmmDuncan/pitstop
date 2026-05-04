@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.3.13 — 2026-05-04
+
+### Added
+
+- **`AWAITING CLAUDE` lifecycle state** — when the current item has no `mark_addressing` entry yet from Claude, the action buttons stay hidden and a status strip reads `AWAITING CLAUDE`. Buttons only appear once the agent has explicitly addressed *this* item, so you can't approve before Claude has driven you to the surface. The strip transitions out cleanly the moment the first `mark_addressing` for the item arrives.
+- **AgentFeed flash on new entry** — when a new narration arrives, the newest line briefly flashes amber and fades to transparent over 1.5s. Draws the eye without being annoying. The feed is no longer dead.
+
+### Changed
+
+- **`ActivityEntry.itemId`** — `mark_addressing` now persists the `itemId` it received as a param onto the activity entry. Previously it was passed in but discarded. Lets the drawer tell which item each narration is about.
+
+### Migration
+
+`ActivityEntry.itemId` is optional, so v0.3.x sessions on disk still parse. After pulling, agents calling `mark_addressing` will start populating the new field automatically.
+
 ## v0.3.12 — 2026-05-04
 
 ### Added

@@ -666,6 +666,17 @@
 }
 .agent-feed-line[data-rank="0"] { color: var(--t1); }
 .agent-feed-line[data-rank="0"]::before { color: var(--amber); }
+
+/* When a new narration arrives the newest line briefly flashes amber so the
+   user notices. Fades back to transparent over 1.5s. Drawn as a left-padding
+   wash so the chevron / text don't shift. */
+.agent-feed-line.is-fresh {
+  animation: agent-feed-flash 1.5s ease-out;
+}
+@keyframes agent-feed-flash {
+  0%   { background: color-mix(in oklab, var(--amber) 28%, transparent); }
+  100% { background: transparent; }
+}
 /* Fade only applies when the feed has hidden older entries — and only on the
    last two visible lines, so the bulk of the feed stays fully readable and
    the fade reads as "more behind this" instead of an overlay on everything. */

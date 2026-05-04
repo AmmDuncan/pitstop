@@ -131,13 +131,15 @@ export const tools = {
   async mark_addressing(ctx: Ctx, params: unknown) {
     const P = z.object({ sessionId: z.string(), itemId: z.string().nullable(), narration: z.string() });
     const { sessionId, itemId, narration } = P.parse(params);
+    const at = Date.now();
+    const entry = { at, tool: 'mark_addressing', narration, itemId: itemId ?? undefined };
     const session = await ctx.store.update(sessionId, (s) => ({
       ...s,
-      agentActivity: [...s.agentActivity, { at: Date.now(), tool: 'mark_addressing', narration }].slice(-50),
-      lastAgentActivityAt: Date.now(),
+      agentActivity: [...s.agentActivity, entry].slice(-50),
+      lastAgentActivityAt: at,
       pokeFailed: false,
     }));
-    ctx.bus.publish(sessionId, { type: 'agent-activity', sessionId, entry: { at: Date.now(), tool: 'mark_addressing', narration } });
+    ctx.bus.publish(sessionId, { type: 'agent-activity', sessionId, entry });
     ctx.bus.publish(sessionId, { type: 'state-changed', session });
     return { ok: true };
   },

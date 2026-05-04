@@ -122,22 +122,38 @@ export const Detail: Component = () => {
           }}
           disabled={submitting()}
         />
-        <Show
-          when={submitState() === 'idle'}
-          fallback={
-            <div class="lifecycle-strip" data-state={submitState()}>
-              <span class="lifecycle-dot" />
-              <span class="lifecycle-label">
-                {submitState() === 'sending' ? 'SENDING…' : 'POKED · WAITING'}
-              </span>
-            </div>
-          }
-        >
-          <div class="actions">
-            <button class="btn btn-primary" onClick={onApprove} disabled={submitting()}>LOOKS_GOOD <span class="kbd">↵</span></button>
-            <button class="btn btn-secondary" onClick={onComment} disabled={submitting() || !comment().trim()}>SEND_COMMENT <span class="kbd">⌘↵</span></button>
-          </div>
-        </Show>
+        {(() => {
+          // Buttons only render when the agent has explicitly addressed this
+          // item (mark_addressing with this itemId). Before that, Claude is
+          // either still booting up or driving the user's tab toward this
+          // surface — approving prematurely would be approving something the
+          // user hasn't actually seen yet.
+          const itemAddressed = () => {
+            const id = item()!.id;
+            return (session.s?.agentActivity ?? []).some(
+              (e) => e.tool === 'mark_addressing' && e.itemId === id,
+            );
+          };
+          const stripState = () => {
+            if (submitState() === 'sending') return { kind: 'sending', label: 'SENDING…' };
+            if (submitState() === 'poked') return { kind: 'poked', label: 'POKED · WAITING' };
+            if (!itemAddressed()) return { kind: 'awaiting', label: 'AWAITING CLAUDE' };
+            return null;
+          };
+          return (
+            <Show when={!stripState()} fallback={
+              <div class="lifecycle-strip" data-state={stripState()!.kind}>
+                <span class="lifecycle-dot" />
+                <span class="lifecycle-label">{stripState()!.label}</span>
+              </div>
+            }>
+              <div class="actions">
+                <button class="btn btn-primary" onClick={onApprove} disabled={submitting()}>LOOKS_GOOD <span class="kbd">↵</span></button>
+                <button class="btn btn-secondary" onClick={onComment} disabled={submitting() || !comment().trim()}>SEND_COMMENT <span class="kbd">⌘↵</span></button>
+              </div>
+            </Show>
+          );
+        })()}
       </div>
     </Show>
   );

@@ -42,6 +42,10 @@ export const ActivityEntryZ = z.object({
   at: z.number(),
   tool: z.string(),
   narration: z.string().optional(),
+  /** Item the activity is about. mark_addressing's `itemId` param persists
+   *  here so the drawer can tell whether the *current* item has been
+   *  addressed yet (ergo buttons can show), vs the agent still driving. */
+  itemId: z.string().optional(),
 });
 
 export const SessionStatusZ = z.enum(['idle', 'active', 'paused', 'complete']);
