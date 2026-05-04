@@ -772,7 +772,13 @@
   resize: vertical;
 }
 .cbox::placeholder { color: var(--t4); font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.02em; }
-.cbox:focus { outline: 1px solid var(--amber); outline-offset: -1px; border-color: var(--amber); }
+.cbox:focus {
+  outline: 1px solid var(--amber);
+  outline-offset: -1px;
+  border-color: var(--amber);
+  /* Subtle dark-amber tint on focus, matching the border colour shift. */
+  background: color-mix(in oklab, var(--amber) 10%, var(--bg-input));
+}
 
 .actions { display: flex; gap: 6px; margin-top: 12px; align-items: center; }
 
