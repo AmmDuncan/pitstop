@@ -3,6 +3,9 @@ import { session } from '../state/store';
 
 const FEED_SIZE = 5;
 const FLASH_DURATION_MS = 1500;
+const FEED_DEFAULT_MAX = 120;
+const FEED_MIN = 80;
+const FEED_MAX = 400;
 
 /** Bottom-of-drawer feed of the agent's recent narrations.
  *  Reads `session.agentActivity`, surfaces the last `FEED_SIZE` `mark_addressing`
@@ -12,6 +15,36 @@ const FLASH_DURATION_MS = 1500;
 export const AgentFeed: Component = () => {
   const [expanded, setExpanded] = createSignal(false);
   const [flashing, setFlashing] = createSignal(false);
+  const [feedMaxHeight, setFeedMaxHeight] = createSignal(FEED_DEFAULT_MAX);
+
+  /** Top-edge handle: drag UP to grow the feed, DOWN to shrink. Same pointer-
+   *  capture pattern as the floating-drawer / resize-handle code so the
+   *  release fires reliably even when the cursor leaves the viewport. */
+  const onResizePointerDown = (e: PointerEvent) => {
+    e.preventDefault();
+    const el = e.currentTarget as Element;
+    el.setPointerCapture(e.pointerId);
+    const startY = e.clientY;
+    const startH = feedMaxHeight();
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId !== e.pointerId) return;
+      const dy = startY - ev.clientY;
+      setFeedMaxHeight(Math.max(FEED_MIN, Math.min(FEED_MAX, startH + dy)));
+    };
+    const release = () => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', release);
+      el.removeEventListener('pointercancel', release);
+      el.removeEventListener('lostpointercapture', release);
+      try { el.releasePointerCapture(e.pointerId); } catch {}
+      document.body.style.cursor = '';
+    };
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', release);
+    el.addEventListener('pointercancel', release);
+    el.addEventListener('lostpointercapture', release);
+    document.body.style.cursor = 'ns-resize';
+  };
 
   const all = () => {
     const entries = (session.s?.agentActivity ?? [])
@@ -46,8 +79,14 @@ export const AgentFeed: Component = () => {
         classList={{ expanded: expanded(), 'has-older': olderCount() > 0 }}
         aria-live="polite"
       >
+        <div
+          class="agent-feed-resize"
+          onPointerDown={onResizePointerDown}
+          title="Drag to resize"
+          aria-hidden="true"
+        />
         <div class="agent-feed-label">CLAUDE</div>
-        <ol class="agent-feed-list">
+        <ol class="agent-feed-list" style={{ 'max-height': `${feedMaxHeight()}px` }}>
           <For each={visible()}>
             {(entry, i) => (
               <li

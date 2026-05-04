@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.3.17 — 2026-05-04
+
+### Added
+
+- **Vertical resize handle on the AgentFeed.** Drag the top edge of the feed up to grow it, down to shrink. Bounded between 80px (min) and 400px (max); default 120px. Same pointer-capture pattern as the floating-drawer drag, so the release fires reliably even when the cursor leaves the viewport.
+
+### Fixed
+
+- **Drawer no longer appears in print previews.** Added `@media print { :host { display: none !important; } }` so the floating overlay stays out of users' printed output.
+
 ## v0.3.16 — 2026-05-04
 
 ### Added
