@@ -81,7 +81,7 @@ export const Header: Component = () => {
 
   return (
     <header class="dheader" onPointerDown={onHeaderPointerDown} classList={{ draggable: position() === 'floating' }}>
-      <div class="mark">W</div>
+      <div class="mark" aria-hidden="true">🏁</div>
       <div>
         <div class="name">PITSTOP</div>
         <div class="ctx">{session.s?.branch ?? session.s?.projectRoot ?? '—'}</div>
