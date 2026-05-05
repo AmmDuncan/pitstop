@@ -36,13 +36,18 @@
   overflow: hidden;
   z-index: 2147483600;
   pointer-events: auto;
-  /* Smooth size changes (especially when set_drawer or the size button
-     swap standard ↔ compact, or strip-mode width snaps). Position flips
-     left ↔ right involve `auto` ↔ `0` on right/left and can't be CSS-
-     transitioned cleanly, so those snap instantly. The user-driven
-     resize-handle drag is fine — small per-frame deltas over 220ms read
-     as a tiny smoothing, not lag. */
+  /* Smooth size changes (set_drawer, size button swap standard ↔ compact,
+     strip collapse). Position flips left ↔ right involve `auto` ↔ `0` on
+     right/left and can't be CSS-transitioned cleanly, so those snap. */
   transition: width 220ms ease, height 220ms ease;
+}
+/* Suppress the transition while the user is actively dragging a resize
+   handle — every per-frame width/height update would otherwise spawn a
+   220ms lerp and the drag feels like the drawer is rubber-banding behind
+   the cursor. The `resizing` class is toggled on from ResizeHandle's
+   pointerdown / release pair via the `interactiveResize` signal. */
+.drawer.resizing {
+  transition: none;
 }
 
 /* Host element covers the viewport at the top of the document stacking

@@ -15,7 +15,7 @@ import {
   togglePinSide,
   toggleTheme,
 } from "../state/modes";
-import { currentItemIdx, session, setHelpOpen, unreviewedIndices } from "../state/store";
+import { currentItemIdx, session, setHelpOpen } from "../state/store";
 import { FloatIcon, MinimizeIcon, SideIcon, SizeIcon, ThemeIcon } from "./Icons";
 import { StatusTag, derivePill } from "./StatusTag";
 
@@ -23,11 +23,6 @@ export const Header: Component = () => {
   const pill = () => derivePill(session.s);
   const total = () => session.s?.items.length ?? 0;
   const current = () => Math.min(currentItemIdx() + 1, total());
-  const skippedCount = () => {
-    const reviewed = (session.s?.responses ?? []).length;
-    if (reviewed === 0) return 0;
-    return unreviewedIndices().filter((i) => i < currentItemIdx()).length;
-  };
 
   const onRetry = async () => {
     if (!session.s) return;
@@ -104,12 +99,14 @@ export const Header: Component = () => {
           <span class="counter-cur">{String(current()).padStart(2, "0")}</span>
           <span class="counter-sep">/</span>
           <span class="counter-total">{String(total()).padStart(2, "0")}</span>
-          <Show when={skippedCount() > 0}>
-            <span class="counter-skipped">· {String(skippedCount()).padStart(2, "0")}_SKIPPED</span>
-          </Show>
         </span>
       </Show>
-      <StatusTag pill={pill()} onRetry={onRetry} />
+      {/* Hide the StatusTag once the session is complete — the ReviewComplete
+          screen below already announces it big and green; the header pill
+          just duplicates the signal and crowds the chrome at narrow widths. */}
+      <Show when={pill().state !== "complete"}>
+        <StatusTag pill={pill()} onRetry={onRetry} />
+      </Show>
       <div class="x-btn-pair">
         <button
           class="x-btn side-btn"

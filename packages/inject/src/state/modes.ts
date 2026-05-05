@@ -70,6 +70,12 @@ export const [floatingTop, setFloatingTop] = createSignal(initial.floatingTop);
 export const [floatingLeft, setFloatingLeft] = createSignal(initial.floatingLeft);
 export const [theme, setTheme] = createSignal<Theme>(initial.theme);
 
+/** True while the user is actively dragging the floating drawer or pulling a
+ *  resize handle. Drawer.tsx adds a `resizing` class while this is true so
+ *  CSS can suppress the width/height transition (otherwise every pixel-
+ *  level pointer delta lerps over 220ms and the drag feels laggy). */
+export const [interactiveResize, setInteractiveResize] = createSignal(false);
+
 createRoot(() => {
   createEffect(() => {
     const m: Modes = {

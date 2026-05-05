@@ -3,6 +3,7 @@ import {
   floatingLeft,
   floatingTop,
   height,
+  interactiveResize,
   position,
   setFloatingLeft,
   setFloatingTop,
@@ -36,6 +37,7 @@ export const Drawer: Component = () => {
   const modeClasses = () => {
     const cls = [`drawer pos-${position()} size-${size()}`];
     if (session.s?.status === "paused") cls.push("paused");
+    if (interactiveResize()) cls.push("resizing");
     return cls.join(" ");
   };
   const floatStyle = () =>

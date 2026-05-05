@@ -1,4 +1,5 @@
 import type { Component } from "solid-js";
+import { setInteractiveResize } from "../state/modes";
 
 type Direction = "edge-left" | "edge-right" | "corner-se" | "corner-sw" | "corner-ne" | "corner-nw";
 
@@ -25,6 +26,7 @@ export const ResizeHandle: Component<Props> = (props) => {
     e.preventDefault();
     const el = e.currentTarget as HTMLElement;
     el.setPointerCapture(e.pointerId);
+    setInteractiveResize(true);
 
     let lastX = e.clientX;
     let lastY = e.clientY;
@@ -47,6 +49,7 @@ export const ResizeHandle: Component<Props> = (props) => {
       } catch {}
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
+      setInteractiveResize(false);
     };
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerup", release);
