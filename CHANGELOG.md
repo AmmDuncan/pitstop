@@ -2,6 +2,19 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.35 — 2026-05-05
+
+### Drawer polish: overlay flush, reflow scope, unread pip, typography
+
+- **Overlay-docked goes fully flush.** Drops the 10px top/bottom/outer-edge inset and the 6px rounded corners that v0.3.33 introduced. The inset created a narrow window where host content bled through as letter fragments at the edge of every line of host text — looked broken, not "honest peek." Differentiation from reflow-on is now solely the soft shadow cast inward toward the page. Reflow-on remains shadowless and sharp.
+- **Reflow padding moved to `<html>` only.** Setting padding on both `<html>` and `<body>` double-counted whenever the host body had its own `max-width` / `margin: 0 auto` layout — squeezing host content to roughly half its intended width. Single-pad fixes that.
+- **Header truncation actually works.** Added `min-width: 0` to `.dheader` so the name-block flex child can shrink past its content min-content, letting the long branch label collapse with `text-overflow: ellipsis` instead of pushing the minimize button past the drawer's right edge. Branch label also gets a `title` attr so the full text shows on hover.
+- **Transitions: `ease` → `ease-out`** across width/height changes.
+- **Typography pass continued from v0.3.32.** `.qline` (item-level question) is now sans 15px / weight 500, was mono uppercase 11px; `.agent-feed-list` is sans 12.5px, was mono 11.5px. Both are sentence-shaped prose, not labels. Spacing between feed entries bumped 4px → 8px.
+- **Floating drawer gets 4px border-radius.** Subtle softening on the only state where the corners actually sit against host page content.
+- **Unread feed signal.** When a new agent narration arrives in the feed and the user hasn't seen it yet, a pulsing amber pip + "N NEW" tag appears on the CLAUDE eyebrow. Pulse is a gentle 2s cycle. Cleared on mouse-enter the feed, scroll the list, or click any feed line. Existing entries on first drawer mount are silently marked seen — only post-mount arrivals count as unread.
+- **Reflow tagged EXPERIMENTAL.** Bordered tag in the kebab menu; tooltip mentions the two host-side limitations (fixed-positioned elements stay viewport-anchored, viewport-based media queries don't follow the narrowed body). README Limitations section expanded to document both gotchas + the host opt-in pattern (anchor fixed elements to `--pitstop-drawer-width`).
+
 ## v0.3.34 — 2026-05-05
 
 ### Fix: phantom strip under the footer when AgentFeed is empty
