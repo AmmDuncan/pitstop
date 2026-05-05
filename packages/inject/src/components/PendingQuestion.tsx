@@ -1,7 +1,7 @@
-import { type Component, For, Show, createSignal } from 'solid-js';
-import type { PendingQuestion as PendingQuestionType } from '@pitstop/shared';
-import { session, setSubmitState, flagSent } from '../state/store';
-import { submitResponse } from '../state/client';
+import type { PendingQuestion as PendingQuestionType } from "@pitstop/shared";
+import { type Component, For, Show, createSignal } from "solid-js";
+import { submitResponse } from "../state/client";
+import { flagSent, session, setSubmitState } from "../state/store";
 
 type Props = {
   question: PendingQuestionType;
@@ -14,22 +14,22 @@ type Props = {
 export const PendingQuestion: Component<Props> = (props) => {
   const [submitting, setSubmitting] = createSignal(false);
   const [freeform, setFreeform] = createSignal(false);
-  const [text, setText] = createSignal('');
+  const [text, setText] = createSignal("");
 
   const submit = async (answer: string) => {
     if (!session.s) return;
     setSubmitting(true);
-    setSubmitState('sending');
+    setSubmitState("sending");
     try {
       await submitResponse(session.s.id, {
-        itemId: props.question.itemId ?? session.s.items[0]?.id ?? '',
-        kind: 'answer',
+        itemId: props.question.itemId ?? session.s.items[0]?.id ?? "",
+        kind: "answer",
         body: answer,
         questionText: props.question.question,
       });
       flagSent();
     } catch {
-      setSubmitState('idle');
+      setSubmitState("idle");
     } finally {
       setSubmitting(false);
     }
@@ -45,7 +45,9 @@ export const PendingQuestion: Component<Props> = (props) => {
   return (
     <section class="pq is-fresh" aria-live="assertive">
       <header class="pq-eyebrow">
-        <span class="pq-icon" aria-hidden="true">?</span>
+        <span class="pq-icon" aria-hidden="true">
+          ?
+        </span>
         CLAUDE_NEEDS_INPUT
       </header>
       <p class="pq-text">{props.question.question}</p>
@@ -79,7 +81,7 @@ export const PendingQuestion: Component<Props> = (props) => {
               value={text()}
               onInput={(e) => setText(e.currentTarget.value)}
               onKeyDown={(e) => {
-                if (e.metaKey && e.key === 'Enter') {
+                if (e.metaKey && e.key === "Enter") {
                   e.preventDefault();
                   onFreeformSubmit(e);
                 }
@@ -88,23 +90,14 @@ export const PendingQuestion: Component<Props> = (props) => {
               autofocus
               disabled={submitting()}
             />
-            <button
-              type="submit"
-              class="btn btn-primary pq-send"
-              disabled={submitting() || !text().trim()}
-            >
+            <button type="submit" class="btn btn-primary pq-send" disabled={submitting() || !text().trim()}>
               SEND_ANSWER <span class="kbd">⌘↵</span>
             </button>
           </form>
         }
       >
-        <button
-          type="button"
-          class="pq-other"
-          disabled={submitting()}
-          onClick={() => setFreeform(true)}
-        >
-          {props.question.options.length ? 'Type a different answer ↓' : 'Type your answer ↓'}
+        <button type="button" class="pq-other" disabled={submitting()} onClick={() => setFreeform(true)}>
+          {props.question.options.length ? "Type a different answer ↓" : "Type your answer ↓"}
         </button>
       </Show>
     </section>

@@ -14,8 +14,8 @@
 // drawer into the daemon's own /demo or session pages.
 
 (() => {
-  const PITSTOP_DAEMON_PORT = '7773';
-  const TAG_ID = 'pitstop-extension-injected';
+  const PITSTOP_DAEMON_PORT = "7773";
+  const TAG_ID = "pitstop-extension-injected";
 
   const isPitstopDaemon = location.port === PITSTOP_DAEMON_PORT;
   if (isPitstopDaemon) return;
@@ -23,11 +23,11 @@
   const inject = () => {
     if (document.getElementById(TAG_ID)) return;
     if (!document.head && !document.body) return;
-    const s = document.createElement('script');
+    const s = document.createElement("script");
     s.id = TAG_ID;
     s.src = `http://localhost:${PITSTOP_DAEMON_PORT}/inject.js`;
     s.defer = true;
-    s.dataset.injectedBy = 'pitstop-chrome-extension';
+    s.dataset.injectedBy = "pitstop-chrome-extension";
     (document.head || document.body).appendChild(s);
   };
 

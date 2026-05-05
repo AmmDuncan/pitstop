@@ -6,21 +6,21 @@
  *   bun run release 0.1.1
  *   bun run release 0.2.0-beta.1
  */
-import { readFile, writeFile } from 'node:fs/promises';
-import { $ } from 'bun';
+import { readFile, writeFile } from "node:fs/promises";
+import { $ } from "bun";
 
 const PACKAGES = [
-  'packages/daemon/package.json',
-  'packages/inject/package.json',
-  'packages/mcp-adapter/package.json',
-  'packages/shared/package.json',
-  'packages/vite-plugin/package.json',
+  "packages/daemon/package.json",
+  "packages/inject/package.json",
+  "packages/mcp-adapter/package.json",
+  "packages/shared/package.json",
+  "packages/vite-plugin/package.json",
 ];
 
 const version = process.argv[2];
 if (!version || !/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) {
-  console.error('Usage: bun run release <semver>');
-  console.error('Example: bun run release 0.1.1');
+  console.error("Usage: bun run release <semver>");
+  console.error("Example: bun run release 0.1.1");
   process.exit(1);
 }
 
@@ -29,7 +29,7 @@ const tag = `v${version}`;
 // 1. Working tree must be clean
 const status = (await $`git status --porcelain`.text()).trim();
 if (status) {
-  console.error('Working tree is dirty. Commit or stash first:');
+  console.error("Working tree is dirty. Commit or stash first:");
   console.error(status);
   process.exit(1);
 }
@@ -42,24 +42,24 @@ if (existingTag) {
 }
 
 // 3. Tests must pass before we touch anything
-console.log('▸ running tests...');
+console.log("▸ running tests...");
 await $`bun test`.quiet();
-console.log('  tests passed.\n');
+console.log("  tests passed.\n");
 
 // 4. Bump all package versions
 console.log(`▸ bumping ${PACKAGES.length} packages → ${version}`);
 for (const file of PACKAGES) {
-  const pkg = JSON.parse(await readFile(file, 'utf8'));
+  const pkg = JSON.parse(await readFile(file, "utf8"));
   pkg.version = version;
-  await writeFile(file, JSON.stringify(pkg, null, 2) + '\n');
+  await writeFile(file, JSON.stringify(pkg, null, 2) + "\n");
   console.log(`  ${file}`);
 }
-console.log('');
+console.log("");
 
 // 5. Rebuild inject so the published bundle reflects this version
-console.log('▸ rebuilding inject.js...');
+console.log("▸ rebuilding inject.js...");
 await $`bun --cwd packages/inject run build`.quiet();
-console.log('  rebuilt.\n');
+console.log("  rebuilt.\n");
 
 // 5b. Rebuild mcp-adapter bundle (Claude Code launches this via node)
 //
@@ -69,12 +69,12 @@ console.log('  rebuilt.\n');
 // pipe stalls after the first message. Launching the same bundle via node
 // (any v18+) registers tools cleanly. Keep --target=node so a fresh checkout
 // can `node packages/mcp-adapter/dist/index.js` without bun installed.
-console.log('▸ rebuilding mcp-adapter bundle...');
+console.log("▸ rebuilding mcp-adapter bundle...");
 await $`bun build packages/mcp-adapter/src/index.ts --outfile packages/mcp-adapter/dist/index.js --target=node --format=esm`.quiet();
-console.log('  rebuilt.\n');
+console.log("  rebuilt.\n");
 
 // 6. Commit, tag, push
-console.log('▸ committing, tagging, pushing...');
+console.log("▸ committing, tagging, pushing...");
 await $`git add -A`;
 await $`git commit -m ${`chore: release ${version}`}`;
 await $`git tag ${tag}`;

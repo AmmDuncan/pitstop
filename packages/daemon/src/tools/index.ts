@@ -1,8 +1,8 @@
-import { z } from 'zod';
-import { ItemZ, type Session } from '@pitstop/shared';
-import type { Store } from '../store/sessions';
-import type { Bus } from '../http/sse';
-import { wire_drawer } from './wire-drawer';
+import { ItemZ, type Session } from "@pitstop/shared";
+import { z } from "zod";
+import type { Bus } from "../http/sse";
+import type { Store } from "../store/sessions";
+import { wire_drawer } from "./wire-drawer";
 
 type Ctx = {
   store: Store;
@@ -30,7 +30,7 @@ export const tools = {
   async start_review(ctx: Ctx, params: unknown) {
     const p = StartReviewZ.parse(params);
     const existing = await ctx.store.getActive(p.projectRoot);
-    if (existing && existing.status !== 'idle') {
+    if (existing && existing.status !== "idle") {
       throw new Error(`ALREADY_ACTIVE:${existing.id}`);
     }
     // If there's an existing idle-and-stale session for this projectRoot
@@ -38,8 +38,12 @@ export const tools = {
     // the fresh one. Avoids the "graveyard of abandoned start_reviews" file
     // pile-up. We only do this for stale idle — idle sessions with responses
     // are real work the user might want preserved.
-    if (existing && existing.status === 'idle' &&
-        existing.responses.length === 0 && existing.agentActivity.length === 0) {
+    if (
+      existing &&
+      existing.status === "idle" &&
+      existing.responses.length === 0 &&
+      existing.agentActivity.length === 0
+    ) {
       await ctx.store.delete(existing.id);
     }
 
@@ -48,7 +52,7 @@ export const tools = {
       devUrls: p.devUrls ?? [],
       clientSessionId: ctx.clientSessionId,
     } as any);
-    ctx.bus.publish(session.id, { type: 'state-snapshot', session });
+    ctx.bus.publish(session.id, { type: "state-snapshot", session });
 
     // Drawer-wiring sniff: if /inject.js has not been requested for this
     // projectRoot in the last 10 min, the agent should warn the user before
@@ -61,7 +65,7 @@ export const tools = {
       : {
           connected: false as const,
           hint:
-            'No /inject.js fetch seen for this projectRoot in the last 10 minutes — the drawer probably is not wired into the dev app yet. ' +
+            "No /inject.js fetch seen for this projectRoot in the last 10 minutes — the drawer probably is not wired into the dev app yet. " +
             `Call wire_drawer({ projectRoot: ${JSON.stringify(p.projectRoot)} }) — it returns the framework + two wiring options (committed conditional snippet vs local-only gitignored file) with exact snippets and file paths. Surface the options to the user via AskUserQuestion, then perform the file edit yourself. Do NOT paste raw snippets into the conversation and ask the user to do it.`,
         };
 
@@ -86,22 +90,22 @@ export const tools = {
       lastAgentActivityAt: Date.now(),
       pokeFailed: false,
     }));
-    ctx.bus.publish(sessionId, { type: 'item-added', sessionId, items });
-    ctx.bus.publish(sessionId, { type: 'state-changed', session });
+    ctx.bus.publish(sessionId, { type: "item-added", sessionId, items });
+    ctx.bus.publish(sessionId, { type: "state-changed", session });
     return { ok: true };
   },
 
   async get_state(ctx: Ctx, params: unknown) {
     const { sessionId } = z.object({ sessionId: z.string() }).parse(params);
     const session = await ctx.store.get(sessionId);
-    if (!session) throw new Error('NOT_FOUND');
+    if (!session) throw new Error("NOT_FOUND");
     // Update activity (separate from get to avoid mutating on every internal read).
     const updated = await ctx.store.update(sessionId, (s) => ({
       ...s,
       lastAgentActivityAt: Date.now(),
       pokeFailed: false,
     }));
-    ctx.bus.publish(sessionId, { type: 'state-changed', session: updated });
+    ctx.bus.publish(sessionId, { type: "state-changed", session: updated });
     return updated;
   },
 
@@ -122,9 +126,7 @@ export const tools = {
       };
     });
     return session.responses.filter((r) =>
-      snapshot
-        ? !snapshot.responses.find((q) => q.itemId === r.itemId && q.at === r.at)?.addressed
-        : true,
+      snapshot ? !snapshot.responses.find((q) => q.itemId === r.itemId && q.at === r.at)?.addressed : true,
     );
   },
 
@@ -139,7 +141,7 @@ export const tools = {
     const at = Date.now();
     const entry = {
       at,
-      tool: 'mark_addressing',
+      tool: "mark_addressing",
       narration,
       itemId: itemId ?? undefined,
       // Default true keeps v0.3.13–v0.3.20 callers working unchanged.
@@ -151,8 +153,8 @@ export const tools = {
       lastAgentActivityAt: at,
       pokeFailed: false,
     }));
-    ctx.bus.publish(sessionId, { type: 'agent-activity', sessionId, entry });
-    ctx.bus.publish(sessionId, { type: 'state-changed', session });
+    ctx.bus.publish(sessionId, { type: "agent-activity", sessionId, entry });
+    ctx.bus.publish(sessionId, { type: "state-changed", session });
     return { ok: true };
   },
 
@@ -160,7 +162,7 @@ export const tools = {
     const P = z.object({ sessionId: z.string(), itemId: z.string() });
     const { sessionId, itemId } = P.parse(params);
     const cur = await ctx.store.get(sessionId);
-    if (!cur) throw new Error('NOT_FOUND');
+    if (!cur) throw new Error("NOT_FOUND");
     if (!cur.items.some((it) => it.id === itemId)) throw new Error(`UNKNOWN_ITEM_ID:${itemId}`);
     const session = await ctx.store.update(sessionId, (s) => ({
       ...s,
@@ -168,7 +170,7 @@ export const tools = {
       lastAgentActivityAt: Date.now(),
       pokeFailed: false,
     }));
-    ctx.bus.publish(sessionId, { type: 'state-changed', session });
+    ctx.bus.publish(sessionId, { type: "state-changed", session });
     return { ok: true };
   },
 
@@ -180,10 +182,14 @@ export const tools = {
     const P = z.object({
       sessionId: z.string(),
       question: z.string().min(1),
-      options: z.array(z.object({
-        label: z.string().min(1),
-        description: z.string().optional(),
-      })).optional(),
+      options: z
+        .array(
+          z.object({
+            label: z.string().min(1),
+            description: z.string().optional(),
+          }),
+        )
+        .optional(),
       itemId: z.string().optional(),
     });
     const { sessionId, question, options, itemId } = P.parse(params);
@@ -194,17 +200,17 @@ export const tools = {
       // Push a feed entry so the question shows in the AgentFeed history too.
       agentActivity: [
         ...s.agentActivity,
-        { at, tool: 'ask_user', narration: `❓ ${question}`, itemId },
+        { at, tool: "ask_user", narration: `❓ ${question}`, itemId },
       ].slice(-50),
       lastAgentActivityAt: at,
       pokeFailed: false,
     }));
     ctx.bus.publish(sessionId, {
-      type: 'agent-activity',
+      type: "agent-activity",
       sessionId,
-      entry: { at, tool: 'ask_user', narration: `❓ ${question}`, itemId },
+      entry: { at, tool: "ask_user", narration: `❓ ${question}`, itemId },
     });
-    ctx.bus.publish(sessionId, { type: 'state-changed', session });
+    ctx.bus.publish(sessionId, { type: "state-changed", session });
     return { ok: true };
   },
 
@@ -212,14 +218,14 @@ export const tools = {
     const { sessionId } = z.object({ sessionId: z.string() }).parse(params);
     const session = await ctx.store.update(sessionId, (s) => ({
       ...s,
-      status: 'complete',
+      status: "complete",
       lastAgentActivityAt: Date.now(),
       pokeFailed: false,
     }));
     // Publish events first (subscribers update their UI), THEN drop the file
     // — completed sessions have no consumer. See CHANGELOG v0.3.11.
-    ctx.bus.publish(sessionId, { type: 'complete', sessionId });
-    ctx.bus.publish(sessionId, { type: 'state-changed', session });
+    ctx.bus.publish(sessionId, { type: "complete", sessionId });
+    ctx.bus.publish(sessionId, { type: "state-changed", session });
     await ctx.store.delete(sessionId);
     return { ok: true };
   },

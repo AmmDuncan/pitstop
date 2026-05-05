@@ -1,5 +1,5 @@
-import { type Component, For, Show, createSignal, createEffect } from 'solid-js';
-import { session } from '../state/store';
+import { type Component, For, Show, createEffect, createSignal } from "solid-js";
+import { session } from "../state/store";
 
 const FEED_SIZE = 5;
 const FLASH_DURATION_MS = 1500;
@@ -32,23 +32,26 @@ export const AgentFeed: Component = () => {
       setFeedMaxHeight(Math.max(FEED_MIN, Math.min(FEED_MAX, startH + dy)));
     };
     const release = () => {
-      el.removeEventListener('pointermove', onMove);
-      el.removeEventListener('pointerup', release);
-      el.removeEventListener('pointercancel', release);
-      el.removeEventListener('lostpointercapture', release);
-      try { el.releasePointerCapture(e.pointerId); } catch {}
-      document.body.style.cursor = '';
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", release);
+      el.removeEventListener("pointercancel", release);
+      el.removeEventListener("lostpointercapture", release);
+      try {
+        el.releasePointerCapture(e.pointerId);
+      } catch {}
+      document.body.style.cursor = "";
     };
-    el.addEventListener('pointermove', onMove);
-    el.addEventListener('pointerup', release);
-    el.addEventListener('pointercancel', release);
-    el.addEventListener('lostpointercapture', release);
-    document.body.style.cursor = 'ns-resize';
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", release);
+    el.addEventListener("pointercancel", release);
+    el.addEventListener("lostpointercapture", release);
+    document.body.style.cursor = "ns-resize";
   };
 
   const all = () => {
-    const entries = (session.s?.agentActivity ?? [])
-      .filter((e) => e.narration && (e.tool === 'mark_addressing' || e.tool === 'ask_user'));
+    const entries = (session.s?.agentActivity ?? []).filter(
+      (e) => e.narration && (e.tool === "mark_addressing" || e.tool === "ask_user"),
+    );
     return entries.slice().reverse();
   };
 
@@ -76,7 +79,7 @@ export const AgentFeed: Component = () => {
     <Show when={visible().length}>
       <div
         class="agent-feed"
-        classList={{ expanded: expanded(), 'has-older': olderCount() > 0 }}
+        classList={{ expanded: expanded(), "has-older": olderCount() > 0 }}
         aria-live="polite"
       >
         <div
@@ -86,12 +89,12 @@ export const AgentFeed: Component = () => {
           aria-hidden="true"
         />
         <div class="agent-feed-label">CLAUDE</div>
-        <ol class="agent-feed-list" style={{ 'max-height': `${feedMaxHeight()}px` }}>
+        <ol class="agent-feed-list" style={{ "max-height": `${feedMaxHeight()}px` }}>
           <For each={visible()}>
             {(entry, i) => (
               <li
                 class="agent-feed-line"
-                classList={{ 'is-fresh': i() === 0 && flashing() }}
+                classList={{ "is-fresh": i() === 0 && flashing() }}
                 data-rank={expanded() ? (i() === 0 ? 0 : undefined) : Math.min(i(), 4)}
                 title={entry.narration}
               >
@@ -101,20 +104,12 @@ export const AgentFeed: Component = () => {
           </For>
         </ol>
         <Show when={olderCount() > 0 && !expanded()}>
-          <button
-            type="button"
-            class="agent-feed-more"
-            onClick={() => setExpanded(true)}
-          >
+          <button type="button" class="agent-feed-more" onClick={() => setExpanded(true)}>
             … +{olderCount()} older
           </button>
         </Show>
         <Show when={expanded()}>
-          <button
-            type="button"
-            class="agent-feed-more"
-            onClick={() => setExpanded(false)}
-          >
+          <button type="button" class="agent-feed-more" onClick={() => setExpanded(false)}>
             show less
           </button>
         </Show>

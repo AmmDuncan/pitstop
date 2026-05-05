@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { existsSync } from "node:fs";
 /**
  * setup.ts — one-shot installer for a fresh pitstop checkout.
  *
@@ -21,18 +22,17 @@
  *   - Wire the drawer into the user's dev app. The right wiring varies per
  *     framework; we print the snippet at the end and let them paste.
  */
-import { readFile, writeFile, mkdir, access } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { $ } from 'bun';
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { $ } from "bun";
 
-const REPO_ROOT = resolve(import.meta.dir, '..');
+const REPO_ROOT = resolve(import.meta.dir, "..");
 const HOME = homedir();
-const CLAUDE_JSON = join(HOME, '.claude.json');
-const SETTINGS_JSON = join(HOME, '.claude', 'settings.json');
-const ADAPTER_DIST = join(REPO_ROOT, 'packages/mcp-adapter/dist/index.js');
-const HOOK_SCRIPT = join(REPO_ROOT, 'packages/scripts/pitstop-context.sh');
+const CLAUDE_JSON = join(HOME, ".claude.json");
+const SETTINGS_JSON = join(HOME, ".claude", "settings.json");
+const ADAPTER_DIST = join(REPO_ROOT, "packages/mcp-adapter/dist/index.js");
+const HOOK_SCRIPT = join(REPO_ROOT, "packages/scripts/pitstop-context.sh");
 
 function step(msg: string) {
   console.log(`\n▸ ${msg}`);
@@ -49,22 +49,24 @@ function warn(msg: string) {
 
 async function readJson(path: string): Promise<any> {
   if (!existsSync(path)) return {};
-  const text = await readFile(path, 'utf8');
+  const text = await readFile(path, "utf8");
   if (!text.trim()) return {};
   return JSON.parse(text);
 }
 
 async function writeJson(path: string, data: any): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, JSON.stringify(data, null, 2) + '\n');
+  await writeFile(path, JSON.stringify(data, null, 2) + "\n");
 }
 
 // ─── 1. Build dist bundles ────────────────────────────────────────────────
-step('building mcp-adapter dist (node-targeted ESM)');
-await $`bun build packages/mcp-adapter/src/index.ts --outfile packages/mcp-adapter/dist/index.js --target=node --format=esm`.cwd(REPO_ROOT).quiet();
+step("building mcp-adapter dist (node-targeted ESM)");
+await $`bun build packages/mcp-adapter/src/index.ts --outfile packages/mcp-adapter/dist/index.js --target=node --format=esm`
+  .cwd(REPO_ROOT)
+  .quiet();
 ok(`packages/mcp-adapter/dist/index.js`);
 
-step('building inject drawer bundle');
+step("building inject drawer bundle");
 await $`bun --cwd ${REPO_ROOT}/packages/inject run build`.quiet();
 ok(`packages/inject/dist/inject.js`);
 
@@ -73,18 +75,18 @@ step(`registering MCP server in ${CLAUDE_JSON}`);
 const claudeConfig = await readJson(CLAUDE_JSON);
 claudeConfig.mcpServers ??= {};
 const desired = {
-  type: 'stdio' as const,
-  command: 'node',
+  type: "stdio" as const,
+  command: "node",
   args: [ADAPTER_DIST],
 };
 const existing = claudeConfig.mcpServers.pitstop;
 if (existing && JSON.stringify(existing) === JSON.stringify(desired)) {
-  ok('already registered (path matches)');
+  ok("already registered (path matches)");
 } else {
-  if (existing) note(`replacing existing entry (was: ${existing.command} ${existing.args?.[0] ?? ''})`);
+  if (existing) note(`replacing existing entry (was: ${existing.command} ${existing.args?.[0] ?? ""})`);
   claudeConfig.mcpServers.pitstop = desired;
   await writeJson(CLAUDE_JSON, claudeConfig);
-  ok('registered');
+  ok("registered");
 }
 
 // ─── 3. Install UserPromptSubmit hook ─────────────────────────────────────
@@ -93,30 +95,30 @@ const settings = await readJson(SETTINGS_JSON);
 settings.hooks ??= {};
 settings.hooks.UserPromptSubmit ??= [];
 type HookEntry = { hooks: Array<{ type: string; command: string }> };
-const ourHook: HookEntry = { hooks: [{ type: 'command', command: HOOK_SCRIPT }] };
-const alreadyInstalled = (settings.hooks.UserPromptSubmit as HookEntry[]).some(
-  (entry) => entry.hooks?.some((h) => h.command === HOOK_SCRIPT),
+const ourHook: HookEntry = { hooks: [{ type: "command", command: HOOK_SCRIPT }] };
+const alreadyInstalled = (settings.hooks.UserPromptSubmit as HookEntry[]).some((entry) =>
+  entry.hooks?.some((h) => h.command === HOOK_SCRIPT),
 );
 if (alreadyInstalled) {
-  ok('already installed');
+  ok("already installed");
 } else {
   (settings.hooks.UserPromptSubmit as HookEntry[]).push(ourHook);
   await writeJson(SETTINGS_JSON, settings);
-  ok('installed');
+  ok("installed");
 }
 
 // ─── 4. Sanity-check Claude Code presence ─────────────────────────────────
-step('checking for Claude Code CLI');
+step("checking for Claude Code CLI");
 try {
   await $`which claude`.quiet();
-  ok('claude found on PATH');
+  ok("claude found on PATH");
 } catch {
-  warn('`claude` not found on PATH — install Claude Code, then restart your shell.');
+  warn("`claude` not found on PATH — install Claude Code, then restart your shell.");
 }
 
 // ─── 5. Final instructions ────────────────────────────────────────────────
 console.log(`
-${'─'.repeat(60)}
+${"─".repeat(60)}
 ✓ pitstop is set up.
 
 Two things you still need to do manually:
@@ -139,5 +141,5 @@ Two things you still need to do manually:
      Replace <absolute-path-to-your-project> with the project root.
 
 Then ask the agent: "Start a pitstop review."
-${'─'.repeat(60)}
+${"─".repeat(60)}
 `);

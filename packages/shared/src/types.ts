@@ -1,14 +1,14 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-export const AttachmentZ = z.discriminatedUnion('kind', [
+export const AttachmentZ = z.discriminatedUnion("kind", [
   z.object({
-    kind: z.literal('file-ref'),
+    kind: z.literal("file-ref"),
     path: z.string(),
     line: z.number().int().positive().optional(),
     diffStats: z.object({ add: z.number(), rem: z.number(), hunks: z.number() }).optional(),
   }),
-  z.object({ kind: z.literal('image'), src: z.string(), caption: z.string().optional() }),
-  z.object({ kind: z.literal('link'), href: z.string().url(), label: z.string() }),
+  z.object({ kind: z.literal("image"), src: z.string(), caption: z.string().optional() }),
+  z.object({ kind: z.literal("link"), href: z.string().url(), label: z.string() }),
 ]);
 
 export const ItemZ = z.object({
@@ -32,7 +32,7 @@ export const ItemZ = z.object({
 
 export const ResponseZ = z.object({
   itemId: z.string(),
-  kind: z.enum(['approve', 'comment', 'answer']),
+  kind: z.enum(["approve", "comment", "answer"]),
   body: z.string().optional(),
   /** Set when kind === 'answer' — the question text the user was responding
    *  to. Helps the agent correlate without relying on session-state ordering. */
@@ -75,7 +75,7 @@ export const ActivityEntryZ = z.object({
   arrived: z.boolean().optional(),
 });
 
-export const SessionStatusZ = z.enum(['idle', 'active', 'paused', 'complete']);
+export const SessionStatusZ = z.enum(["idle", "active", "paused", "complete"]);
 
 export const SessionZ = z.object({
   id: z.string(),
@@ -122,21 +122,21 @@ export type PendingQuestionOption = z.infer<typeof PendingQuestionOptionZ>;
 
 /** SSE event payloads pushed from daemon → browser. */
 export type SseEvent =
-  | { type: 'state-snapshot'; session: Session }
-  | { type: 'state-changed'; session: Session }
-  | { type: 'item-added'; sessionId: string; items: Item[] }
-  | { type: 'agent-activity'; sessionId: string; entry: ActivityEntry }
-  | { type: 'complete'; sessionId: string };
+  | { type: "state-snapshot"; session: Session }
+  | { type: "state-changed"; session: Session }
+  | { type: "item-added"; sessionId: string; items: Item[] }
+  | { type: "agent-activity"; sessionId: string; entry: ActivityEntry }
+  | { type: "complete"; sessionId: string };
 
 export type PokeKind =
-  | { kind: 'claude-resume' }
-  | { kind: 'webhook'; url: string }
-  | { kind: 'script'; command: string; args?: string[] };
+  | { kind: "claude-resume" }
+  | { kind: "webhook"; url: string }
+  | { kind: "script"; command: string; args?: string[] };
 
 export type PitstopConfig = {
   port: number;
   poke: PokeKind;
-  editor: 'cursor' | 'vscode' | 'jetbrains' | 'none';
-  drawer: { position: 'right' | 'left' | 'floating'; size: 'standard' | 'compact' | 'strip'; width: number };
-  theme: 'auto' | 'dark' | 'light';
+  editor: "cursor" | "vscode" | "jetbrains" | "none";
+  drawer: { position: "right" | "left" | "floating"; size: "standard" | "compact" | "strip"; width: number };
+  theme: "auto" | "dark" | "light";
 };

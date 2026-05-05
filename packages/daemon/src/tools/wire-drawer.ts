@@ -1,22 +1,14 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { z } from 'zod';
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { z } from "zod";
 
 /** Frameworks the wire_drawer tool knows how to suggest snippets for.
  *  `unknown` falls back to a generic head-tag suggestion. */
-export type Framework =
-  | 'nuxt'
-  | 'next'
-  | 'vite'
-  | 'sveltekit'
-  | 'astro'
-  | 'remix'
-  | 'plain-html'
-  | 'unknown';
+export type Framework = "nuxt" | "next" | "vite" | "sveltekit" | "astro" | "remix" | "plain-html" | "unknown";
 
 export type WireOption = {
   /** Stable identifier the agent can pass back when actually performing the edit. */
-  id: 'committed' | 'local-only';
+  id: "committed" | "local-only";
   /** Short user-facing label (used as an option in AskUserQuestion). */
   label: string;
   /** One-line description of what this option does and when to pick it. */
@@ -35,7 +27,7 @@ export type WireResult = {
   projectRoot: string;
   options: WireOption[];
   /** The id of the option to default to when presenting choices to the user. */
-  recommended: 'committed' | 'local-only';
+  recommended: "committed" | "local-only";
   /** Free-form notes the agent should surface alongside the options
    *  (e.g. ".gitignore needs an extra line"). */
   notes: string[];
@@ -45,10 +37,10 @@ const fileExists = (root: string, ...names: string[]): boolean =>
   names.some((n) => existsSync(join(root, n)));
 
 const hasPkgDep = (root: string, name: string): boolean => {
-  const pkgPath = join(root, 'package.json');
+  const pkgPath = join(root, "package.json");
   if (!existsSync(pkgPath)) return false;
   try {
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
     return Boolean(pkg.dependencies?.[name] || pkg.devDependencies?.[name]);
   } catch {
     return false;
@@ -56,14 +48,17 @@ const hasPkgDep = (root: string, name: string): boolean => {
 };
 
 function detectFramework(root: string): Framework {
-  if (fileExists(root, 'nuxt.config.ts', 'nuxt.config.js') || hasPkgDep(root, 'nuxt')) return 'nuxt';
-  if (fileExists(root, 'next.config.js', 'next.config.mjs', 'next.config.ts') || hasPkgDep(root, 'next')) return 'next';
-  if (fileExists(root, 'astro.config.mjs', 'astro.config.ts') || hasPkgDep(root, 'astro')) return 'astro';
-  if (fileExists(root, 'svelte.config.js', 'svelte.config.ts') || hasPkgDep(root, '@sveltejs/kit')) return 'sveltekit';
-  if (fileExists(root, 'remix.config.js', 'remix.config.ts') || hasPkgDep(root, '@remix-run/react')) return 'remix';
-  if (fileExists(root, 'vite.config.ts', 'vite.config.js') || hasPkgDep(root, 'vite')) return 'vite';
-  if (fileExists(root, 'index.html')) return 'plain-html';
-  return 'unknown';
+  if (fileExists(root, "nuxt.config.ts", "nuxt.config.js") || hasPkgDep(root, "nuxt")) return "nuxt";
+  if (fileExists(root, "next.config.js", "next.config.mjs", "next.config.ts") || hasPkgDep(root, "next"))
+    return "next";
+  if (fileExists(root, "astro.config.mjs", "astro.config.ts") || hasPkgDep(root, "astro")) return "astro";
+  if (fileExists(root, "svelte.config.js", "svelte.config.ts") || hasPkgDep(root, "@sveltejs/kit"))
+    return "sveltekit";
+  if (fileExists(root, "remix.config.js", "remix.config.ts") || hasPkgDep(root, "@remix-run/react"))
+    return "remix";
+  if (fileExists(root, "vite.config.ts", "vite.config.js") || hasPkgDep(root, "vite")) return "vite";
+  if (fileExists(root, "index.html")) return "plain-html";
+  return "unknown";
 }
 
 const tag = (projectRoot: string): string =>
@@ -71,13 +66,14 @@ const tag = (projectRoot: string): string =>
 
 function buildOptions(framework: Framework, projectRoot: string): WireOption[] {
   switch (framework) {
-    case 'nuxt':
+    case "nuxt":
       return [
         {
-          id: 'committed',
-          label: 'Wire it into nuxt.config.ts (visible to teammates)',
-          description: "Adds a dev-only script tag in nuxt.config.ts head.script. Conditional on NODE_ENV === 'development' so prod builds drop it. Pick this if your team uses pitstop too.",
-          file: 'nuxt.config.ts',
+          id: "committed",
+          label: "Wire it into nuxt.config.ts (visible to teammates)",
+          description:
+            "Adds a dev-only script tag in nuxt.config.ts head.script. Conditional on NODE_ENV === 'development' so prod builds drop it. Pick this if your team uses pitstop too.",
+          file: "nuxt.config.ts",
           snippet: `// Inside defineNuxtConfig, under app.head:
 script: process.env.NODE_ENV === 'development'
   ? [{
@@ -88,10 +84,11 @@ script: process.env.NODE_ENV === 'development'
   : [],`,
         },
         {
-          id: 'local-only',
-          label: 'Local plugin file (gitignored, only on this laptop)',
-          description: "Creates a Nuxt client-only plugin that injects the script tag in dev. The team's .gitignore needs to ignore the *.client.local.ts pattern. Pick this if you don't want pitstop wiring in the team repo.",
-          file: 'app/plugins/pitstop.client.local.ts',
+          id: "local-only",
+          label: "Local plugin file (gitignored, only on this laptop)",
+          description:
+            "Creates a Nuxt client-only plugin that injects the script tag in dev. The team's .gitignore needs to ignore the *.client.local.ts pattern. Pick this if you don't want pitstop wiring in the team repo.",
+          file: "app/plugins/pitstop.client.local.ts",
           snippet: `export default defineNuxtPlugin(() => {
   if (process.dev && typeof window !== 'undefined') {
     const s = document.createElement('script')
@@ -100,24 +97,26 @@ script: process.env.NODE_ENV === 'development'
     document.head.appendChild(s)
   }
 })`,
-          gitignoreLine: '*.client.local.ts',
+          gitignoreLine: "*.client.local.ts",
         },
       ];
 
-    case 'vite':
+    case "vite":
       return [
         {
-          id: 'committed',
-          label: 'Add the script tag to index.html',
-          description: 'Drops a dev-only script tag into index.html. Vite ignores it in production builds because the daemon is on localhost only.',
-          file: 'index.html',
+          id: "committed",
+          label: "Add the script tag to index.html",
+          description:
+            "Drops a dev-only script tag into index.html. Vite ignores it in production builds because the daemon is on localhost only.",
+          file: "index.html",
           snippet: tag(projectRoot),
         },
         {
-          id: 'local-only',
-          label: 'Local Vite config override (gitignored)',
-          description: 'Run dev with `vite --config vite.config.local.ts` so the override stays on this laptop only.',
-          file: 'vite.config.local.ts',
+          id: "local-only",
+          label: "Local Vite config override (gitignored)",
+          description:
+            "Run dev with `vite --config vite.config.local.ts` so the override stays on this laptop only.",
+          file: "vite.config.local.ts",
           snippet: `// Run with: vite --config vite.config.local.ts
 import baseConfig from './vite.config'
 import { defineConfig, mergeConfig } from 'vite'
@@ -133,124 +132,128 @@ export default mergeConfig(baseConfig, defineConfig({
     },
   }],
 }))`,
-          gitignoreLine: 'vite.config.local.ts',
+          gitignoreLine: "vite.config.local.ts",
         },
       ];
 
-    case 'next':
+    case "next":
       return [
         {
-          id: 'committed',
-          label: 'Add to your root layout',
-          description: 'App Router → app/layout.tsx; Pages Router → pages/_document.tsx. Gated by NODE_ENV so prod drops it.',
-          file: 'app/layout.tsx (App Router) or pages/_document.tsx (Pages Router)',
+          id: "committed",
+          label: "Add to your root layout",
+          description:
+            "App Router → app/layout.tsx; Pages Router → pages/_document.tsx. Gated by NODE_ENV so prod drops it.",
+          file: "app/layout.tsx (App Router) or pages/_document.tsx (Pages Router)",
           snippet: `{process.env.NODE_ENV === 'development' && (
   <script src="http://localhost:7773/inject.js?pitstop-project=${encodeURIComponent(projectRoot)}" defer />
 )}`,
         },
         {
-          id: 'local-only',
-          label: 'Skip — Next.js has no clean local-only point',
-          description: "Next.js doesn't expose a hook for local-only HTML injection. Either commit the conditional snippet (Option A) or use the Chrome extension instead.",
-          file: 'app/layout.tsx',
+          id: "local-only",
+          label: "Skip — Next.js has no clean local-only point",
+          description:
+            "Next.js doesn't expose a hook for local-only HTML injection. Either commit the conditional snippet (Option A) or use the Chrome extension instead.",
+          file: "app/layout.tsx",
           snippet: `{process.env.NODE_ENV === 'development' && (
   <script src="http://localhost:7773/inject.js?pitstop-project=${encodeURIComponent(projectRoot)}" defer />
 )}`,
         },
       ];
 
-    case 'sveltekit':
+    case "sveltekit":
       return [
         {
-          id: 'committed',
-          label: 'Add to src/app.html',
-          description: "Drops the script tag into SvelteKit's root HTML template. Vite’s tree-shaking won't remove it, so keep it %sveltekit.head%-local for cleanliness.",
-          file: 'src/app.html',
+          id: "committed",
+          label: "Add to src/app.html",
+          description:
+            "Drops the script tag into SvelteKit's root HTML template. Vite’s tree-shaking won't remove it, so keep it %sveltekit.head%-local for cleanliness.",
+          file: "src/app.html",
           snippet: `<!-- next to %sveltekit.head% -->
 ${tag(projectRoot)}`,
         },
         {
-          id: 'local-only',
-          label: 'Skip — easier to commit conditionally',
+          id: "local-only",
+          label: "Skip — easier to commit conditionally",
           description: "SvelteKit's app.html is single-source. Recommend Option A.",
-          file: 'src/app.html',
+          file: "src/app.html",
           snippet: tag(projectRoot),
         },
       ];
 
-    case 'astro':
+    case "astro":
       return [
         {
-          id: 'committed',
-          label: 'Add to your root layout (.astro)',
+          id: "committed",
+          label: "Add to your root layout (.astro)",
           description: "Gated by import.meta.env.DEV so prod builds drop it.",
-          file: 'src/layouts/Layout.astro',
+          file: "src/layouts/Layout.astro",
           snippet: `{import.meta.env.DEV && (
   <script src="http://localhost:7773/inject.js?pitstop-project=${encodeURIComponent(projectRoot)}" defer />
 )}`,
         },
         {
-          id: 'local-only',
-          label: 'Skip — easier to commit conditionally',
-          description: 'Astro layout files are single-source; pick Option A.',
-          file: 'src/layouts/Layout.astro',
+          id: "local-only",
+          label: "Skip — easier to commit conditionally",
+          description: "Astro layout files are single-source; pick Option A.",
+          file: "src/layouts/Layout.astro",
           snippet: tag(projectRoot),
         },
       ];
 
-    case 'remix':
+    case "remix":
       return [
         {
-          id: 'committed',
-          label: 'Add to app/root.tsx',
-          description: 'Drops the snippet inside <head>, gated by NODE_ENV.',
-          file: 'app/root.tsx',
+          id: "committed",
+          label: "Add to app/root.tsx",
+          description: "Drops the snippet inside <head>, gated by NODE_ENV.",
+          file: "app/root.tsx",
           snippet: `{process.env.NODE_ENV === 'development' && (
   <script src="http://localhost:7773/inject.js?pitstop-project=${encodeURIComponent(projectRoot)}" defer />
 )}`,
         },
         {
-          id: 'local-only',
-          label: 'Skip — easier to commit conditionally',
+          id: "local-only",
+          label: "Skip — easier to commit conditionally",
           description: "Remix's root.tsx is single-source. Recommend Option A.",
-          file: 'app/root.tsx',
+          file: "app/root.tsx",
           snippet: tag(projectRoot),
         },
       ];
 
-    case 'plain-html':
+    case "plain-html":
       return [
         {
-          id: 'committed',
-          label: 'Add the script tag to index.html',
-          description: 'Just drops the tag in <head>.',
-          file: 'index.html',
+          id: "committed",
+          label: "Add the script tag to index.html",
+          description: "Just drops the tag in <head>.",
+          file: "index.html",
           snippet: tag(projectRoot),
         },
         {
-          id: 'local-only',
-          label: 'Use a gitignored index.local.html and serve that during dev',
-          description: 'Copy index.html to index.local.html, add the tag there, gitignore the local file, and point your dev server at it.',
-          file: 'index.local.html',
+          id: "local-only",
+          label: "Use a gitignored index.local.html and serve that during dev",
+          description:
+            "Copy index.html to index.local.html, add the tag there, gitignore the local file, and point your dev server at it.",
+          file: "index.local.html",
           snippet: tag(projectRoot),
-          gitignoreLine: 'index.local.html',
+          gitignoreLine: "index.local.html",
         },
       ];
 
     default:
       return [
         {
-          id: 'committed',
-          label: 'Add the script tag wherever your dev HTML <head> lives',
-          description: 'Framework not detected. Drop this snippet anywhere in <head> during dev.',
-          file: '<wherever your dev HTML lives>',
+          id: "committed",
+          label: "Add the script tag wherever your dev HTML <head> lives",
+          description: "Framework not detected. Drop this snippet anywhere in <head> during dev.",
+          file: "<wherever your dev HTML lives>",
           snippet: tag(projectRoot),
         },
         {
-          id: 'local-only',
-          label: 'Use whatever local-override mechanism your framework supports',
+          id: "local-only",
+          label: "Use whatever local-override mechanism your framework supports",
           description: "We couldn't detect a framework, so the local-only path is up to you.",
-          file: '<framework-specific>',
+          file: "<framework-specific>",
           snippet: tag(projectRoot),
         },
       ];
@@ -258,11 +261,11 @@ ${tag(projectRoot)}`,
 }
 
 function gitignoreLineMissing(root: string, line: string): boolean {
-  const giPath = join(root, '.gitignore');
+  const giPath = join(root, ".gitignore");
   if (!existsSync(giPath)) return true;
   try {
-    const text = readFileSync(giPath, 'utf8');
-    return !text.split('\n').some((l) => l.trim() === line);
+    const text = readFileSync(giPath, "utf8");
+    return !text.split("\n").some((l) => l.trim() === line);
   } catch {
     return true;
   }
@@ -286,17 +289,26 @@ export async function wire_drawer(params: unknown): Promise<WireResult> {
   // multi-person repo (CODEOWNERS / CONTRIBUTING.md / a populated AUTHORS file)
   // lean committed so teammates benefit. For solo / fresh projects, default
   // to local-only so we don't slip wiring into a repo the user might not own.
-  const looksLikeTeamRepo =
-    fileExists(projectRoot, 'CONTRIBUTING.md', '.github/CODEOWNERS', 'CODEOWNERS', '.github/PULL_REQUEST_TEMPLATE.md');
-  const recommended: 'committed' | 'local-only' = looksLikeTeamRepo ? 'committed' : 'local-only';
+  const looksLikeTeamRepo = fileExists(
+    projectRoot,
+    "CONTRIBUTING.md",
+    ".github/CODEOWNERS",
+    "CODEOWNERS",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+  );
+  const recommended: "committed" | "local-only" = looksLikeTeamRepo ? "committed" : "local-only";
 
   const notes: string[] = [];
-  if (framework === 'unknown') {
-    notes.push("Framework not detected — using a generic <head> snippet. Adjust the file path to wherever your dev HTML's head lives.");
+  if (framework === "unknown") {
+    notes.push(
+      "Framework not detected — using a generic <head> snippet. Adjust the file path to wherever your dev HTML's head lives.",
+    );
   }
   for (const opt of options) {
     if (opt.gitignoreLine && gitignoreLineMissing(projectRoot, opt.gitignoreLine)) {
-      notes.push(`If the user picks "${opt.id}", also append \`${opt.gitignoreLine}\` to ${projectRoot}/.gitignore.`);
+      notes.push(
+        `If the user picks "${opt.id}", also append \`${opt.gitignoreLine}\` to ${projectRoot}/.gitignore.`,
+      );
     }
   }
 

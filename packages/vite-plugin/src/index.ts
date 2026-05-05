@@ -1,4 +1,4 @@
-import type { Plugin } from 'vite';
+import type { Plugin } from "vite";
 
 export type PitstopPluginOpts = {
   /** Daemon port. Defaults to 7773. */
@@ -16,28 +16,28 @@ export type PitstopPluginOpts = {
 export default function pitstop(opts: PitstopPluginOpts = {}): Plugin {
   const port = opts.port ?? 7773;
   return {
-    name: '@pitstop/vite-plugin',
-    apply: opts.alsoInProduction ? undefined : 'serve',
+    name: "@pitstop/vite-plugin",
+    apply: opts.alsoInProduction ? undefined : "serve",
     transformIndexHtml: {
-      order: 'pre',
+      order: "pre",
       handler(_html, ctx) {
         // Skip during production builds unless explicitly opted in
         if (!opts.alsoInProduction && ctx.bundle) return;
-        const projectRoot = opts.projectRoot ?? (ctx.server?.config.root ?? '');
-        const params = projectRoot ? `?pitstop-project=${encodeURIComponent(projectRoot)}` : '';
+        const projectRoot = opts.projectRoot ?? ctx.server?.config.root ?? "";
+        const params = projectRoot ? `?pitstop-project=${encodeURIComponent(projectRoot)}` : "";
         return [
           {
-            tag: 'script',
+            tag: "script",
             attrs: {
               src: `http://localhost:${port}/inject.js${params}`,
               defer: true,
             },
-            injectTo: 'body',
+            injectTo: "body",
           },
           {
-            tag: 'script',
+            tag: "script",
             children: `window.__PITSTOP_PROJECT__ = ${JSON.stringify(projectRoot)};`,
-            injectTo: 'body-prepend',
+            injectTo: "body-prepend",
           },
         ];
       },

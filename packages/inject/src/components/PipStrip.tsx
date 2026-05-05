@@ -1,25 +1,23 @@
-import { type Component, For, Show, createEffect, createMemo, createSignal } from 'solid-js';
-import type { Item } from '@pitstop/shared';
-import { session, currentItemIdx, setCurrentItemIdx } from '../state/store';
-import { ItemListSheet } from './ItemListSheet';
+import type { Item } from "@pitstop/shared";
+import { type Component, For, Show, createEffect, createMemo, createSignal } from "solid-js";
+import { currentItemIdx, session, setCurrentItemIdx } from "../state/store";
+import { ItemListSheet } from "./ItemListSheet";
 
 const WINDOWED_THRESHOLD = 26;
 
-type PipState = 'approved' | 'commented' | 'focused' | 'pending';
+type PipState = "approved" | "commented" | "focused" | "pending";
 
 function glyphFor(state: PipState): string {
-  return { approved: '✓', commented: '•', focused: '▸', pending: '·' }[state];
+  return { approved: "✓", commented: "•", focused: "▸", pending: "·" }[state];
 }
 
-type Slot =
-  | { kind: 'pip'; item: Item; index: number }
-  | { kind: 'ellipsis'; key: string };
+type Slot = { kind: "pip"; item: Item; index: number } | { kind: "ellipsis"; key: string };
 
 /** Builds the slot list for the pip-strip. Returns all items inline below threshold,
  *  or a windowed view (head + focus-radius + tail with ellipses for hidden ranges) above it. */
 function buildWindow(items: Item[], focusIdx: number): Slot[] {
   if (items.length < WINDOWED_THRESHOLD) {
-    return items.map((item, i) => ({ kind: 'pip', item, index: i }));
+    return items.map((item, i) => ({ kind: "pip", item, index: i }));
   }
   const HEAD = 3;
   const TAIL = 3;
@@ -32,11 +30,7 @@ function buildWindow(items: Item[], focusIdx: number): Slot[] {
   for (let i = Math.max(0, items.length - TAIL); i < items.length; i++) {
     visible.add(i);
   }
-  for (
-    let i = Math.max(0, focusIdx - RADIUS);
-    i <= Math.min(items.length - 1, focusIdx + RADIUS);
-    i++
-  ) {
+  for (let i = Math.max(0, focusIdx - RADIUS); i <= Math.min(items.length - 1, focusIdx + RADIUS); i++) {
     visible.add(i);
   }
 
@@ -44,10 +38,10 @@ function buildWindow(items: Item[], focusIdx: number): Slot[] {
   const slots: Slot[] = [];
   for (let j = 0; j < sorted.length; j++) {
     const i = sorted[j]!;
-    slots.push({ kind: 'pip', item: items[i]!, index: i });
+    slots.push({ kind: "pip", item: items[i]!, index: i });
     const next = sorted[j + 1];
     if (next !== undefined && next > i + 1) {
-      slots.push({ kind: 'ellipsis', key: `gap-${i}-${next}` });
+      slots.push({ kind: "ellipsis", key: `gap-${i}-${next}` });
     }
   }
   return slots;
@@ -59,11 +53,11 @@ export const PipStrip: Component = () => {
 
   const items = () => session.s?.items ?? [];
   const responsesByItem = createMemo(() => {
-    const m = new Map<string, 'approved' | 'commented'>();
+    const m = new Map<string, "approved" | "commented">();
     for (const r of session.s?.responses ?? []) {
       const cur = m.get(r.itemId);
-      if (r.kind === 'comment') m.set(r.itemId, 'commented');
-      else if (cur !== 'commented') m.set(r.itemId, 'approved');
+      if (r.kind === "comment") m.set(r.itemId, "commented");
+      else if (cur !== "commented") m.set(r.itemId, "approved");
     }
     return m;
   });
@@ -77,7 +71,7 @@ export const PipStrip: Component = () => {
     requestAnimationFrame(() => {
       const focused = stripEl?.querySelector(`.pip[data-idx="${idx}"]`) as HTMLElement | null;
       if (focused) {
-        focused.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        focused.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
       }
     });
   });
@@ -87,20 +81,16 @@ export const PipStrip: Component = () => {
       <div class="pips" ref={stripEl}>
         <For each={slots()}>
           {(slot) => {
-            if (slot.kind === 'ellipsis') {
+            if (slot.kind === "ellipsis") {
               return (
-                <div
-                  class="pip-ellipsis"
-                  onClick={() => setSheetOpen(true)}
-                  title="Show all items"
-                >
+                <div class="pip-ellipsis" onClick={() => setSheetOpen(true)} title="Show all items">
                   ···
                 </div>
               );
             }
             const state = (): PipState => {
-              if (slot.index === currentItemIdx()) return 'focused';
-              return responsesByItem().get(slot.item.id) ?? 'pending';
+              if (slot.index === currentItemIdx()) return "focused";
+              return responsesByItem().get(slot.item.id) ?? "pending";
             };
             return (
               <div
@@ -109,7 +99,7 @@ export const PipStrip: Component = () => {
                 onClick={() => setCurrentItemIdx(slot.index)}
               >
                 <span class="glyph">{glyphFor(state())}</span>
-                <span class="num">{String(slot.item.index ?? slot.index + 1).padStart(2, '0')}</span>
+                <span class="num">{String(slot.item.index ?? slot.index + 1).padStart(2, "0")}</span>
               </div>
             );
           }}

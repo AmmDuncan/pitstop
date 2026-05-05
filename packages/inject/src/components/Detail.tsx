@@ -1,41 +1,43 @@
-import { type Component, createEffect, createSignal, For, Show } from 'solid-js';
-import { marked } from 'marked';
+import type { Attachment } from "@pitstop/shared";
+import { marked } from "marked";
+import { type Component, For, Show, createEffect, createSignal } from "solid-js";
+import { submitResponse } from "../state/client";
 import {
-  session,
-  currentItemIdx,
-  setCurrentItemIdx,
-  setSummaryOpen,
-  unreviewedIndices,
-  getDraft,
-  setDraft,
   clearDraft,
-  submitState,
-  setSubmitState,
+  currentItemIdx,
   flagSent,
-} from '../state/store';
-import { submitResponse } from '../state/client';
-import { FileRef } from './FileRef';
-import { ImageAttachment } from './ImageAttachment';
-import { PendingQuestion } from './PendingQuestion';
-import type { Attachment } from '@pitstop/shared';
+  getDraft,
+  session,
+  setCurrentItemIdx,
+  setDraft,
+  setSubmitState,
+  setSummaryOpen,
+  submitState,
+  unreviewedIndices,
+} from "../state/store";
+import { FileRef } from "./FileRef";
+import { ImageAttachment } from "./ImageAttachment";
+import { PendingQuestion } from "./PendingQuestion";
 
 export const Detail: Component = () => {
   const item = () => session.s?.items[currentItemIdx()];
-  const itemId = () => item()?.id ?? '';
+  const itemId = () => item()?.id ?? "";
   const comment = () => getDraft(itemId());
 
   // When the user submits (via mouse or keyboard), the action area is
   // replaced by a status strip. If they were scrolled up reading the item
   // body, the strip lands off-screen and they get no visual confirmation.
   // Scroll the detail-scroll container to its bottom so the strip is in view.
-  let prevSubmitState: 'idle' | 'sending' | 'poked' = 'idle';
+  let prevSubmitState: "idle" | "sending" | "poked" = "idle";
   createEffect(() => {
     const ss = submitState();
-    if (prevSubmitState === 'idle' && (ss === 'sending' || ss === 'poked')) {
+    if (prevSubmitState === "idle" && (ss === "sending" || ss === "poked")) {
       requestAnimationFrame(() => {
-        const host = document.querySelector('pitstop-drawer') as unknown as { shadowRoot: ShadowRoot | null } | null;
-        const scroll = host?.shadowRoot?.querySelector('.detail-scroll');
-        if (scroll) scroll.scrollTo({ top: scroll.scrollHeight, behavior: 'smooth' });
+        const host = document.querySelector("pitstop-drawer") as unknown as {
+          shadowRoot: ShadowRoot | null;
+        } | null;
+        const scroll = host?.shadowRoot?.querySelector(".detail-scroll");
+        if (scroll) scroll.scrollTo({ top: scroll.scrollHeight, behavior: "smooth" });
       });
     }
     prevSubmitState = ss;
@@ -46,9 +48,9 @@ export const Detail: Component = () => {
     const it = item();
     if (!it || !session.s) return;
     setSubmitting(true);
-    setSubmitState('sending');
+    setSubmitState("sending");
     try {
-      await submitResponse(session.s.id, { itemId: it.id, kind: 'approve' });
+      await submitResponse(session.s.id, { itemId: it.id, kind: "approve" });
       flagSent();
       const total = session.s.items.length;
       const wasLast = currentItemIdx() === total - 1;
@@ -64,7 +66,7 @@ export const Detail: Component = () => {
       }
       setCurrentItemIdx(Math.min(total - 1, currentItemIdx() + 1));
     } catch {
-      setSubmitState('idle');
+      setSubmitState("idle");
     } finally {
       setSubmitting(false);
     }
@@ -74,13 +76,13 @@ export const Detail: Component = () => {
     const it = item();
     if (!it || !session.s || !comment().trim()) return;
     setSubmitting(true);
-    setSubmitState('sending');
+    setSubmitState("sending");
     try {
-      await submitResponse(session.s.id, { itemId: it.id, kind: 'comment', body: comment().trim() });
+      await submitResponse(session.s.id, { itemId: it.id, kind: "comment", body: comment().trim() });
       clearDraft(it.id);
       flagSent();
     } catch {
-      setSubmitState('idle');
+      setSubmitState("idle");
     } finally {
       setSubmitting(false);
     }
@@ -90,7 +92,7 @@ export const Detail: Component = () => {
     <Show when={item()} fallback={<div class="detail-scroll">No items.</div>}>
       <div class="detail-scroll">
         <div class="detail-eyebrow">
-          ITEM_{item()!.id} <span class="sep">/</span> {String((session.s?.items.length ?? 0)).padStart(2, '0')}
+          ITEM_{item()!.id} <span class="sep">/</span> {String(session.s?.items.length ?? 0).padStart(2, "0")}
         </div>
         <h2 class="detail-title">{item()!.title}</h2>
         <div class="detail-body" innerHTML={marked.parse(item()!.body) as string} />
@@ -110,11 +112,11 @@ export const Detail: Component = () => {
             </ul>
           </section>
         </Show>
-        <For each={item()!.attachments.filter((a) => a.kind === 'file-ref')}>
+        <For each={item()!.attachments.filter((a) => a.kind === "file-ref")}>
           {(att) => <FileRef att={att as any} />}
         </For>
-        <For each={item()!.attachments.filter((a) => a.kind === 'image')}>
-          {(att) => <ImageAttachment att={att as Extract<Attachment, { kind: 'image' }>} />}
+        <For each={item()!.attachments.filter((a) => a.kind === "image")}>
+          {(att) => <ImageAttachment att={att as Extract<Attachment, { kind: "image" }>} />}
         </For>
         <Show when={item()!.question && !session.s?.pendingQuestion}>
           <div class="qline">{item()!.question}</div>
@@ -130,10 +132,10 @@ export const Detail: Component = () => {
               // bubbling out of the drawer. Letting events leak meant typing
               // letters triggered drawer shortcuts (t flipped the theme, ?
               // opened help) AND Escape closed any open modal in the host app.
-              if (e.metaKey && e.key === 'Enter') {
+              if (e.metaKey && e.key === "Enter") {
                 e.preventDefault();
                 onComment();
-              } else if (e.key === 'Escape') {
+              } else if (e.key === "Escape") {
                 e.preventDefault();
                 e.currentTarget.blur();
               }
@@ -155,26 +157,37 @@ export const Detail: Component = () => {
             // this item. Mid-drive narrations passed with arrived: false keep
             // the AWAITING CLAUDE strip up.
             return (session.s?.agentActivity ?? []).some(
-              (e) => e.tool === 'mark_addressing' && e.itemId === id && e.arrived !== false,
+              (e) => e.tool === "mark_addressing" && e.itemId === id && e.arrived !== false,
             );
           };
           const stripState = () => {
-            if (submitState() === 'sending') return { kind: 'sending', label: 'SENDING…' };
-            if (submitState() === 'poked') return { kind: 'poked', label: 'POKED · WAITING' };
-            if (!itemAddressed()) return { kind: 'awaiting', label: 'AWAITING CLAUDE' };
+            if (submitState() === "sending") return { kind: "sending", label: "SENDING…" };
+            if (submitState() === "poked") return { kind: "poked", label: "POKED · WAITING" };
+            if (!itemAddressed()) return { kind: "awaiting", label: "AWAITING CLAUDE" };
             return null;
           };
           return (
             <Show when={!pending()} fallback={<PendingQuestion question={pending()!} />}>
-              <Show when={!stripState()} fallback={
-                <div class="lifecycle-strip" data-state={stripState()!.kind}>
-                  <span class="lifecycle-dot" />
-                  <span class="lifecycle-label">{stripState()!.label}</span>
-                </div>
-              }>
+              <Show
+                when={!stripState()}
+                fallback={
+                  <div class="lifecycle-strip" data-state={stripState()!.kind}>
+                    <span class="lifecycle-dot" />
+                    <span class="lifecycle-label">{stripState()!.label}</span>
+                  </div>
+                }
+              >
                 <div class="actions">
-                  <button class="btn btn-primary" onClick={onApprove} disabled={submitting()}>LOOKS_GOOD <span class="kbd">↵</span></button>
-                  <button class="btn btn-secondary" onClick={onComment} disabled={submitting() || !comment().trim()}>SEND_COMMENT <span class="kbd">⌘↵</span></button>
+                  <button class="btn btn-primary" onClick={onApprove} disabled={submitting()}>
+                    LOOKS_GOOD <span class="kbd">↵</span>
+                  </button>
+                  <button
+                    class="btn btn-secondary"
+                    onClick={onComment}
+                    disabled={submitting() || !comment().trim()}
+                  >
+                    SEND_COMMENT <span class="kbd">⌘↵</span>
+                  </button>
                 </div>
               </Show>
             </Show>

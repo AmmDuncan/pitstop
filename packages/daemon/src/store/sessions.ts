@@ -1,15 +1,15 @@
-import { readFile, readdir, unlink } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { nanoid } from 'nanoid';
-import { type Session, SessionZ, type Item } from '@pitstop/shared';
-import { writeAtomic } from './atomic';
+import { existsSync } from "node:fs";
+import { readFile, readdir, unlink } from "node:fs/promises";
+import { join } from "node:path";
+import { type Item, type Session, SessionZ } from "@pitstop/shared";
+import { nanoid } from "nanoid";
+import { writeAtomic } from "./atomic";
 
 type CreateInput = {
   projectRoot: string;
   branch?: string;
   devUrls?: string[];
-  items: Array<Omit<Item, 'index'> & { index?: number }>;
+  items: Array<Omit<Item, "index"> & { index?: number }>;
   clientSessionId?: string;
 };
 
@@ -18,7 +18,7 @@ export class Store {
   private sessionsDir: string;
 
   constructor(dataDir: string) {
-    this.sessionsDir = join(dataDir, 'sessions');
+    this.sessionsDir = join(dataDir, "sessions");
   }
 
   private path(id: string): string {
@@ -34,9 +34,9 @@ export class Store {
       devUrls: input.devUrls ?? [],
       createdAt: now,
       updatedAt: now,
-      status: 'idle',
+      status: "idle",
       items: input.items.map((it, i) => ({
-        id: it.id ?? String(i + 1).padStart(2, '0'),
+        id: it.id ?? String(i + 1).padStart(2, "0"),
         index: it.index ?? i + 1,
         title: it.title,
         body: it.body,
@@ -58,7 +58,7 @@ export class Store {
   async get(id: string): Promise<Session | null> {
     const p = this.path(id);
     if (!existsSync(p)) return null;
-    return SessionZ.parse(JSON.parse(await readFile(p, 'utf8')));
+    return SessionZ.parse(JSON.parse(await readFile(p, "utf8")));
   }
 
   async list(): Promise<Session[]> {
@@ -66,8 +66,8 @@ export class Store {
     const files = await readdir(this.sessionsDir);
     const sessions: Session[] = [];
     for (const f of files) {
-      if (!f.endsWith('.json') || f.endsWith('.tmp')) continue;
-      const s = await this.get(f.replace(/\.json$/, ''));
+      if (!f.endsWith(".json") || f.endsWith(".tmp")) continue;
+      const s = await this.get(f.replace(/\.json$/, ""));
       if (s) sessions.push(s);
     }
     return sessions;
@@ -76,7 +76,7 @@ export class Store {
   /** Returns the first non-complete session for the given `projectRoot`, or null. */
   async getActive(projectRoot: string): Promise<Session | null> {
     const all = await this.list();
-    return all.find((s) => s.projectRoot === projectRoot && s.status !== 'complete') ?? null;
+    return all.find((s) => s.projectRoot === projectRoot && s.status !== "complete") ?? null;
   }
 
   async update(id: string, updater: (s: Session) => Session): Promise<Session> {

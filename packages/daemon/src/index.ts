@@ -1,10 +1,10 @@
-import { buildApp } from './http/server';
-import { IdleTracker } from './lifecycle/idle';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { buildApp } from "./http/server";
+import { IdleTracker } from "./lifecycle/idle";
 
 const port = Number(process.env.PITSTOP_PORT ?? 7773);
-const dataDir = join(homedir(), '.claude', 'pitstop');
+const dataDir = join(homedir(), ".claude", "pitstop");
 const idleMs = Number(process.env.PITSTOP_IDLE_MS ?? 30 * 60 * 1000);
 
 const app = buildApp({ port, dataDir });
@@ -14,7 +14,7 @@ const idle = new IdleTracker({
   idleMs,
   hasClients: () => bus.subscriberCount() > 0,
   onShutdown: () => {
-    console.log('pitstop-daemon idle, shutting down');
+    console.log("pitstop-daemon idle, shutting down");
     server.stop();
     process.exit(0);
   },

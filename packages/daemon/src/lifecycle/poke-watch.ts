@@ -1,5 +1,5 @@
-import type { Store } from '../store/sessions';
-import type { Bus } from '../http/sse';
+import type { Bus } from "../http/sse";
+import type { Store } from "../store/sessions";
 
 export type PokeWatchOpts = {
   store: Store;
@@ -30,9 +30,9 @@ export class PokeWatch {
       const lastActivity = session.lastAgentActivityAt ?? 0;
       if (lastActivity >= session.pokeSpawnedAt) return;
       const updated = await this.opts.store.update(sessionId, (s) => ({ ...s, pokeFailed: true }));
-      this.opts.bus.publish(sessionId, { type: 'state-changed', session: updated });
+      this.opts.bus.publish(sessionId, { type: "state-changed", session: updated });
     }, this.windowMs);
-    if (typeof (t as any).unref === 'function') (t as any).unref();
+    if (typeof (t as any).unref === "function") (t as any).unref();
     this.timers.set(sessionId, t);
   }
 

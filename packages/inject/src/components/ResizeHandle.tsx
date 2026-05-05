@@ -1,6 +1,6 @@
-import { type Component } from 'solid-js';
+import type { Component } from "solid-js";
 
-type Direction = 'edge-left' | 'edge-right' | 'corner-se' | 'corner-sw' | 'corner-ne' | 'corner-nw';
+type Direction = "edge-left" | "edge-right" | "corner-se" | "corner-sw" | "corner-ne" | "corner-nw";
 
 type Props = {
   direction: Direction;
@@ -8,12 +8,12 @@ type Props = {
 };
 
 const cursors: Record<Direction, string> = {
-  'edge-left': 'ew-resize',
-  'edge-right': 'ew-resize',
-  'corner-se': 'nwse-resize',
-  'corner-sw': 'nesw-resize',
-  'corner-ne': 'nesw-resize',
-  'corner-nw': 'nwse-resize',
+  "edge-left": "ew-resize",
+  "edge-right": "ew-resize",
+  "corner-se": "nwse-resize",
+  "corner-sw": "nesw-resize",
+  "corner-ne": "nesw-resize",
+  "corner-nw": "nwse-resize",
 };
 
 /** Resize handle with pointer-event capture. Same shape as the floating-
@@ -38,20 +38,22 @@ export const ResizeHandle: Component<Props> = (props) => {
       props.onDrag(dx, dy);
     };
     const release = () => {
-      el.removeEventListener('pointermove', onMove);
-      el.removeEventListener('pointerup', release);
-      el.removeEventListener('pointercancel', release);
-      el.removeEventListener('lostpointercapture', release);
-      try { el.releasePointerCapture(e.pointerId); } catch {}
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", release);
+      el.removeEventListener("pointercancel", release);
+      el.removeEventListener("lostpointercapture", release);
+      try {
+        el.releasePointerCapture(e.pointerId);
+      } catch {}
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
-    el.addEventListener('pointermove', onMove);
-    el.addEventListener('pointerup', release);
-    el.addEventListener('pointercancel', release);
-    el.addEventListener('lostpointercapture', release);
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", release);
+    el.addEventListener("pointercancel", release);
+    el.addEventListener("lostpointercapture", release);
     document.body.style.cursor = cursors[props.direction];
-    document.body.style.userSelect = 'none';
+    document.body.style.userSelect = "none";
   };
 
   return <div class={`resize-handle ${props.direction}`} onPointerDown={onPointerDown} />;

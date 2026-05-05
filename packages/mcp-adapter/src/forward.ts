@@ -1,5 +1,5 @@
-import { spawn } from 'node:child_process';
-import { setTimeout as sleep } from 'node:timers/promises';
+import { spawn } from "node:child_process";
+import { setTimeout as sleep } from "node:timers/promises";
 
 /** HTTP client that talks to the daemon's /api/rpc endpoint, auto-spawning the daemon if needed. */
 export class Forwarder {
@@ -9,16 +9,20 @@ export class Forwarder {
   async call(method: string, params: unknown): Promise<unknown> {
     await this.ensureDaemon();
     const res = await fetch(`${this.opts.baseUrl}/api/rpc`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'content-type': 'application/json',
-        ...(this.opts.clientSessionId ? { 'x-client-session-id': this.opts.clientSessionId } : {}),
+        "content-type": "application/json",
+        ...(this.opts.clientSessionId ? { "x-client-session-id": this.opts.clientSessionId } : {}),
       },
       body: JSON.stringify({ method, params }),
     });
     const body = await res.json();
     if (!res.ok) {
-      throw new Error(typeof body === 'object' && body && 'error' in body ? String((body as any).error) : `HTTP ${res.status}`);
+      throw new Error(
+        typeof body === "object" && body && "error" in body
+          ? String((body as any).error)
+          : `HTTP ${res.status}`,
+      );
     }
     return body;
   }
@@ -30,9 +34,9 @@ export class Forwarder {
     } catch {
       // not running — spawn it
     }
-    const child = spawn('bun', ['run', new URL('../../daemon/src/index.ts', import.meta.url).pathname], {
+    const child = spawn("bun", ["run", new URL("../../daemon/src/index.ts", import.meta.url).pathname], {
       detached: true,
-      stdio: 'ignore',
+      stdio: "ignore",
       env: { ...process.env, PITSTOP_PORT: String(new URL(this.opts.baseUrl).port) },
     });
     child.unref();
@@ -44,6 +48,6 @@ export class Forwarder {
       } catch {}
       await sleep(100);
     }
-    throw new Error('daemon failed to start');
+    throw new Error("daemon failed to start");
   }
 }

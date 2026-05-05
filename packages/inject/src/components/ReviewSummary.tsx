@@ -1,6 +1,6 @@
-import { type Component, For } from 'solid-js';
-import { session, unreviewedIndices, setCurrentItemIdx, setSummaryOpen } from '../state/store';
-import { baseUrl } from '../state/client';
+import { type Component, For } from "solid-js";
+import { baseUrl } from "../state/client";
+import { session, setCurrentItemIdx, setSummaryOpen, unreviewedIndices } from "../state/store";
 
 export const ReviewSummary: Component = () => {
   const total = () => session.s?.items.length ?? 0;
@@ -23,9 +23,9 @@ export const ReviewSummary: Component = () => {
       if (!ok) return;
     }
     await fetch(`${baseUrl}/api/sessions/${session.s.id}/status`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ status: 'complete' }),
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "complete" }),
     });
     setSummaryOpen(false);
   };
@@ -34,11 +34,17 @@ export const ReviewSummary: Component = () => {
     <div class="review-summary">
       <div class="summary-stamp">REVIEW_SUMMARY</div>
       <div class="summary-stats">
-        <span><span class="v">{String(reviewed()).padStart(2, '0')}</span>_REVIEWED</span>
+        <span>
+          <span class="v">{String(reviewed()).padStart(2, "0")}</span>_REVIEWED
+        </span>
         <span class="sep">·</span>
-        <span><span class="v skipped">{String(skipped().length).padStart(2, '0')}</span>_SKIPPED</span>
+        <span>
+          <span class="v skipped">{String(skipped().length).padStart(2, "0")}</span>_SKIPPED
+        </span>
         <span class="sep">·</span>
-        <span><span class="v">{String(total()).padStart(2, '0')}</span>_TOTAL</span>
+        <span>
+          <span class="v">{String(total()).padStart(2, "0")}</span>_TOTAL
+        </span>
       </div>
       <div class="summary-skipped-list">
         <For each={skipped()}>
@@ -64,7 +70,9 @@ export const ReviewSummary: Component = () => {
         <button class="btn btn-primary" onClick={onReviewSkipped} disabled={skipped().length === 0}>
           REVIEW_SKIPPED <span class="kbd">↵</span>
         </button>
-        <button class="btn btn-secondary" onClick={onMarkDone}>MARK_DONE</button>
+        <button class="btn btn-secondary" onClick={onMarkDone}>
+          MARK_DONE
+        </button>
       </div>
     </div>
   );
