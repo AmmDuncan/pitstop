@@ -2,6 +2,19 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.33 — 2026-05-05
+
+### Drawer chrome v2 — reflow, padlock, kebab
+
+- **Reflow mode**: when pinned, the drawer can push the host page (body+html padding referencing `--pitstop-drawer-width`) so content reflows around it instead of being overlaid. Off by default; toggle from the kebab. Strip mode opts out automatically.
+- **Visual differentiation between docked modes**:
+  - Pinned + overlay (default) → ~10px inset on top/bottom/outer-edge, 6px rounded corners, soft shadow. Reads as "I'm hovering at the side."
+  - Pinned + reflow on → flush to viewport edge, sharp corner, no shadow. Reads as "I'm part of the layout."
+  - Floating unchanged.
+- **Chrome reorder + padlock**: drops the v0.3.27 Side+Float segmented pair. Position toggle (`PanelLeft`/`PanelRight`) and padlock (`Lock`/`LockOpen`) are now distinct controls and sit adjacent so they read as one anchoring group. Position toggle hides while floating.
+- **Kebab overflow** (`EllipsisVertical` — vertical 3 dots, not meatballs): reflow + theme + help collapse into the kebab when the header is narrow (< 440px) or in compact size mode. ResizeObserver drives the threshold; items hop back inline as the drawer widens.
+- **`--pitstop-drawer-width`** is exposed on `:root` so host pages can anchor sticky/fixed elements when reflow is on. Host responsibility — pitstop won't magic-fix every host's stickies.
+
 ## v0.3.32 — 2026-05-05
 
 ### Changed
