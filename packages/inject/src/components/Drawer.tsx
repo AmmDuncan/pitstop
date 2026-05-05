@@ -5,7 +5,6 @@ import {
   height,
   interactiveResize,
   position,
-  reflow,
   setFloatingLeft,
   setFloatingTop,
   setHeight,
@@ -39,7 +38,6 @@ export const Drawer: Component = () => {
     const cls = [`drawer pos-${position()} size-${size()}`];
     if (session.s?.status === "paused") cls.push("paused");
     if (interactiveResize()) cls.push("resizing");
-    if (reflow()) cls.push("reflow-on");
     return cls.join(" ");
   };
   const floatStyle = () =>

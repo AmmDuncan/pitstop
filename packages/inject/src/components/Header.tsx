@@ -5,7 +5,6 @@ import {
   floatingLeft,
   floatingTop,
   position,
-  reflow,
   setFloatingLeft,
   setFloatingTop,
   setSize,
@@ -14,7 +13,6 @@ import {
   theme,
   toggleFloat,
   togglePinSide,
-  toggleReflow,
   toggleTheme,
 } from "../state/modes";
 import { currentItemIdx, session, setHelpOpen } from "../state/store";
@@ -23,7 +21,6 @@ import {
   MinimizeIcon,
   PadlockIcon,
   PositionIcon,
-  ReflowIcon,
   SizeIcon,
   ThemeIcon,
 } from "./Icons";
@@ -127,10 +124,6 @@ export const Header: Component = () => {
     position() === "floating"
       ? `Drawer floating · Click to dock to ${side()}`
       : "Drawer pinned · Click to float";
-  const reflowTitle = () =>
-    reflow()
-      ? "Reflow ON (experimental) · narrows host page via padding · doesn't reach fixed elements or viewport media queries · click to overlay"
-      : "Overlay ON · drawer covers page · click to reflow (experimental)";
   const themeTitle = () =>
     `Theme: ${theme()} · Click to switch to ${theme() === "dark" ? "light" : "dark"}`;
   const sizeTitle = () =>
@@ -187,18 +180,8 @@ export const Header: Component = () => {
         <SizeIcon />
       </button>
 
-      {/* Secondary trio — inline at full width, swept into kebab when collapsed. */}
+      {/* Secondary pair — inline at full width, swept into kebab when collapsed. */}
       <Show when={!secondaryCollapsed()}>
-        <Show when={position() !== "floating"}>
-          <button
-            class="x-btn reflow-btn"
-            classList={{ active: reflow() }}
-            onClick={toggleReflow}
-            title={reflowTitle()}
-          >
-            <ReflowIcon />
-          </button>
-        </Show>
         <button class="x-btn theme-btn" onClick={toggleTheme} title={themeTitle()}>
           <ThemeIcon />
         </button>
@@ -223,23 +206,6 @@ export const Header: Component = () => {
           </button>
           <Show when={kebabOpen()}>
             <div class="kebab-menu" role="menu">
-              <Show when={position() !== "floating"}>
-                <button
-                  class="kebab-item"
-                  classList={{ active: reflow() }}
-                  onClick={closeKebabAfter(toggleReflow)}
-                  role="menuitem"
-                  title={reflowTitle()}
-                >
-                  <span class="kebab-glyph">
-                    <ReflowIcon />
-                  </span>
-                  <span class="kebab-item-label">
-                    <span>{reflow() ? "Reflow on" : "Reflow off"}</span>
-                    <span class="kebab-tag">EXPERIMENTAL</span>
-                  </span>
-                </button>
-              </Show>
               <button
                 class="kebab-item"
                 onClick={closeKebabAfter(toggleTheme)}

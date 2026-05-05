@@ -72,9 +72,10 @@
   }
 }
 
-/* Position variants — base values are the *flush* (reflow-on) treatment.
-   Without `.reflow-on`, the overlay-docked override below pulls the drawer
-   inward and adds shadow + rounding. */
+/* Position variants — drawer hugs viewport edges in pinned modes. The soft
+   shadow cast inward toward the page content provides the only visual
+   separation between drawer and host page. Strip mode opts out (it's a
+   32px sliver with its own treatment). */
 .drawer.pos-right {
   right: 0;
   left: auto;
@@ -87,7 +88,6 @@
   top: 0;
   bottom: 0;
   border-left: none;
-  border-right: 1px solid var(--rule-2);
 }
 .drawer.pos-floating {
   position: fixed;
@@ -96,17 +96,11 @@
   border-radius: 4px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
 }
-
-/* Overlay-docked (default when pinned + reflow off): drawer hugs all viewport
-   edges so the host page never bleeds through. Differentiation from reflow-on
-   is solely the soft shadow cast inward toward the page content; reflow-on
-   is shadowless. No rounding — without an inset gap there's nothing for a
-   rounded corner to soften against. Strip mode opts out. */
-.drawer.pos-right:not(.size-strip):not(.reflow-on) {
+.drawer.pos-right:not(.size-strip) {
   border: none;
   box-shadow: -8px 0 24px rgba(7, 26, 43, 0.18);
 }
-.drawer.pos-left:not(.size-strip):not(.reflow-on) {
+.drawer.pos-left:not(.size-strip) {
   border: none;
   box-shadow: 8px 0 24px rgba(7, 26, 43, 0.18);
 }
@@ -459,18 +453,6 @@
   height: 14px;
 }
 
-/* Reflow toggle visually flags its on-state with an amber underline so the
-   user can tell at a glance whether the page is reflowing. Outline-only
-   means off; coloured underline means on. */
-.dheader .x-btn.reflow-btn.active {
-  color: var(--amber);
-  border-color: var(--amber);
-}
-.dheader .x-btn.reflow-btn.active:hover {
-  color: var(--amber);
-  border-color: var(--amber);
-}
-
 /* Kebab overflow menu — small popover anchored under the trigger button.
    Only rendered when the secondary trio collapses (narrow header or compact
    size mode). The wrap is position-relative so the menu floats below it. */
@@ -487,7 +469,7 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 240px;
+  min-width: 180px;
   background: var(--bg-paper);
   border: 1px solid var(--rule-2);
   box-shadow: 0 8px 24px rgba(7, 26, 43, 0.18);
@@ -532,26 +514,6 @@
 .dheader .kebab-item .kebab-glyph svg {
   width: 14px;
   height: 14px;
-}
-/* Two-piece label: main text + small experimental tag, separated to the
-   right so the tag reads as ancillary metadata, not part of the action name. */
-.dheader .kebab-item .kebab-item-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  white-space: nowrap;
-}
-.dheader .kebab-item .kebab-tag {
-  font-size: 8.5px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  color: var(--t4);
-  border: 1px solid var(--rule-2);
-  padding: 1px 5px;
-  border-radius: 2px;
-  text-transform: uppercase;
 }
 
 /* Header is a drag handle when drawer is floating */

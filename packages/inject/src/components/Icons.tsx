@@ -1,5 +1,5 @@
 import { type Component, Show } from "solid-js";
-import { position, reflow, side, size, theme } from "../state/modes";
+import { position, side, size, theme } from "../state/modes";
 
 const SVG_PROPS = {
   width: "16",
@@ -48,45 +48,6 @@ export const PadlockIcon: Component = () => {
       </Show>
       <Show when={isFloating()}>
         <path d="M8 11V7a4 4 0 0 1 7.5-2" />
-      </Show>
-    </svg>
-  );
-};
-
-/**
- * Reflow icon — Lucide ArrowRightToLine / ArrowLeftToLine, mirrored to match
- * the drawer's pinned side so the arrow always reads as "drawer pushing the
- * page edge inward." Filled accent when reflow is on, outline-only when off.
- */
-export const ReflowIcon: Component = () => {
-  const on = () => reflow();
-  const dir = () => side();
-  return (
-    <svg {...SVG_PROPS}>
-      <Show when={dir() === "right"}>
-        {/* Page edge on the right; arrow pushes toward it from the left. */}
-        <line x1="3" y1="12" x2="17" y2="12" />
-        <polyline points="11,6 17,12 11,18" />
-        <line
-          x1="21"
-          y1="4"
-          x2="21"
-          y2="20"
-          stroke-width="2.4"
-          stroke={on() ? "currentColor" : undefined}
-        />
-      </Show>
-      <Show when={dir() === "left"}>
-        <line x1="21" y1="12" x2="7" y2="12" />
-        <polyline points="13,6 7,12 13,18" />
-        <line
-          x1="3"
-          y1="4"
-          x2="3"
-          y2="20"
-          stroke-width="2.4"
-          stroke={on() ? "currentColor" : undefined}
-        />
       </Show>
     </svg>
   );

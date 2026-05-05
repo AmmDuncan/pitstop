@@ -17,9 +17,6 @@ type Modes = {
   floatingTop: number;
   floatingLeft: number;
   theme: Theme;
-  /** When true and pinned, host page reflows around the drawer (body padding).
-   *  When false (default), drawer overlays the page. Has no effect while floating. */
-  reflow: boolean;
 };
 
 function systemTheme(): Theme {
@@ -38,7 +35,6 @@ const DEFAULTS: Modes = {
   floatingTop: 80,
   floatingLeft: 80,
   theme: "dark",
-  reflow: false,
 };
 
 function load(): Modes {
@@ -59,8 +55,7 @@ function load(): Modes {
         : parsed.position === "left"
           ? "left"
           : "right";
-    const reflow = parsed.reflow === true;
-    return { ...fresh, ...parsed, theme, side, reflow };
+    return { ...fresh, ...parsed, theme, side };
   } catch {}
   return fresh;
 }
@@ -74,7 +69,6 @@ export const [height, setHeight] = createSignal(initial.height);
 export const [floatingTop, setFloatingTop] = createSignal(initial.floatingTop);
 export const [floatingLeft, setFloatingLeft] = createSignal(initial.floatingLeft);
 export const [theme, setTheme] = createSignal<Theme>(initial.theme);
-export const [reflow, setReflow] = createSignal<boolean>(initial.reflow);
 
 /** True while the user is actively dragging the floating drawer or pulling a
  *  resize handle. Drawer.tsx adds a `resizing` class while this is true so
@@ -93,48 +87,30 @@ createRoot(() => {
       floatingTop: floatingTop(),
       floatingLeft: floatingLeft(),
       theme: theme(),
-      reflow: reflow(),
     };
     try {
       localStorage.setItem(KEY, JSON.stringify(m));
     } catch {}
   });
 
-  // Reflow effect: when pinned + reflow on, push host-page padding on the
-  // <html> element so the page visibly narrows by the drawer's width. The
-  // body adapts naturally — padding both <html> AND <body> would double-count,
-  // squeezing host content to half its intended width whenever the body has
-  // its own max-width / margin: 0 auto layout. The CSS var is always exposed
-  // on :root so host apps can anchor sticky/fixed elements to it even when
-  // reflow is off (selective opt-in). Floating + strip clear the padding.
-  // We always clear body inline padding too in case a previous build left it
-  // stale on the page.
+  // Expose the drawer's current width on :root as --pitstop-drawer-width.
+  // Always set, regardless of pinned/floating state — host pages can read it
+  // if they want to know how much screen pitstop is occupying. This was the
+  // anchor point for the v0.3.27–v0.3.35 reflow mode (host opt-in via
+  // `right: var(--pitstop-drawer-width, 0)` on slideovers etc.); reflow itself
+  // was retired in v0.3.36 because of layout-citizen issues, but the var
+  // stays exposed in case reflow ever comes back or hosts find other uses.
+  if (typeof document !== "undefined") {
+    // One-time cleanup for users upgrading from v0.3.35 or earlier with
+    // reflow on — strip any stale body/html padding their last session left.
+    document.documentElement.style.removeProperty("padding-left");
+    document.documentElement.style.removeProperty("padding-right");
+    document.body.style.removeProperty("padding-left");
+    document.body.style.removeProperty("padding-right");
+  }
   createEffect(() => {
     if (typeof document === "undefined") return;
-    const root = document.documentElement;
-    const body = document.body;
-    const w = `${width()}px`;
-    root.style.setProperty("--pitstop-drawer-width", w);
-    body.style.removeProperty("padding-left");
-    body.style.removeProperty("padding-right");
-
-    const pinned = position() !== "floating";
-    const stripped = size() === "strip";
-    const active = pinned && reflow() && !stripped;
-
-    if (!active) {
-      root.style.removeProperty("padding-left");
-      root.style.removeProperty("padding-right");
-      return;
-    }
-
-    if (position() === "right") {
-      root.style.setProperty("padding-right", "var(--pitstop-drawer-width)");
-      root.style.removeProperty("padding-left");
-    } else {
-      root.style.setProperty("padding-left", "var(--pitstop-drawer-width)");
-      root.style.removeProperty("padding-right");
-    }
+    document.documentElement.style.setProperty("--pitstop-drawer-width", `${width()}px`);
   });
 });
 
@@ -178,12 +154,4 @@ export function toggleSize() {
 
 export function toggleTheme() {
   setTheme(theme() === "dark" ? "light" : "dark");
-}
-
-/**
- * Toggle reflow mode. Has visible effect only while pinned — flipping it while
- * floating updates the pref so docking later reflects the choice.
- */
-export function toggleReflow() {
-  setReflow(!reflow());
 }
