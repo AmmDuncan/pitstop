@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.25 — 2026-05-04
+
+### Changed
+
+- **Logo padded.** The 2×2 checker SVG was rendering edge-flush in the 22×22 header box, which read as too aggressive next to the `PITSTOP` wordmark. SVG sized down to 16×16 (centred by the wrapper's `place-items: center`) so the mark sits with breathing room.
+
 ## v0.3.24 — 2026-05-04
 
 ### Changed

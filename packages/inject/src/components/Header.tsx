@@ -82,7 +82,7 @@ export const Header: Component = () => {
   return (
     <header class="dheader" onPointerDown={onHeaderPointerDown} classList={{ draggable: position() === 'floating' }}>
       <div class="mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="22" height="22">
+        <svg viewBox="0 0 24 24" width="16" height="16">
           <rect x="0" y="0" width="12" height="12" fill="currentColor" />
           <rect x="12" y="12" width="12" height="12" fill="currentColor" />
         </svg>
