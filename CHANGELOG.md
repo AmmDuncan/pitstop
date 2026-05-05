@@ -2,6 +2,22 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.32 — 2026-05-05
+
+### Changed
+- **Pip-strip focused state** is now an amber underline (3px rule along the bottom edge) instead of a raised panel + amber glyph. Quieter, doesn't compete with the amber `commented` color, reads as "you are here" via a structural cue rather than re-coloring the body of the pip.
+- **Question typography** in the `ask_user` banner: bumped 14px → 15px and reaffirmed sans prose. Mono uppercase stays where it belongs (the eyebrow `[?] CLAUDE_NEEDS_INPUT`); the question itself reads as a sentence, not metadata.
+- **Comment textarea placeholder** is now sans 13.5px matching the typed text, instead of mono 12px. No font swap on first keystroke; longer placeholder copy stays readable. The rule going forward: mono only for short structural strings (eyebrows, kbd glyphs, status pills); sans for anything sentence-shaped.
+- **AgentFeed older lines** sit at `opacity: 0.85` on top of their existing `--t2` color, widening the contrast with the rank-0 newest line without making older entries unreadable.
+- **Header counter** drops the `_SKIPPED` suffix. The information is already surfaced via the pip strip (amber `•` glyphs ARE the skipped items), the ReviewSummary screen, and the ReviewComplete terminal page. Counter becomes plain `current / total`.
+- **StatusTag is hidden in the header** when `session.status === 'complete'`. The new ReviewComplete screen already announces it; the header pill duplicated the signal and got awkwardly cropped at narrow widths.
+
+### Added
+- **STATUS group** at the top of the keymap overlay (`?`). Color → name legend covering the four content states (`APPROVED`, `AGENT_ADDRESSED`, `COMMENTED`, `PENDING`). FOCUSED is intentionally not legended — it's a navigation state, not a content state, and the underline is plainly visible on the strip itself. Sits above NAVIGATION so the most foundational reference content is the first thing a confused user sees.
+
+### Fixed
+- **Resize-handle drag was rubber-banding** behind the cursor because the v0.3.31 `.drawer { transition: width/height }` rule applied to every per-frame pointer delta. New `.drawer.resizing` class (toggled by `ResizeHandle` for the duration of an active drag) suppresses the transition. Snap during drag, smooth lerp on programmatic size changes — best of both.
+
 ## v0.3.31 — 2026-05-05
 
 ### Added
