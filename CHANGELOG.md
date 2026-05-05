@@ -2,6 +2,14 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.30 — 2026-05-05
+
+### Added
+- POKE button on the lifecycle strip. While `AWAITING CLAUDE` or `POKED · WAITING` is up, the user can now click POKE to re-engage Claude — useful when the agent appears stuck. Strip also shows a live elapsed counter (`mm:ss`) so the wait time is visible at a glance.
+
+### Changed
+- `/api/sessions/:id/retry-poke` no longer no-ops when there are no unread comments. The endpoint now always pokes; the context adapts ("N comments pending" vs "user-initiated nudge, read `get_state` and continue") so Claude knows whether it's catching up on feedback or just being asked to resume.
+
 ## v0.3.29 — 2026-05-05
 
 ### Fixed
