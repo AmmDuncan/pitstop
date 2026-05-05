@@ -2,6 +2,20 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.36 — 2026-05-05
+
+### Retire reflow mode
+
+The reflow attempt at "drawer narrows the host page via padding" was honest in intent but couldn't deliver on hosts with any non-trivial CSS. Two structural limitations sank it: `position: fixed` host elements (slideovers, modals, sticky headers) stayed anchored to the viewport and ended up under the drawer; viewport-based `@media` queries didn't fire against the narrowed body, so host CSS still saw the original viewport width and rendered desktop layout in a tablet-width container. v0.3.35 tagged the toggle EXPERIMENTAL and documented host opt-in patterns, but the failure modes were too subtle to live with as a default.
+
+Removing reflow simplifies the model: the drawer either overlays (pinned), floats, or strips. Each failure mode is honest and the workaround is obvious.
+
+**What goes**: `reflow` signal + persistence + `toggleReflow`; the `<html>` body padding effect; `ReflowIcon`; the reflow inline button + kebab item + EXPERIMENTAL tag; the `.reflow-on` class on the drawer; README paragraph documenting the experimental opt-in.
+
+**What stays**: `--pitstop-drawer-width` on `:root` (the var continues to be exposed in case reflow ever returns or hosts find other uses for it); a one-time cleanup of stale html/body padding on script load, so users upgrading from v0.3.35 with `reflow=true` in localStorage don't get stuck with a permanently narrowed host page.
+
+**Reversibility**: tags v0.3.27 through v0.3.35 contain the full reflow implementation. If reflow ever comes back, it's a copy-paste from those tags, not a reimplementation.
+
 ## v0.3.35 — 2026-05-05
 
 ### Drawer polish: overlay flush, reflow scope, unread pip, typography

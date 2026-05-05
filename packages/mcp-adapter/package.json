@@ -1,7 +1,7 @@
 {
   "name": "@pitstop/mcp-adapter",
   "type": "module",
-  "version": "0.3.35",
+  "version": "0.3.36",
   "bin": {
     "pitstop-mcp": "./src/index.ts"
   },
