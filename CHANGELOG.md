@@ -2,6 +2,14 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.34 — 2026-05-05
+
+### Fix: phantom strip under the footer when AgentFeed is empty
+
+Pin the drawer footer to the last grid track (`grid-row: -2 / -1`) so it stays at the bottom regardless of which siblings render. Previously, when AgentFeed had no entries to show (its `<Show>` rendered nothing), the footer would auto-place into the `auto` row above its intended slot and the absolute-positioned resize handle would land in the trailing 42px row, leaving a visible empty strip under the footer.
+
+One-line CSS fix; no behavior change when AgentFeed is present.
+
 ## v0.3.33 — 2026-05-05
 
 ### Drawer chrome v2 — reflow, padlock, kebab
