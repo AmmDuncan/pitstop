@@ -2,6 +2,19 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.29 — 2026-05-05
+
+### Fixed
+- Drawer mounted before `start_review` no longer needs a manual reload. Until now the headline workflow ("agent calls `start_review` → drawer pops up in your already-open dev tab") didn't actually work in script-tag mode — the drawer never opened any SSE connection while it had no session, so the daemon had no one to notify when one was created. Reviewers had to refresh after every `start_review`.
+
+### Added
+- Project-scoped lobby SSE channel. The bus now keeps a parallel `byProject` map alongside `byId`. A new `GET /api/projects/events?projectRoot=…` endpoint opens a "lobby" connection scoped to a projectRoot. `POST /api/sessions` publishes a `session-hello` event on the matching project channel after creating the session.
+- Drawer in script-tag mode subscribes to the lobby while it has no session. On `session-hello`, it re-runs bootstrap (now finds the session, opens the per-session SSE), and closes the lobby connection. Latency is ~RTT instead of the 12s polling the extension-mode path uses.
+
+### Notes
+- Multi-worktree workflows benefit directly: each worktree has its own absolute path, so each gets its own project channel and each drawer reacts independently to its own agent's `start_review`.
+- After a tab graduates from lobby → per-session, it stops listening for *future* sessions on that projectRoot. Reopening the lobby when `session.status === 'complete'` is a deferred enhancement.
+
 ## v0.3.28 — 2026-05-05
 
 ### Fixed
