@@ -177,18 +177,20 @@ export const Detail: Component = () => {
                   </div>
                 }
               >
-                <div class="actions">
-                  <button class="btn btn-primary" onClick={onApprove} disabled={submitting()}>
-                    LOOKS_GOOD <span class="kbd">↵</span>
-                  </button>
-                  <button
-                    class="btn btn-secondary"
-                    onClick={onComment}
-                    disabled={submitting() || !comment().trim()}
-                  >
-                    SEND_COMMENT <span class="kbd">⌘↵</span>
-                  </button>
-                </div>
+                <Show when={session.s?.status !== "complete"}>
+                  <div class="actions">
+                    <button class="btn btn-primary" onClick={onApprove} disabled={submitting()}>
+                      LOOKS_GOOD <span class="kbd">↵</span>
+                    </button>
+                    <button
+                      class="btn btn-secondary"
+                      onClick={onComment}
+                      disabled={submitting() || !comment().trim()}
+                    >
+                      SEND_COMMENT <span class="kbd">⌘↵</span>
+                    </button>
+                  </div>
+                </Show>
               </Show>
             </Show>
           );

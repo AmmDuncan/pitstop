@@ -152,15 +152,19 @@ export const Drawer: Component = () => {
                 onPointerDown={onStripPointerDown}
                 title={position() === "floating" ? "Click to expand · drag to move" : "Click to expand"}
               >
-                <span class="v-mark" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="14" height="14">
-                    <rect x="0" y="0" width="12" height="12" fill="currentColor" />
-                    <rect x="12" y="12" width="12" height="12" fill="currentColor" />
-                  </svg>
-                </span>
-                <span class="v-label">PITSTOP</span>
-                <span class="v-num">{String(session.s?.items.length ?? 0).padStart(2, "0")}</span>
-                <span class="v-dot" />
+                <div class="strip-top">
+                  <span class="v-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="14" height="14">
+                      <rect x="0" y="0" width="12" height="12" fill="currentColor" />
+                      <rect x="12" y="12" width="12" height="12" fill="currentColor" />
+                    </svg>
+                  </span>
+                  <span class="v-label">PITSTOP</span>
+                </div>
+                <div class="strip-bottom">
+                  <span class="v-num">{String(session.s?.items.length ?? 0).padStart(2, "0")}</span>
+                  <span class="v-dot" />
+                </div>
               </div>
             }
           >

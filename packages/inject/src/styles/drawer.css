@@ -177,17 +177,20 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+/* Top-right placement mirrors the active-state header's min-btn so the
+   "collapse to strip" affordance lives in the same visual region whether
+   a session is active or not. */
 .drawer.empty .empty-collapse {
   position: absolute;
-  bottom: 16px;
-  right: 24px;
+  top: 14px;
+  right: 14px;
   background: transparent;
   border: 1px solid var(--rule-2);
   color: var(--t3);
   font-family: var(--mono);
   font-size: 10.5px;
   letter-spacing: 0.08em;
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 3px;
   cursor: pointer;
 }
@@ -240,11 +243,19 @@
   height: 100%;
   background: var(--bg-rail);
   cursor: pointer;
-  gap: 16px;
 }
 .drawer.collapsed .strip > *,
 .drawer.size-strip .strip > * {
   flex-shrink: 0;
+}
+.drawer.collapsed .strip-top,
+.drawer.size-strip .strip-top,
+.drawer.collapsed .strip-bottom,
+.drawer.size-strip .strip-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 /* Logo mark at top of strip — same SVG as the drawer header, sized to fit
