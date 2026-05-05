@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.26 — 2026-05-04
+
+### Added
+
+- **Logo in strip mode.** Same 2×2 checker SVG that lives in the drawer header now also appears at the top of the strip when the drawer is collapsed. Sized to fit the 32px-wide rail (14×14 SVG centred horizontally).
+
 ## v0.3.25 — 2026-05-04
 
 ### Changed

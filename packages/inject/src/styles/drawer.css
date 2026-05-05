@@ -201,6 +201,15 @@
   flex-shrink: 0;
 }
 
+/* Logo mark at top of strip — same SVG as the drawer header, sized to fit
+   the 32px-wide strip with breathing room. Uses currentColor like the
+   header mark; .v-mark sets the amber. */
+.drawer.collapsed .strip .v-mark,
+.drawer.size-strip .strip .v-mark {
+  display: grid;
+  place-items: center;
+  color: var(--amber);
+}
 .drawer.collapsed .strip .v-label,
 .drawer.size-strip .strip .v-label {
   font-family: var(--mono);
