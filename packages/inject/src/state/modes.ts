@@ -100,17 +100,23 @@ createRoot(() => {
     } catch {}
   });
 
-  // Reflow effect: when pinned + reflow on, push host-page padding so the page
-  // visibly narrows by the drawer's width. The CSS var is always exposed on
-  // :root so host apps can anchor sticky/fixed elements to --pitstop-drawer-width
-  // even when reflow is off (they'd just opt in selectively). On floating or
-  // strip mode, we clear the padding so the page returns to full width.
+  // Reflow effect: when pinned + reflow on, push host-page padding on the
+  // <html> element so the page visibly narrows by the drawer's width. The
+  // body adapts naturally — padding both <html> AND <body> would double-count,
+  // squeezing host content to half its intended width whenever the body has
+  // its own max-width / margin: 0 auto layout. The CSS var is always exposed
+  // on :root so host apps can anchor sticky/fixed elements to it even when
+  // reflow is off (selective opt-in). Floating + strip clear the padding.
+  // We always clear body inline padding too in case a previous build left it
+  // stale on the page.
   createEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
     const body = document.body;
     const w = `${width()}px`;
     root.style.setProperty("--pitstop-drawer-width", w);
+    body.style.removeProperty("padding-left");
+    body.style.removeProperty("padding-right");
 
     const pinned = position() !== "floating";
     const stripped = size() === "strip";
@@ -119,21 +125,15 @@ createRoot(() => {
     if (!active) {
       root.style.removeProperty("padding-left");
       root.style.removeProperty("padding-right");
-      body.style.removeProperty("padding-left");
-      body.style.removeProperty("padding-right");
       return;
     }
 
     if (position() === "right") {
       root.style.setProperty("padding-right", "var(--pitstop-drawer-width)");
-      body.style.setProperty("padding-right", "var(--pitstop-drawer-width)");
       root.style.removeProperty("padding-left");
-      body.style.removeProperty("padding-left");
     } else {
       root.style.setProperty("padding-left", "var(--pitstop-drawer-width)");
-      body.style.setProperty("padding-left", "var(--pitstop-drawer-width)");
       root.style.removeProperty("padding-right");
-      body.style.removeProperty("padding-right");
     }
   });
 });

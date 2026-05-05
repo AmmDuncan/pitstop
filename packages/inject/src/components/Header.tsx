@@ -129,8 +129,8 @@ export const Header: Component = () => {
       : "Drawer pinned · Click to float";
   const reflowTitle = () =>
     reflow()
-      ? "Reflow on · page narrows around drawer · Click to overlay"
-      : "Overlay on · drawer covers page · Click to reflow";
+      ? "Reflow ON (experimental) · narrows host page via padding · doesn't reach fixed elements or viewport media queries · click to overlay"
+      : "Overlay ON · drawer covers page · click to reflow (experimental)";
   const themeTitle = () =>
     `Theme: ${theme()} · Click to switch to ${theme() === "dark" ? "light" : "dark"}`;
   const sizeTitle = () =>
@@ -156,7 +156,9 @@ export const Header: Component = () => {
       </div>
       <div class="name-block">
         <div class="name">PITSTOP</div>
-        <div class="ctx">{session.s?.branch ?? session.s?.projectRoot ?? "—"}</div>
+        <div class="ctx" title={session.s?.branch ?? session.s?.projectRoot ?? "—"}>
+          {session.s?.branch ?? session.s?.projectRoot ?? "—"}
+        </div>
       </div>
       <Show when={total() > 0}>
         <span class="counter">
@@ -227,11 +229,15 @@ export const Header: Component = () => {
                   classList={{ active: reflow() }}
                   onClick={closeKebabAfter(toggleReflow)}
                   role="menuitem"
+                  title={reflowTitle()}
                 >
                   <span class="kebab-glyph">
                     <ReflowIcon />
                   </span>
-                  <span>{reflow() ? "Reflow on" : "Reflow off"}</span>
+                  <span class="kebab-item-label">
+                    <span>{reflow() ? "Reflow on" : "Reflow off"}</span>
+                    <span class="kebab-tag">EXPERIMENTAL</span>
+                  </span>
                 </button>
               </Show>
               <button

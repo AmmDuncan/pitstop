@@ -39,7 +39,7 @@
   /* Smooth size changes (set_drawer, size button swap standard ↔ compact,
      strip collapse). Position flips left ↔ right involve `auto` ↔ `0` on
      right/left and can't be CSS-transitioned cleanly, so those snap. */
-  transition: width 220ms ease, height 220ms ease;
+  transition: width 220ms ease-out, height 220ms ease-out;
 }
 /* Suppress the transition while the user is actively dragging a resize
    handle — every per-frame width/height update would otherwise spawn a
@@ -93,30 +93,22 @@
   position: fixed;
   height: auto;
   max-height: 80vh;
+  border-radius: 4px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
 }
 
-/* Overlay-docked (default when pinned + reflow off): drawer pulls 10px away
-   from top/bottom/outer-edge, rounded corners, soft shadow. Reads as
-   "I'm hovering at the side of the page" rather than fused to the chrome.
-   Strip mode opts out — it's a 32px sliver that stays flush. */
-.drawer.pos-right:not(.size-strip):not(.reflow-on),
+/* Overlay-docked (default when pinned + reflow off): drawer hugs all viewport
+   edges so the host page never bleeds through. Differentiation from reflow-on
+   is solely the soft shadow cast inward toward the page content; reflow-on
+   is shadowless. No rounding — without an inset gap there's nothing for a
+   rounded corner to soften against. Strip mode opts out. */
+.drawer.pos-right:not(.size-strip):not(.reflow-on) {
+  border: none;
+  box-shadow: -8px 0 24px rgba(7, 26, 43, 0.18);
+}
 .drawer.pos-left:not(.size-strip):not(.reflow-on) {
   border: none;
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(7, 26, 43, 0.18);
-  transition: width 220ms ease, height 220ms ease, top 220ms ease,
-    right 220ms ease, bottom 220ms ease, left 220ms ease;
-}
-.drawer.pos-right:not(.size-strip):not(.reflow-on) {
-  top: 10px;
-  right: 10px;
-  bottom: 10px;
-}
-.drawer.pos-left:not(.size-strip):not(.reflow-on) {
-  top: 10px;
-  left: 10px;
-  bottom: 10px;
+  box-shadow: 8px 0 24px rgba(7, 26, 43, 0.18);
 }
 
 /* Size variants */
@@ -376,6 +368,11 @@
   background: var(--bg-paper);
   overflow: visible; /* kebab popover may extend below header */
   position: relative;
+  /* Without min-width: 0, the header (a grid item in .drawer) defaults to
+     min-width: auto = its children's min-content, which prevents the name
+     block's flex shrink from kicking in. Result: long branch labels push
+     buttons past the drawer's right edge. */
+  min-width: 0;
 }
 .dheader .name-block {
   flex: 1 1 0;
@@ -490,7 +487,7 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 180px;
+  min-width: 240px;
   background: var(--bg-paper);
   border: 1px solid var(--rule-2);
   box-shadow: 0 8px 24px rgba(7, 26, 43, 0.18);
@@ -535,6 +532,26 @@
 .dheader .kebab-item .kebab-glyph svg {
   width: 14px;
   height: 14px;
+}
+/* Two-piece label: main text + small experimental tag, separated to the
+   right so the tag reads as ancillary metadata, not part of the action name. */
+.dheader .kebab-item .kebab-item-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  white-space: nowrap;
+}
+.dheader .kebab-item .kebab-tag {
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--t4);
+  border: 1px solid var(--rule-2);
+  padding: 1px 5px;
+  border-radius: 2px;
+  text-transform: uppercase;
 }
 
 /* Header is a drag handle when drawer is floating */
@@ -1038,13 +1055,45 @@
   text-transform: uppercase;
   color: var(--t4);
   margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Pulsing pip + "N NEW" tag when entries have arrived since the user last
+   interacted with the feed. Cleared by mouseenter / scroll / click on the
+   feed (markSeen in AgentFeed.tsx). The pulse adds motion so the user
+   catches it in peripheral vision; the count tells them how many to scan. */
+.agent-feed-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  animation: feed-pip-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.agent-feed-new {
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+@keyframes feed-pip-pulse {
+  0%, 100% {
+    opacity: 0.55;
+    box-shadow: 0 0 4px rgba(244, 191, 94, 0.4);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 12px rgba(244, 191, 94, 0.9);
+  }
 }
 .agent-feed-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  font-family: var(--mono);
-  font-size: 11.5px;
+  font-family: var(--sans);
+  font-size: 12.5px;
   line-height: 1.45;
   color: var(--t2);
   /* `max-height` is set inline by AgentFeed.tsx via the resize handle (default
@@ -1056,7 +1105,7 @@
 .agent-feed-line {
   position: relative;
   padding-left: 12px;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   /* 2-line wrap-clamp with ellipsis. Hover surfaces the full text via the
      title attr the line carries from JSX. */
   display: -webkit-box;
@@ -1158,19 +1207,28 @@
   padding: 0 4px;
 }
 
+/* Item-level question. Sentence-shaped prose, so sans matches the rule
+   codified for .pq-text in v0.3.32 — mono uppercase reads as a status
+   label, not a question to a person. The `?? ` prefix stays as a small
+   mono-styled inline eyebrow that the question text follows. */
 .qline {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--t1);
+  margin-bottom: 10px;
+}
+.qline::before {
+  content: "?? ";
+  color: var(--amber);
   font-family: var(--mono);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--t1);
-  margin-bottom: 8px;
-}
-.qline::before {
-  content: "?? ";
-  color: var(--amber);
   padding-right: 3px;
+  vertical-align: middle;
 }
 .cbox {
   width: 100%;

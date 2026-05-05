@@ -16,6 +16,12 @@ export const AgentFeed: Component = () => {
   const [expanded, setExpanded] = createSignal(false);
   const [flashing, setFlashing] = createSignal(false);
   const [feedMaxHeight, setFeedMaxHeight] = createSignal(FEED_DEFAULT_MAX);
+  /** Timestamp watermark of the last entry the user has acknowledged.
+   *  Anything with `at > lastInteractedAt` counts as unread. Initialized
+   *  on first render so existing entries don't show as unread when the
+   *  drawer first mounts; only entries that arrive AFTER the user's first
+   *  view of the feed become unread. */
+  const [lastInteractedAt, setLastInteractedAt] = createSignal(-1);
 
   /** Top-edge handle: drag UP to grow the feed, DOWN to shrink. Same pointer-
    *  capture pattern as the floating-drawer / resize-handle code so the
@@ -64,21 +70,44 @@ export const AgentFeed: Component = () => {
   const olderCount = () => Math.max(0, all().length - FEED_SIZE);
 
   // Flash the newest line briefly when a new entry arrives, so the user
-  // notices the feed is live. Tracks the last-seen `at` timestamp; when it
-  // changes, sets a short-lived `flashing` flag that the rendered top line
-  // picks up via classList.
+  // notices the feed is live. Also seeds the unread watermark on init so
+  // existing entries aren't reported as unread when the drawer mounts;
+  // anything arriving AFTER init is unread until the user interacts.
+  // The `hasInitialized` flag distinguishes the very first effect run
+  // (snapshot of pre-existing state) from subsequent runs (new arrivals).
   let lastSeenAt = -1;
+  let hasInitialized = false;
   createEffect(() => {
     const top = all()[0];
+    if (!hasInitialized) {
+      hasInitialized = true;
+      // Seed watermark. If entries exist already, mark them all seen.
+      // If none exist, watermark = 0 so any future entry counts as unread.
+      setLastInteractedAt(top ? top.at : 0);
+      lastSeenAt = top ? top.at : -1;
+      return;
+    }
     if (!top) return;
     if (top.at === lastSeenAt) return;
-    if (lastSeenAt !== -1) {
-      // Genuinely new entry (not the initial snapshot).
-      setFlashing(true);
-      setTimeout(() => setFlashing(false), FLASH_DURATION_MS);
-    }
+    // Genuinely new entry post-init — flash and let the unread counter pick
+    // it up via lastInteractedAt being older than this entry's at.
+    setFlashing(true);
+    setTimeout(() => setFlashing(false), FLASH_DURATION_MS);
     lastSeenAt = top.at;
   });
+
+  /** Count of entries newer than the user's last interaction. Drives the
+   *  pulsing pip + "N NEW" tag on the CLAUDE eyebrow. */
+  const unreadCount = () => {
+    const entries = all();
+    const since = lastInteractedAt();
+    return entries.filter((e) => e.at > since).length;
+  };
+
+  const markSeen = () => {
+    const top = all()[0];
+    if (top) setLastInteractedAt(top.at);
+  };
 
   return (
     <Show when={visible().length}>
@@ -86,6 +115,8 @@ export const AgentFeed: Component = () => {
         class="agent-feed"
         classList={{ expanded: expanded(), "has-older": olderCount() > 0 }}
         aria-live="polite"
+        onMouseEnter={markSeen}
+        onClick={markSeen}
       >
         <div
           class="agent-feed-resize"
@@ -93,8 +124,18 @@ export const AgentFeed: Component = () => {
           title="Drag to resize"
           aria-hidden="true"
         />
-        <div class="agent-feed-label">CLAUDE</div>
-        <ol class="agent-feed-list" style={{ "max-height": `${feedMaxHeight()}px` }}>
+        <div class="agent-feed-label">
+          <span>CLAUDE</span>
+          <Show when={unreadCount() > 0}>
+            <span class="agent-feed-pip" aria-hidden="true" />
+            <span class="agent-feed-new">{unreadCount()} NEW</span>
+          </Show>
+        </div>
+        <ol
+          class="agent-feed-list"
+          style={{ "max-height": `${feedMaxHeight()}px` }}
+          onScroll={markSeen}
+        >
           <For each={visible()}>
             {(entry, i) => (
               <li

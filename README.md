@@ -246,6 +246,11 @@ docs/            — design brief, specs, plans
 - The daemon-spawned `claude --resume` is a fallback for offline sessions. It often no-ops in active sessions; that's expected. The live MCP path is the load-bearing one.
 - Single-tab assumption. Multi-tab handling is out of scope for v0.2.
 - The drawer's `kind: 'navigate'` skip-ahead response is not implemented yet. Approves and comments are the only response kinds.
+- **Reflow mode is experimental** because two host-side gotchas mean it only fully works for hosts that opt in:
+  - **`position: fixed` host elements stay anchored to the viewport** when reflow narrows the page. Slideovers, modals, sticky headers, and other viewport-anchored overlays end up underneath the drawer. Hosts can opt in by anchoring their fixed elements to `--pitstop-drawer-width` (exposed on `:root`): `right: var(--pitstop-drawer-width, 0)` on a right-edge slideover does the trick. The `, 0` fallback keeps the same rule harmless when pitstop isn't injected. Auto-fixing this from pitstop's side would require a `transform` on `<body>`, which re-anchors *every* fixed element on the page and causes layout jumps — too invasive to enable by default.
+  - **Viewport-based responsive CSS doesn't follow the reflow.** Host stylesheets using `@media (min-width: …)` are evaluated against the actual viewport width (e.g. 1280px), but the body content area is being shrunk to whatever's left after subtracting the drawer (e.g. 868px). The host renders desktop layout in a tablet-width container. Container queries (`@container`) on the host's root layout would fix it; viewport media queries can't be overridden from the inject side.
+
+  Reflow is exposed but tagged **EXPERIMENTAL** in the drawer's kebab menu so users only opt in after understanding these trade-offs. For hosts without slideovers and without viewport-based breakpoints (docs sites, blogs, simple internal tools), reflow works exactly as advertised.
 
 ## Development
 
