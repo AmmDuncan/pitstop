@@ -126,7 +126,13 @@ export type SseEvent =
   | { type: "state-changed"; session: Session }
   | { type: "item-added"; sessionId: string; items: Item[] }
   | { type: "agent-activity"; sessionId: string; entry: ActivityEntry }
-  | { type: "complete"; sessionId: string };
+  | { type: "complete"; sessionId: string }
+  /**
+   * Published on the project-scoped lobby channel when a new session is
+   * created for a projectRoot. Lets a drawer that was mounted before the
+   * session existed react instantly instead of waiting for a manual reload.
+   */
+  | { type: "session-hello"; session: Session };
 
 export type PokeKind =
   | { kind: "claude-resume" }

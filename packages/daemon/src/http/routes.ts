@@ -75,6 +75,10 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     }
     const session = await store.create(parsed.data as Parameters<typeof store.create>[0]);
     bus.publish(session.id, { type: "state-snapshot", session });
+    // Notify any drawer that subscribed to the project lobby before this
+    // session existed — without this, the drawer keeps showing "no active
+    // review" until the user reloads.
+    bus.publishToProject(session.projectRoot, { type: "session-hello", session });
     return c.json(session, 201);
   });
 
@@ -204,6 +208,44 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
           // Live stream
           const unsub = bus.subscribe(id, (event) => send(event.type, event));
           // Heartbeat every 25s so proxies don't close the connection on idle
+          const hb = setInterval(() => controller.enqueue(enc.encode(`: heartbeat\n\n`)), 25_000);
+          c.req.raw.signal.addEventListener("abort", () => {
+            clearInterval(hb);
+            unsub();
+            try {
+              controller.close();
+            } catch {}
+          });
+        },
+      }),
+      {
+        headers: {
+          "content-type": "text/event-stream",
+          "cache-control": "no-cache",
+          connection: "keep-alive",
+        },
+      },
+    );
+  });
+
+  // Project-scoped lobby SSE — a drawer subscribes to this while it's
+  // mounted but no session exists for its projectRoot yet. The daemon
+  // publishes a `session-hello` event the moment `start_review` creates a
+  // matching session, so the drawer can switch from idle to active without
+  // the user having to reload the dev tab.
+  app.get("/api/projects/events", (c) => {
+    const projectRoot = c.req.query("projectRoot");
+    if (!projectRoot) {
+      return c.json({ error: "MISSING_PROJECT_ROOT" }, 400);
+    }
+    return new Response(
+      new ReadableStream({
+        async start(controller) {
+          const enc = new TextEncoder();
+          const send = (event: string, data: unknown) => {
+            controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+          };
+          const unsub = bus.subscribeToProject(projectRoot, (event) => send(event.type, event));
           const hb = setInterval(() => controller.enqueue(enc.encode(`: heartbeat\n\n`)), 25_000);
           c.req.raw.signal.addEventListener("abort", () => {
             clearInterval(hb);

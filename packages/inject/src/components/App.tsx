@@ -1,5 +1,5 @@
 import { type Component, Show, createSignal, onCleanup, onMount } from "solid-js";
-import { fetchMostRecentActiveSession } from "../state/client";
+import { fetchMostRecentActiveSession, openProjectEventStream } from "../state/client";
 import { installKeyboard } from "../state/keyboard";
 import { bootstrap, session } from "../state/store";
 import { Drawer } from "./Drawer";
@@ -53,9 +53,13 @@ export const App: Component = () => {
     }
   };
 
+  let lobbyClose: (() => void) | null = null;
+
   onMount(async () => {
     await tryBootstrap();
     if (!session.s && isExtensionMode) {
+      // Extension mode: no projectRoot, so we can't subscribe to a project
+      // lobby. Fall back to polling for any active session to appear.
       poller = setInterval(async () => {
         try {
           const found = await fetchMostRecentActiveSession();
@@ -66,6 +70,18 @@ export const App: Component = () => {
       }, POLL_INTERVAL_MS);
     } else {
       setBootstrapped(true);
+      if (!session.s && projectRoot) {
+        // Script-tag mode with no active session yet: open the lobby SSE so
+        // the drawer reacts the instant `start_review` creates one for this
+        // projectRoot — no manual reload required.
+        lobbyClose = openProjectEventStream(projectRoot, async (e) => {
+          if (e.type === "session-hello") {
+            lobbyClose?.();
+            lobbyClose = null;
+            await tryBootstrap();
+          }
+        });
+      }
     }
 
     installKeyboard(() => {
@@ -77,6 +93,7 @@ export const App: Component = () => {
   onCleanup(() => {
     closer()();
     if (poller) clearInterval(poller);
+    lobbyClose?.();
   });
 
   return (

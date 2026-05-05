@@ -41,6 +41,19 @@ export function openEventStream(sessionId: string, on: (e: SseEvent) => void): (
   return () => es.close();
 }
 
+/**
+ * Open the project-scoped lobby SSE channel. Used while the drawer is mounted
+ * but no session yet exists — the daemon will publish a `session-hello` event
+ * the moment `start_review` creates one for this projectRoot, letting the
+ * drawer transition to active without a manual reload.
+ */
+export function openProjectEventStream(projectRoot: string, on: (e: SseEvent) => void): () => void {
+  const url = `${baseUrl}/api/projects/events?projectRoot=${encodeURIComponent(projectRoot)}`;
+  const es = new EventSource(url);
+  es.addEventListener("session-hello", (m) => on(JSON.parse((m as MessageEvent).data)));
+  return () => es.close();
+}
+
 export async function submitResponse(
   sessionId: string,
   body: { itemId: string; kind: "approve" | "comment"; body?: string },
