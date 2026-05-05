@@ -644,11 +644,13 @@
      against both light and dark themes. */
   color: oklch(0.74 0.10 200);
 }
+/* Tab-indicator pattern — amber rule along the bottom edge. Quiet but
+   unambiguous; reads as "you are here" without recoloring the pip body
+   (which would compete with the amber `commented` state). */
 .pip.focused {
-  background: var(--bg-panel);
   color: var(--t1);
   font-weight: 600;
-  border-bottom: none;
+  box-shadow: inset 0 -3px 0 var(--amber);
 }
 .pip.focused .num {
   color: var(--amber);
@@ -983,6 +985,11 @@
 .agent-feed-line[data-rank="0"]::before {
   color: var(--amber);
 }
+/* Slight fade on non-newest lines widens the contrast with the rank-0
+   highlight without making older entries unreadable. */
+.agent-feed-line:not([data-rank="0"]) {
+  opacity: 0.85;
+}
 
 /* When a new narration arrives the newest line briefly flashes amber so the
    user notices. Fades back to transparent over 1.5s. Drawn as a left-padding
@@ -1089,11 +1096,14 @@
   resize: vertical;
 }
 .cbox::placeholder {
+  /* Sans matches the typed text — no font swap on first keystroke — and
+     reads naturally if the placeholder copy ever grows beyond a one-liner. */
   color: var(--t4);
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: 0;
 }
 .cbox:focus {
   outline: 1px solid var(--amber);
@@ -1146,11 +1156,14 @@
   line-height: 1;
 }
 .pq-text {
+  /* Sentence-shaped content reads as prose, not a status label. The mono
+     uppercase eyebrow above carries the structural "this is a question
+     from the agent" signal; the question itself stays comfortable. */
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   color: var(--t1);
-  margin: 0 0 10px;
+  margin: 0 0 12px;
 }
 .pq-options {
   display: flex;
@@ -1888,6 +1901,20 @@
   color: var(--t4);
   margin-left: 6px;
   font-weight: 500;
+}
+/* STATUS group — small pip badge in the keys column matches the live pip
+   strip's appearance (same .pip + state classes), constrained to fit a
+   single keymap-row line. */
+.keymap-pip-sample {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--rule-1);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  width: fit-content;
 }
 
 /* Mobile / tight viewport: drawer goes full-screen unless collapsed to strip.

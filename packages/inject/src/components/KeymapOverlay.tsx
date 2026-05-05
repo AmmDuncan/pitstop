@@ -11,6 +11,9 @@ type Shortcut = {
   keepOpen?: boolean;
   /** When true, keys are joined with `+` (chord). When false (default), `/` (alternates). */
   chord?: boolean;
+  /** When set, the row renders a pip badge instead of kbd buttons. Used by the
+   *  STATUS group to legend the pip-strip colors. */
+  pip?: { state: "approved" | "agent-addressed" | "commented" | "focused" | "pending"; glyph: string; num: string };
 };
 type Group = { title: string; shortcuts: Shortcut[] };
 
@@ -37,6 +40,20 @@ const GROUPS: Group[] = [
     shortcuts: [
       { keys: ["J", "↓"], label: "NEXT_ITEM", action: next },
       { keys: ["K", "↑"], label: "PREV_ITEM", action: prev },
+    ],
+  },
+  {
+    title: "STATUS · pip strip",
+    shortcuts: [
+      { keys: [], label: "FOCUSED — item you're viewing", pip: { state: "focused", glyph: "▸", num: "03" } },
+      { keys: [], label: "APPROVED — you marked it LOOKS_GOOD", pip: { state: "approved", glyph: "✓", num: "01" } },
+      {
+        keys: [],
+        label: "AGENT_ADDRESSED — agent says fixed; click to verify",
+        pip: { state: "agent-addressed", glyph: "↻", num: "02" },
+      },
+      { keys: [], label: "COMMENTED — your feedback is open", pip: { state: "commented", glyph: "•", num: "04" } },
+      { keys: [], label: "PENDING — no response yet", pip: { state: "pending", glyph: "·", num: "05" } },
     ],
   },
   {
@@ -102,16 +119,26 @@ export const KeymapOverlay: Component = () => {
                 <For each={group.shortcuts}>
                   {(s) => (
                     <div class={`keymap-row ${s.action ? "clickable" : ""}`} onClick={() => handleClick(s)}>
-                      <span class="keymap-keys">
-                        <For each={s.keys}>
-                          {(key, i) => (
-                            <>
-                              {i() > 0 && <span class="keymap-plus">{s.chord ? "+" : "/"}</span>}
-                              <kbd class="keymap-key">{key}</kbd>
-                            </>
-                          )}
-                        </For>
-                      </span>
+                      <Show
+                        when={!s.pip}
+                        fallback={
+                          <span class={`keymap-pip-sample pip ${s.pip!.state}`}>
+                            <span class="glyph">{s.pip!.glyph}</span>
+                            <span class="num">{s.pip!.num}</span>
+                          </span>
+                        }
+                      >
+                        <span class="keymap-keys">
+                          <For each={s.keys}>
+                            {(key, i) => (
+                              <>
+                                {i() > 0 && <span class="keymap-plus">{s.chord ? "+" : "/"}</span>}
+                                <kbd class="keymap-key">{key}</kbd>
+                              </>
+                            )}
+                          </For>
+                        </span>
+                      </Show>
                       <span class="keymap-label">{s.label}</span>
                     </div>
                   )}
