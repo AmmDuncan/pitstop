@@ -1,10 +1,11 @@
-import { type Component, Show } from "solid-js";
+import { type Component, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { baseUrl } from "../state/client";
 import {
   toggleSize,
   floatingLeft,
   floatingTop,
   position,
+  reflow,
   setFloatingLeft,
   setFloatingTop,
   setSize,
@@ -13,16 +14,60 @@ import {
   theme,
   toggleFloat,
   togglePinSide,
+  toggleReflow,
   toggleTheme,
 } from "../state/modes";
 import { currentItemIdx, session, setHelpOpen } from "../state/store";
-import { FloatIcon, MinimizeIcon, SideIcon, SizeIcon, ThemeIcon } from "./Icons";
+import {
+  KebabIcon,
+  MinimizeIcon,
+  PadlockIcon,
+  PositionIcon,
+  ReflowIcon,
+  SizeIcon,
+  ThemeIcon,
+} from "./Icons";
 import { StatusTag, derivePill } from "./StatusTag";
+
+/** Pixel width below which secondary controls collapse into the kebab menu.
+ *  Tuned so the standard 504px drawer keeps everything inline; compact +
+ *  long branch labels push past it. */
+const NARROW_THRESHOLD = 440;
 
 export const Header: Component = () => {
   const pill = () => derivePill(session.s);
   const total = () => session.s?.items.length ?? 0;
   const current = () => Math.min(currentItemIdx() + 1, total());
+
+  const [headerWidth, setHeaderWidth] = createSignal(9999);
+  const [kebabOpen, setKebabOpen] = createSignal(false);
+  let headerRef: HTMLElement | undefined;
+  let kebabWrapRef: HTMLDivElement | undefined;
+
+  onMount(() => {
+    if (!headerRef) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) setHeaderWidth(entry.contentRect.width);
+    });
+    ro.observe(headerRef);
+    onCleanup(() => ro.disconnect());
+
+    // Click-outside to close kebab — bound at document level inside the
+    // shadow root so it sees clicks anywhere in the drawer chrome.
+    const onDocClick = (e: MouseEvent) => {
+      if (!kebabOpen()) return;
+      const target = e.target as Node | null;
+      if (kebabWrapRef && target && !kebabWrapRef.contains(target)) {
+        setKebabOpen(false);
+      }
+    };
+    document.addEventListener("click", onDocClick, true);
+    onCleanup(() => document.removeEventListener("click", onDocClick, true));
+  });
+
+  // Trigger collapse on either narrow header or compact size — both legitimate
+  // squeeze cases per spec. Items hop back inline when neither holds.
+  const secondaryCollapsed = () => headerWidth() < NARROW_THRESHOLD || size() === "compact";
 
   const onRetry = async () => {
     if (!session.s) return;
@@ -35,9 +80,7 @@ export const Header: Component = () => {
 
   // Floating-drawer drag uses pointer events with implicit capture so the
   // release fires reliably even when the cursor leaves the browser window or
-  // crosses iframe/shadow boundaries mid-drag. The previous mousemove/mouseup
-  // listeners on `window` could miss the up event in those cases, leaving the
-  // drawer glued to the cursor until the user clicked again.
+  // crosses iframe/shadow boundaries mid-drag.
   const onHeaderPointerDown = (e: PointerEvent) => {
     if (position() !== "floating") return;
     const target = e.target as HTMLElement;
@@ -78,8 +121,29 @@ export const Header: Component = () => {
     document.body.style.userSelect = "none";
   };
 
+  const sideTitle = () =>
+    `Drawer on ${side()} · Click to move to ${side() === "right" ? "left" : "right"}`;
+  const padlockTitle = () =>
+    position() === "floating"
+      ? `Drawer floating · Click to dock to ${side()}`
+      : "Drawer pinned · Click to float";
+  const reflowTitle = () =>
+    reflow()
+      ? "Reflow on · page narrows around drawer · Click to overlay"
+      : "Overlay on · drawer covers page · Click to reflow";
+  const themeTitle = () =>
+    `Theme: ${theme()} · Click to switch to ${theme() === "dark" ? "light" : "dark"}`;
+  const sizeTitle = () =>
+    `Size: ${size()} · Click to switch to ${size() === "standard" ? "compact" : "standard"}`;
+
+  const closeKebabAfter = (fn: () => void) => () => {
+    fn();
+    setKebabOpen(false);
+  };
+
   return (
     <header
+      ref={headerRef}
       class="dheader"
       onPointerDown={onHeaderPointerDown}
       classList={{ draggable: position() === "floating" }}
@@ -90,7 +154,7 @@ export const Header: Component = () => {
           <rect x="12" y="12" width="12" height="12" fill="currentColor" />
         </svg>
       </div>
-      <div>
+      <div class="name-block">
         <div class="name">PITSTOP</div>
         <div class="ctx">{session.s?.branch ?? session.s?.projectRoot ?? "—"}</div>
       </div>
@@ -101,49 +165,98 @@ export const Header: Component = () => {
           <span class="counter-total">{String(total()).padStart(2, "0")}</span>
         </span>
       </Show>
-      {/* Hide the StatusTag once the session is complete — the ReviewComplete
-          screen below already announces it big and green; the header pill
-          just duplicates the signal and crowds the chrome at narrow widths. */}
       <Show when={pill().state !== "complete"}>
         <StatusTag pill={pill()} onRetry={onRetry} />
       </Show>
-      <div class="x-btn-pair">
-        <button
-          class="x-btn side-btn"
-          onClick={togglePinSide}
-          title={`Drawer on ${side()} · Click to move to ${side() === "right" ? "left" : "right"}`}
-        >
-          <SideIcon />
+
+      {/* Anchoring group: position + padlock sit adjacent — both control where
+          the drawer is docked. Position hides while floating (no side applies). */}
+      <Show when={position() !== "floating"}>
+        <button class="x-btn pos-btn" onClick={togglePinSide} title={sideTitle()}>
+          <PositionIcon />
         </button>
-        <button
-          class="x-btn float-btn"
-          onClick={toggleFloat}
-          title={
-            position() === "floating"
-              ? `Drawer floating · Click to dock to ${side()}`
-              : "Drawer pinned · Click to float"
-          }
-        >
-          <FloatIcon />
-        </button>
-      </div>
-      <button
-        class="x-btn size-btn"
-        onClick={toggleSize}
-        title={`Size: ${size()} · Click to switch to ${size() === "standard" ? "compact" : "standard"}`}
-      >
+      </Show>
+      <button class="x-btn padlock-btn" onClick={toggleFloat} title={padlockTitle()}>
+        <PadlockIcon />
+      </button>
+
+      {/* Size cycle — its own concern (binary standard ↔ compact). */}
+      <button class="x-btn size-btn" onClick={toggleSize} title={sizeTitle()}>
         <SizeIcon />
       </button>
-      <button
-        class="x-btn theme-btn"
-        onClick={toggleTheme}
-        title={`Theme: ${theme()} · Click to switch to ${theme() === "dark" ? "light" : "dark"}`}
-      >
-        <ThemeIcon />
-      </button>
-      <button class="x-btn help-btn" onClick={() => setHelpOpen(true)} title="Show keyboard shortcuts">
-        ?
-      </button>
+
+      {/* Secondary trio — inline at full width, swept into kebab when collapsed. */}
+      <Show when={!secondaryCollapsed()}>
+        <Show when={position() !== "floating"}>
+          <button
+            class="x-btn reflow-btn"
+            classList={{ active: reflow() }}
+            onClick={toggleReflow}
+            title={reflowTitle()}
+          >
+            <ReflowIcon />
+          </button>
+        </Show>
+        <button class="x-btn theme-btn" onClick={toggleTheme} title={themeTitle()}>
+          <ThemeIcon />
+        </button>
+        <button
+          class="x-btn help-btn"
+          onClick={() => setHelpOpen(true)}
+          title="Show keyboard shortcuts"
+        >
+          ?
+        </button>
+      </Show>
+
+      <Show when={secondaryCollapsed()}>
+        <div class="kebab-wrap" ref={kebabWrapRef}>
+          <button
+            class="x-btn kebab-btn"
+            classList={{ open: kebabOpen() }}
+            onClick={() => setKebabOpen(!kebabOpen())}
+            title="More controls"
+          >
+            <KebabIcon />
+          </button>
+          <Show when={kebabOpen()}>
+            <div class="kebab-menu" role="menu">
+              <Show when={position() !== "floating"}>
+                <button
+                  class="kebab-item"
+                  classList={{ active: reflow() }}
+                  onClick={closeKebabAfter(toggleReflow)}
+                  role="menuitem"
+                >
+                  <span class="kebab-glyph">
+                    <ReflowIcon />
+                  </span>
+                  <span>{reflow() ? "Reflow on" : "Reflow off"}</span>
+                </button>
+              </Show>
+              <button
+                class="kebab-item"
+                onClick={closeKebabAfter(toggleTheme)}
+                role="menuitem"
+              >
+                <span class="kebab-glyph">
+                  <ThemeIcon />
+                </span>
+                <span>Theme · {theme()}</span>
+              </button>
+              <button
+                class="kebab-item"
+                onClick={closeKebabAfter(() => setHelpOpen(true))}
+                role="menuitem"
+              >
+                <span class="kebab-glyph">?</span>
+                <span>Help</span>
+              </button>
+            </div>
+          </Show>
+        </div>
+      </Show>
+
       <button class="x-btn min-btn" onClick={() => setSize("strip")} title="Minimize to strip">
         <MinimizeIcon />
       </button>

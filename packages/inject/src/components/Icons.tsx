@@ -1,5 +1,5 @@
 import { type Component, Show } from "solid-js";
-import { position, side, size, theme } from "../state/modes";
+import { position, reflow, side, size, theme } from "../state/modes";
 
 const SVG_PROPS = {
   width: "16",
@@ -13,46 +13,93 @@ const SVG_PROPS = {
 };
 
 /**
- * Side icon — previews the side the drawer would move to on click.
- * Shows the opposite of the current `side` so the icon answers "where will this go?".
+ * Position icon — Lucide PanelLeft / PanelRight. Shows the drawer's
+ * *current* docked side as a filled segment. Click flips to the other side.
  */
-export const SideIcon: Component = () => {
-  // The destination side is the one we'd flip to.
-  const dest = () => (side() === "right" ? "left" : "right");
+export const PositionIcon: Component = () => {
+  const cur = () => side();
   return (
     <svg {...SVG_PROPS}>
-      <Show when={dest() === "right"}>
-        <rect x="3" y="4" width="18" height="16" rx="1.5" />
-        <rect x="14" y="4" width="7" height="16" rx="1.5" fill="currentColor" />
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <Show when={cur() === "left"}>
+        <rect x="3" y="3" width="6" height="18" fill="currentColor" stroke="none" />
+        <line x1="9" y1="3" x2="9" y2="21" />
       </Show>
-      <Show when={dest() === "left"}>
-        <rect x="3" y="4" width="18" height="16" rx="1.5" />
-        <rect x="3" y="4" width="7" height="16" rx="1.5" fill="currentColor" />
+      <Show when={cur() === "right"}>
+        <rect x="15" y="3" width="6" height="18" fill="currentColor" stroke="none" />
+        <line x1="15" y1="3" x2="15" y2="21" />
       </Show>
     </svg>
   );
 };
 
 /**
- * Float icon — shows the destination state on click.
- * Pinned → "pop out" glyph; floating → "dock" glyph (single panel returning to side).
+ * Padlock — Lucide Lock / LockOpen.
+ * Closed = drawer pinned to a side; open = drawer floating.
+ * Click flips between the two; reflow pref persists across the flip.
  */
-export const FloatIcon: Component = () => {
+export const PadlockIcon: Component = () => {
   const isFloating = () => position() === "floating";
   return (
     <svg {...SVG_PROPS}>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
       <Show when={!isFloating()}>
-        <rect x="3" y="3" width="13" height="11" rx="1.5" />
-        <rect x="8" y="9" width="13" height="11" rx="1.5" fill="currentColor" stroke="none" />
-        <rect x="8" y="9" width="13" height="11" rx="1.5" />
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
       </Show>
       <Show when={isFloating()}>
-        <rect x="3" y="4" width="18" height="16" rx="1.5" />
-        <rect x="3" y="4" width="18" height="16" rx="1.5" stroke="currentColor" />
+        <path d="M8 11V7a4 4 0 0 1 7.5-2" />
       </Show>
     </svg>
   );
 };
+
+/**
+ * Reflow icon — Lucide ArrowRightToLine / ArrowLeftToLine, mirrored to match
+ * the drawer's pinned side so the arrow always reads as "drawer pushing the
+ * page edge inward." Filled accent when reflow is on, outline-only when off.
+ */
+export const ReflowIcon: Component = () => {
+  const on = () => reflow();
+  const dir = () => side();
+  return (
+    <svg {...SVG_PROPS}>
+      <Show when={dir() === "right"}>
+        {/* Page edge on the right; arrow pushes toward it from the left. */}
+        <line x1="3" y1="12" x2="17" y2="12" />
+        <polyline points="11,6 17,12 11,18" />
+        <line
+          x1="21"
+          y1="4"
+          x2="21"
+          y2="20"
+          stroke-width="2.4"
+          stroke={on() ? "currentColor" : undefined}
+        />
+      </Show>
+      <Show when={dir() === "left"}>
+        <line x1="21" y1="12" x2="7" y2="12" />
+        <polyline points="13,6 7,12 13,18" />
+        <line
+          x1="3"
+          y1="4"
+          x2="3"
+          y2="20"
+          stroke-width="2.4"
+          stroke={on() ? "currentColor" : undefined}
+        />
+      </Show>
+    </svg>
+  );
+};
+
+/** Kebab — Lucide EllipsisVertical. NOT meatballs (horizontal). */
+export const KebabIcon: Component = () => (
+  <svg {...SVG_PROPS}>
+    <circle cx="12" cy="5" r="1" fill="currentColor" />
+    <circle cx="12" cy="12" r="1" fill="currentColor" />
+    <circle cx="12" cy="19" r="1" fill="currentColor" />
+  </svg>
+);
 
 /** Size icon — full panel for standard, short panel for compact. Strip mode lives on the minimize button. */
 export const SizeIcon: Component = () => {

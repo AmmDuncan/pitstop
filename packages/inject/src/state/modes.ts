@@ -17,6 +17,9 @@ type Modes = {
   floatingTop: number;
   floatingLeft: number;
   theme: Theme;
+  /** When true and pinned, host page reflows around the drawer (body padding).
+   *  When false (default), drawer overlays the page. Has no effect while floating. */
+  reflow: boolean;
 };
 
 function systemTheme(): Theme {
@@ -35,6 +38,7 @@ const DEFAULTS: Modes = {
   floatingTop: 80,
   floatingLeft: 80,
   theme: "dark",
+  reflow: false,
 };
 
 function load(): Modes {
@@ -55,7 +59,8 @@ function load(): Modes {
         : parsed.position === "left"
           ? "left"
           : "right";
-    return { ...fresh, ...parsed, theme, side };
+    const reflow = parsed.reflow === true;
+    return { ...fresh, ...parsed, theme, side, reflow };
   } catch {}
   return fresh;
 }
@@ -69,6 +74,7 @@ export const [height, setHeight] = createSignal(initial.height);
 export const [floatingTop, setFloatingTop] = createSignal(initial.floatingTop);
 export const [floatingLeft, setFloatingLeft] = createSignal(initial.floatingLeft);
 export const [theme, setTheme] = createSignal<Theme>(initial.theme);
+export const [reflow, setReflow] = createSignal<boolean>(initial.reflow);
 
 /** True while the user is actively dragging the floating drawer or pulling a
  *  resize handle. Drawer.tsx adds a `resizing` class while this is true so
@@ -87,10 +93,48 @@ createRoot(() => {
       floatingTop: floatingTop(),
       floatingLeft: floatingLeft(),
       theme: theme(),
+      reflow: reflow(),
     };
     try {
       localStorage.setItem(KEY, JSON.stringify(m));
     } catch {}
+  });
+
+  // Reflow effect: when pinned + reflow on, push host-page padding so the page
+  // visibly narrows by the drawer's width. The CSS var is always exposed on
+  // :root so host apps can anchor sticky/fixed elements to --pitstop-drawer-width
+  // even when reflow is off (they'd just opt in selectively). On floating or
+  // strip mode, we clear the padding so the page returns to full width.
+  createEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const body = document.body;
+    const w = `${width()}px`;
+    root.style.setProperty("--pitstop-drawer-width", w);
+
+    const pinned = position() !== "floating";
+    const stripped = size() === "strip";
+    const active = pinned && reflow() && !stripped;
+
+    if (!active) {
+      root.style.removeProperty("padding-left");
+      root.style.removeProperty("padding-right");
+      body.style.removeProperty("padding-left");
+      body.style.removeProperty("padding-right");
+      return;
+    }
+
+    if (position() === "right") {
+      root.style.setProperty("padding-right", "var(--pitstop-drawer-width)");
+      body.style.setProperty("padding-right", "var(--pitstop-drawer-width)");
+      root.style.removeProperty("padding-left");
+      body.style.removeProperty("padding-left");
+    } else {
+      root.style.setProperty("padding-left", "var(--pitstop-drawer-width)");
+      body.style.setProperty("padding-left", "var(--pitstop-drawer-width)");
+      root.style.removeProperty("padding-right");
+      body.style.removeProperty("padding-right");
+    }
   });
 });
 
@@ -134,4 +178,12 @@ export function toggleSize() {
 
 export function toggleTheme() {
   setTheme(theme() === "dark" ? "light" : "dark");
+}
+
+/**
+ * Toggle reflow mode. Has visible effect only while pinned — flipping it while
+ * floating updates the pref so docking later reflects the choice.
+ */
+export function toggleReflow() {
+  setReflow(!reflow());
 }

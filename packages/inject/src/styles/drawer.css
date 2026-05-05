@@ -45,9 +45,11 @@
    handle — every per-frame width/height update would otherwise spawn a
    220ms lerp and the drag feels like the drawer is rubber-banding behind
    the cursor. The `resizing` class is toggled on from ResizeHandle's
-   pointerdown / release pair via the `interactiveResize` signal. */
+   pointerdown / release pair via the `interactiveResize` signal.
+   !important because the overlay-docked rule below is more specific and
+   would otherwise reinstate the transition mid-drag. */
 .drawer.resizing {
-  transition: none;
+  transition: none !important;
 }
 
 /* Host element covers the viewport at the top of the document stacking
@@ -70,7 +72,9 @@
   }
 }
 
-/* Position variants */
+/* Position variants — base values are the *flush* (reflow-on) treatment.
+   Without `.reflow-on`, the overlay-docked override below pulls the drawer
+   inward and adds shadow + rounding. */
 .drawer.pos-right {
   right: 0;
   left: auto;
@@ -90,6 +94,29 @@
   height: auto;
   max-height: 80vh;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+/* Overlay-docked (default when pinned + reflow off): drawer pulls 10px away
+   from top/bottom/outer-edge, rounded corners, soft shadow. Reads as
+   "I'm hovering at the side of the page" rather than fused to the chrome.
+   Strip mode opts out — it's a 32px sliver that stays flush. */
+.drawer.pos-right:not(.size-strip):not(.reflow-on),
+.drawer.pos-left:not(.size-strip):not(.reflow-on) {
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(7, 26, 43, 0.18);
+  transition: width 220ms ease, height 220ms ease, top 220ms ease,
+    right 220ms ease, bottom 220ms ease, left 220ms ease;
+}
+.drawer.pos-right:not(.size-strip):not(.reflow-on) {
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+}
+.drawer.pos-left:not(.size-strip):not(.reflow-on) {
+  top: 10px;
+  left: 10px;
+  bottom: 10px;
 }
 
 /* Size variants */
@@ -341,16 +368,17 @@
 }
 
 .dheader {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto auto auto auto auto auto;
+  display: flex;
   align-items: center;
   gap: 8px;
   padding: 0 14px;
   border-bottom: 1px solid var(--rule-1);
   background: var(--bg-paper);
-  overflow: hidden;
+  overflow: visible; /* kebab popover may extend below header */
+  position: relative;
 }
-.dheader > div:nth-child(2) {
+.dheader .name-block {
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
 }
@@ -434,21 +462,79 @@
   height: 14px;
 }
 
-/* Side + Float share a single border so they read as one segmented control.
-   The wrapper paints the outer frame; inner buttons only paint the divider. */
-.dheader .x-btn-pair {
+/* Reflow toggle visually flags its on-state with an amber underline so the
+   user can tell at a glance whether the page is reflowing. Outline-only
+   means off; coloured underline means on. */
+.dheader .x-btn.reflow-btn.active {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+.dheader .x-btn.reflow-btn.active:hover {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+/* Kebab overflow menu — small popover anchored under the trigger button.
+   Only rendered when the secondary trio collapses (narrow header or compact
+   size mode). The wrap is position-relative so the menu floats below it. */
+.dheader .kebab-wrap {
+  position: relative;
   display: inline-flex;
-  border: 1px solid var(--rule-2);
+  align-items: center;
 }
-.dheader .x-btn-pair .x-btn {
-  border: none;
-}
-.dheader .x-btn-pair .x-btn + .x-btn {
-  border-left: 1px solid var(--rule-2);
-}
-.dheader .x-btn-pair:hover,
-.dheader .x-btn-pair:hover .x-btn + .x-btn {
+.dheader .x-btn.kebab-btn.open {
+  color: var(--t1);
   border-color: var(--rule-3);
+}
+.dheader .kebab-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  background: var(--bg-paper);
+  border: 1px solid var(--rule-2);
+  box-shadow: 0 8px 24px rgba(7, 26, 43, 0.18);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dheader .kebab-item {
+  background: transparent;
+  border: none;
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border-radius: 4px;
+}
+.dheader .kebab-item:hover {
+  color: var(--t1);
+  background: var(--bg-rail);
+}
+.dheader .kebab-item.active {
+  color: var(--amber);
+}
+.dheader .kebab-item .kebab-glyph {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  color: inherit;
+}
+.dheader .kebab-item .kebab-glyph svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* Header is a drag handle when drawer is floating */
