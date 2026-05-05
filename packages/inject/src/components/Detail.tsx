@@ -1,7 +1,7 @@
 import type { Attachment } from "@pitstop/shared";
 import { marked } from "marked";
-import { type Component, For, Show, createEffect, createSignal } from "solid-js";
-import { submitResponse } from "../state/client";
+import { type Component, For, Show, createEffect, createSignal, onCleanup } from "solid-js";
+import { baseUrl, submitResponse } from "../state/client";
 import {
   clearDraft,
   currentItemIdx,
@@ -43,6 +43,68 @@ export const Detail: Component = () => {
     prevSubmitState = ss;
   });
   const [submitting, setSubmitting] = createSignal(false);
+
+  // Lifecycle strip "elapsed time + POKE button" — shows the user how long the
+  // strip has been up and lets them re-engage Claude when it seems stuck. The
+  // POKE button calls /retry-poke; the daemon adapts the context to the
+  // pending state (unread comments vs user-initiated nudge).
+  const itemAddressed = () => {
+    const id = item()?.id;
+    if (!id) return false;
+    return (session.s?.agentActivity ?? []).some(
+      (e) => e.tool === "mark_addressing" && e.itemId === id && e.arrived !== false,
+    );
+  };
+  const stripState = () => {
+    if (submitState() === "sending") return { kind: "sending", label: "SENDING…" };
+    if (submitState() === "poked") return { kind: "poked", label: "POKED · WAITING" };
+    if (!itemAddressed()) return { kind: "awaiting", label: "AWAITING CLAUDE" };
+    return null;
+  };
+
+  const [stripStartedAt, setStripStartedAt] = createSignal<number | null>(null);
+  const [now, setNow] = createSignal(Date.now());
+  let lastStripKind: string | null = null;
+  createEffect(() => {
+    const ss = stripState();
+    const kind = ss?.kind ?? null;
+    if (kind !== lastStripKind) {
+      lastStripKind = kind;
+      setStripStartedAt(kind ? Date.now() : null);
+    }
+  });
+  let tick: ReturnType<typeof setInterval> | null = null;
+  createEffect(() => {
+    if (stripState() && !tick) {
+      tick = setInterval(() => setNow(Date.now()), 1000);
+    } else if (!stripState() && tick) {
+      clearInterval(tick);
+      tick = null;
+    }
+  });
+  onCleanup(() => {
+    if (tick) clearInterval(tick);
+  });
+  const elapsedFormatted = () => {
+    const start = stripStartedAt();
+    if (!start) return "";
+    const s = Math.max(0, Math.floor((now() - start) / 1000));
+    const mm = Math.floor(s / 60);
+    const ss = s % 60;
+    return `${mm}:${String(ss).padStart(2, "0")}`;
+  };
+  const [poking, setPoking] = createSignal(false);
+  const onPoke = async () => {
+    if (!session.s || poking()) return;
+    setPoking(true);
+    try {
+      await fetch(`${baseUrl}/api/sessions/${session.s.id}/retry-poke`, { method: "POST" });
+    } catch (err) {
+      console.error("poke failed", err);
+    } finally {
+      setPoking(false);
+    }
+  };
 
   const onApprove = async () => {
     const it = item();
@@ -151,21 +213,6 @@ export const Detail: Component = () => {
           //   3. Action buttons (LOOKS_GOOD / SEND_COMMENT)
           // Each subsumes the one below it — no two of these stack.
           const pending = () => session.s?.pendingQuestion ?? null;
-          const itemAddressed = () => {
-            const id = item()!.id;
-            // Buttons appear once we've seen an `arrived !== false` entry for
-            // this item. Mid-drive narrations passed with arrived: false keep
-            // the AWAITING CLAUDE strip up.
-            return (session.s?.agentActivity ?? []).some(
-              (e) => e.tool === "mark_addressing" && e.itemId === id && e.arrived !== false,
-            );
-          };
-          const stripState = () => {
-            if (submitState() === "sending") return { kind: "sending", label: "SENDING…" };
-            if (submitState() === "poked") return { kind: "poked", label: "POKED · WAITING" };
-            if (!itemAddressed()) return { kind: "awaiting", label: "AWAITING CLAUDE" };
-            return null;
-          };
           return (
             <Show when={!pending()} fallback={<PendingQuestion question={pending()!} />}>
               <Show
@@ -174,6 +221,17 @@ export const Detail: Component = () => {
                   <div class="lifecycle-strip" data-state={stripState()!.kind}>
                     <span class="lifecycle-dot" />
                     <span class="lifecycle-label">{stripState()!.label}</span>
+                    <Show when={stripState()!.kind !== "sending"}>
+                      <span class="lifecycle-elapsed">{elapsedFormatted()}</span>
+                      <button
+                        class="lifecycle-poke"
+                        onClick={onPoke}
+                        disabled={poking()}
+                        title="Poke Claude — re-engage if it seems stuck"
+                      >
+                        POKE
+                      </button>
+                    </Show>
                   </div>
                 }
               >

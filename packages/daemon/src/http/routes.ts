@@ -369,12 +369,17 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     if (!session) return c.json({ error: "NOT_FOUND" }, 404);
     if (session.pokePid) return c.json({ error: "ALREADY_IN_FLIGHT" }, 409);
     if (!session.clientSessionId) return c.json({ error: "NO_CLIENT_SESSION_ID" }, 400);
-    const unaddressed = session.responses.filter((r) => !r.addressed && r.kind === "comment");
-    if (unaddressed.length === 0) return c.json({ ok: true, skipped: "no-unread" });
 
     const { ClaudeResumePoke } = await import("../poke/claude-resume");
     const poke = new ClaudeResumePoke({ spawn: opts.spawn });
-    const ctx = `Pitstop session ${id} retry: ${unaddressed.length} comment${unaddressed.length === 1 ? "" : "s"} pending. Read get_unread_responses(${id}).`;
+    // Context tailors to what the agent should do next: pick up unread
+    // comments if any, otherwise a user-initiated nudge ("are you stuck?")
+    // that just asks the agent to look at current state and continue.
+    const unaddressed = session.responses.filter((r) => !r.addressed && r.kind === "comment");
+    const ctx =
+      unaddressed.length > 0
+        ? `Pitstop session ${id} retry: ${unaddressed.length} comment${unaddressed.length === 1 ? "" : "s"} pending. Read get_unread_responses(${id}).`
+        : `Pitstop session ${id}: user-initiated poke from the drawer (likely thinks you're stuck). Read get_state(${id}) and continue driving the review.`;
     try {
       const { pid, exited } = await poke.trigger({
         sessionId: id,

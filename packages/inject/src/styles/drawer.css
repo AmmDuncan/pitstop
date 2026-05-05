@@ -1239,6 +1239,37 @@
   flex-shrink: 0;
   animation: pulse 1.5s ease-in-out infinite;
 }
+.lifecycle-strip .lifecycle-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.lifecycle-strip .lifecycle-elapsed {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.10em;
+  color: var(--t3);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.lifecycle-strip .lifecycle-poke {
+  background: transparent;
+  border: 1px solid var(--amber);
+  color: var(--amber-text);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  padding: 4px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.lifecycle-strip .lifecycle-poke:hover:not(:disabled) {
+  background: var(--amber-soft);
+}
+.lifecycle-strip .lifecycle-poke:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 /* Shimmer pass on the long-running states — keeps the strip feeling alive
    during POKED · WAITING and AWAITING_CLAUDE. SENDING is too brief to bother. */
 .lifecycle-strip[data-state="poked"] .lifecycle-label,
