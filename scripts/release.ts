@@ -6,7 +6,10 @@
  *   bun run release 0.1.1
  *   bun run release 0.2.0-beta.1
  */
-import { readFile, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { readFile, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join as pathJoin } from "node:path";
 import { $ } from "bun";
 
 const PACKAGES = [
@@ -46,7 +49,67 @@ console.log("▸ running tests...");
 await $`bun test`.quiet();
 console.log("  tests passed.\n");
 
-// 4. Bump all package versions
+// 4. Draft a CHANGELOG entry from commit subjects since the last tag, then
+//    open it in $EDITOR for the user to confirm/trim/edit before commit.
+const lastTag = (await $`git describe --tags --abbrev=0`.text()).trim();
+const commitsRaw = (await $`git log --pretty=format:%s ${lastTag}..HEAD`.text()).trim();
+if (!commitsRaw) {
+  console.error(`No commits since ${lastTag}. Nothing to release.`);
+  process.exit(1);
+}
+
+const draftBullets = commitsRaw
+  .split("\n")
+  .filter((s) => s.trim() && !/^chore: release \d/.test(s))
+  .map((s) => `- ${s}`)
+  .join("\n");
+
+const today = new Date().toISOString().slice(0, 10);
+const draftSection = `## v${version} — ${today}\n\n${draftBullets}\n`;
+
+const editor = process.env.EDITOR || process.env.VISUAL;
+let finalSection: string;
+
+if (editor) {
+  const tmpFile = pathJoin(tmpdir(), `pitstop-release-${version}.md`);
+  await writeFile(tmpFile, draftSection);
+  console.log(`▸ drafting CHANGELOG entry...`);
+  console.log(`  opening ${editor} — review/edit the bullets and save to continue.`);
+  const result = spawnSync(editor, [tmpFile], { stdio: "inherit" });
+  if (result.status !== 0) {
+    console.error(`  $EDITOR exited with status ${result.status}; aborting.`);
+    await unlink(tmpFile).catch(() => {});
+    process.exit(1);
+  }
+  finalSection = (await readFile(tmpFile, "utf8")).trim();
+  await unlink(tmpFile).catch(() => {});
+} else {
+  console.error(
+    "▸ drafting CHANGELOG entry needs $EDITOR (or $VISUAL) set so you can review the auto-derived bullets.",
+  );
+  console.error("  Set one (e.g. `export EDITOR=nano`) and re-run.");
+  process.exit(1);
+}
+
+if (!finalSection.startsWith(`## v${version}`)) {
+  console.error("CHANGELOG section header is missing or wrong; aborting.");
+  process.exit(1);
+}
+
+// Prepend the new section to CHANGELOG.md (after the file header, before
+// the most recent entry).
+const changelogPath = "CHANGELOG.md";
+const changelog = await readFile(changelogPath, "utf8");
+const headerEnd = changelog.indexOf("\n## ");
+if (headerEnd === -1) {
+  console.error("Couldn't find any version section in CHANGELOG.md.");
+  process.exit(1);
+}
+const newChangelog = `${changelog.slice(0, headerEnd + 1)}${finalSection}\n\n${changelog.slice(headerEnd + 1)}`;
+await writeFile(changelogPath, newChangelog);
+console.log("  CHANGELOG.md updated.\n");
+
+// 5. Bump all package versions
 console.log(`▸ bumping ${PACKAGES.length} packages → ${version}`);
 for (const file of PACKAGES) {
   const pkg = JSON.parse(await readFile(file, "utf8"));
@@ -80,5 +143,18 @@ await $`git commit -m ${`chore: release ${version}`}`;
 await $`git tag ${tag}`;
 await $`git push origin main --tags`;
 
-console.log(`\n✓ released ${tag}`);
+// 7. Create the GitHub release with the section body so the /releases page
+//    matches CHANGELOG.md. Skip silently if `gh` isn't installed or auth'd.
+const sectionBody = finalSection.replace(/^## v[\d.]+ — \d{4}-\d{2}-\d{2}\n+/, "").trim();
+console.log("▸ creating GitHub release...");
+const ghResult = spawnSync("gh", ["release", "create", tag, "--title", tag, "--notes", sectionBody], {
+  stdio: "inherit",
+});
+if (ghResult.status !== 0) {
+  console.warn(`  ⚠ gh release create returned ${ghResult.status} — continuing.`);
+} else {
+  console.log("  done.\n");
+}
+
+console.log(`✓ released ${tag}`);
 console.log(`  https://github.com/AmmDuncan/pitstop/releases/tag/${tag}`);

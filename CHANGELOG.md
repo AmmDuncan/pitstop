@@ -1,5 +1,28 @@
 # Changelog
 
+All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
+
+## v0.3.27 — 2026-05-05
+
+### Added
+- Header position split: separate Side (right ↔ left) and Float (pinned ↔ floating) buttons replace the cycle. New `side` signal tracks the dock preference even while floating.
+- Lifecycle-strip shimmer on `POKED · WAITING` and `AWAITING_CLAUDE` labels (~2.6s, low-contrast, CSS-only).
+- `REVIEW_COMPLETE` terminal screen with counts, time spent, and `REVIEW_ITEMS` / `CLOSE` actions; `BACK_TO_SUMMARY` lives in the footer while browsing items.
+- Shared `responseCounts` memo in `state/store.ts` (deduplicates the addressed-once invariant from v0.3.6 between Footer and ReviewComplete).
+
+### Changed
+- Theme is binary (`dark` ↔ `light`); `auto` mode and `resolvedTheme` removed. Legacy `auto` localStorage values migrate to the current system preference on first read.
+- Size button is binary (`standard` ↔ `compact`); strip mode lives only on the dedicated minimize button + empty-state collapse.
+- Header chrome cluster tightened: 22×22 buttons (down from 26×24), 8px gap; the pos pair shares one outer border with a sibling-selector divider.
+- Strip layout grouped into top (logo + label) and bottom (count + dot) clusters — no more giant gaps between every element.
+- `REVIEW_COMPLETE` stamp uses `--ok` (green) to match the success semantic the rest of the UI assigns to that color.
+- Empty-state collapse moved to top-right (`top: 14px`), mirroring the active-state minimize button.
+
+### Fixed
+- Detail action buttons hidden when session status is `complete`; browse-back mode no longer accepts stray approves/comments.
+- `reviewingComplete` auto-resets when the session leaves the complete state — fresh sessions never open stuck in browse mode.
+- Removed unsafe `position() as Side` cast in `toggleFloat`.
+
 ## v0.3.26 — 2026-05-04
 
 ### Added
@@ -18,11 +41,35 @@
 
 - **Logo: 🏁 emoji → custom SVG (flush 2×2 checker).** v0.3.23 used the checkered-flag emoji as a placeholder, which renders differently across OSes (Apple/Microsoft/Google all draw 🏁 their own way). v0.3.24 replaces it with an inline SVG mark — variant A1 from the 2026-05-04 visual brainstorm — so the drawer header looks identical everywhere. Spec at `docs/superpowers/specs/2026-05-04-pitstop-logo-design.md`.
 
+## v0.3.23 — 2026-05-04
+
+### Changed
+- Replaced the inline `W` mark with a checkered-flag emoji (🏁) — placeholder until the custom SVG arrived in v0.3.24.
+
+## v0.3.22 — 2026-05-04
+
+### Changed
+- Comment textarea: dark-amber tint on focus to match the border shift, so the focused state reads as a single visual change rather than just a border flicker.
+
 ## v0.3.21 — 2026-05-04
 
 ### Added
 
 - **`arrived` flag on `mark_addressing`.** Optional boolean (default `true`, for backwards compat with v0.3.13–v0.3.20 callers). Agents narrating progressively during navigation should pass `arrived: false` on intermediate calls — the drawer keeps the `AWAITING CLAUDE` strip up and buttons hidden. The final narration omits the flag (or passes `arrived: true`) to unlock the action buttons. Single-narration items work unchanged. MCP tool description spells out the rule.
+
+## v0.3.20 — 2026-05-04
+
+### Changed
+- AgentFeed older lines no longer fade — only the newest line gets the rank-0 highlight (chevron + bolder color).
+
+## v0.3.19 — 2026-05-04
+
+Maintenance release.
+
+## v0.3.18 — 2026-05-04
+
+### Changed
+- More breathing room at the bottom of the comment textarea while typing.
 
 ## v0.3.17 — 2026-05-04
 
@@ -92,11 +139,29 @@
 
 Existing complete-status JSONs from before this version stay on disk until you manually `rm ~/.claude/pitstop/sessions/*.json`. Going forward, the directory should self-prune.
 
+## v0.3.10 — 2026-05-03
+
+### Fixed
+- AgentFeed only fades the last 2 lines when overflowing (was fading all 5).
+
 ## v0.3.9 — 2026-05-04
 
 ### Fixed
 
 - **Strip mode in floating position had no drag handle.** Strip size doesn't render the header, so the floating drawer was stuck where you collapsed it. The strip body itself now doubles as click-to-expand and (when floating) drag-to-move — distinguishes drag from click by a 3px movement threshold; same pointer-capture pattern as the header drag, so the release fires reliably.
+
+## v0.3.8 — 2026-05-03
+
+### Changed
+- Footer button: `STOP` → `PAUSE` (with title tooltips spelling out each direction's effect).
+
+### Fixed
+- Comment textarea border in light mode (was missing the focused-state contrast).
+
+## v0.3.7 — 2026-05-03
+
+### Fixed
+- Cap the expanded AgentFeed at 90px so it doesn't displace detail content.
 
 ## v0.3.6 — 2026-05-04
 
@@ -124,6 +189,21 @@ The "less chore, more signal" release. Drawn from feedback that v0.3.x's items f
 ### Migration
 
 No code changes for consumers. Existing sessions still parse. Re-run `bun run setup` to rebuild bundles.
+
+## v0.3.4 — 2026-05-03
+
+### Fixed
+- Resize handles release on cursor-left-viewport (matched the same fix the floating-drawer header drag got in v0.3.1).
+
+## v0.3.3 — 2026-05-03
+
+### Changed
+- `wire_drawer`: `projectRoot` resolution is the agent's responsibility — the daemon no longer guesses.
+
+## v0.3.2 — 2026-05-03
+
+### Changed
+- `wire_drawer` is now self-routing — picks the right install path (committed snippet, local-only file, or Chrome extension) based on the project's framework.
 
 ## v0.3.1 — 2026-05-04
 
