@@ -2,6 +2,17 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.28 — 2026-05-05
+
+### Fixed
+- `bun run setup` silently no-op'd the inject build on Bun 1.3.13 because `bun --cwd <dir> run <script>` is misparsed (Bun lists scripts and exits 0 instead of running). Switched to `bun run --cwd <dir> <script>` and added `existsSync` checks so the script fails loudly if a dist file is missing.
+- Daemon's `/inject.js` route returned Bun's HTML error fallback as `application/javascript` when the bundle was missing, so the drawer would silently fail to mount. Now returns 503 + plaintext with a hint to run `bun run setup`.
+- Empty-state drawer (no active session) had no width resize handle. Added the `edge-left` handle so the drawer is squeezable in either state.
+
+### Added
+- `CHANGELOG.md` backfilled across all releases. Every tag now has a matching entry on the GitHub releases page.
+- `bun run release` auto-drafts a CHANGELOG section from commit subjects since the last tag, opens it in `$EDITOR` for review, prepends to `CHANGELOG.md`, and creates a matching GitHub release after the tag push.
+
 ## v0.3.27 — 2026-05-05
 
 ### Added
