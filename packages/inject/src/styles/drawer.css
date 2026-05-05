@@ -1471,8 +1471,12 @@
   justify-content: center;
 }
 
-/* Footer */
+/* Footer — pinned to the last grid row so it doesn't slide up when AgentFeed
+   collapses (no entries). Without this, footer auto-places into the `auto`
+   row and the resize-handle (absolute, but still grid-placeable) ends up
+   occupying the 42px row instead, leaving a phantom strip under the footer. */
 .dfooter {
+  grid-row: -2 / -1;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
