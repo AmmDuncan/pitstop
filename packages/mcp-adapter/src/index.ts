@@ -193,7 +193,7 @@ If you only narrate once per item (arrive immediately), omit the flag — the de
 WHEN TO USE THIS INSTEAD OF AskUserQuestion:
 While ANY pitstop session is active, prefer ask_user over AskUserQuestion for questions related to the work in progress. AskUserQuestion hijacks the chat with a modal and pulls the user out of the flow they're already in (the drawer). ask_user surfaces the question where the user's eye already is.
 
-ALSO: when you call ask_user, also write a one-line plain-text mention of the question in your chat output (e.g. "I'm asking via the drawer: <question>") so the chat history reflects what was asked. Don't use AskUserQuestion for the same question — that would double-prompt and hijack the modal anyway.
+DUAL-SURFACE RULE (required): whenever you call ask_user, ALSO render the FULL question + EVERY option (label + description, if any) as readable text in your chat reply. The chat is canonical history; the drawer is one UI surface, not the only one. The user might be looking at the terminal, not the drawer, and shouldn't have to scroll the drawer to re-read what they're answering. A one-line "I'm asking via the drawer" teaser is NOT enough — both surfaces should carry the same content so the user can answer from either. Don't use AskUserQuestion for the same question, that would double-prompt and hijack the modal anyway.
 
 If you're certain there's no active pitstop session for this projectRoot, fall back to AskUserQuestion as normal.
 
@@ -279,9 +279,73 @@ wire_drawer NEVER writes files — that's you, so the user can review your edit.
       "End the review session. Flips the drawer status pill to REVIEW_COMPLETE. Call this only after every item has at least one response (approve or comment).",
     inputSchema: { type: "object", required: ["sessionId"], properties: { sessionId: { type: "string" } } },
   },
+  {
+    name: "agent_address_comment",
+    description: `Mark that you've addressed (fixed/done) a user comment on an item, BEFORE you call set_current_item to move on. The pip for that item flips to a third color (agent-addressed, distinct from amber/commented and from green/approved) and a narration lands in the feed at the bottom of the drawer ("Addressed your comment on item N — moving on.").
+
+WHY THIS EXISTS:
+The user's amber pip on a commented item is a visible TODO; if you just navigate away, they're left looking at the next item with the previous still amber, wondering if you actually fixed it. Calling this clears the ambiguity without overstepping — you're saying "I think it's done"; they retain final say (clicking LOOKS_GOOD on that item still flips it to green).
+
+WHEN TO CALL:
+After you've actually shipped the fix for the comment on item X, BEFORE set_current_item(item Y). Pair with mark_addressing for the new item as the next call.
+
+NOT a substitute for user approval. NOT for items the user only approved (no open comment). Skip if there was no comment to address.`,
+    inputSchema: {
+      type: "object",
+      required: ["sessionId", "itemId", "narration"],
+      properties: {
+        sessionId: { type: "string" },
+        itemId: {
+          type: "string",
+          description: "The item whose user comment you've addressed.",
+        },
+        narration: {
+          type: "string",
+          description:
+            "One sentence explaining what you fixed. Lands in the AgentFeed. E.g. 'Switched the date format to YYYY-MM-DD per your comment.'",
+        },
+      },
+    },
+  },
+  {
+    name: "set_drawer",
+    description: `Reposition or resize the pitstop drawer. Use this when the drawer is covering UI you need to interact with — most commonly when an automated click fails because <pitstop-drawer> is the obscuring element. The drawer host carries data-pitstop="drawer" so blocking-element checks can identify it specifically.
+
+WHEN TO USE:
+- Your click was blocked and the obscuring element is or contains <pitstop-drawer>. Switch sides (right ↔ left), or collapse to strip, then retry the click.
+- The user is interacting with a region of their app that the drawer is permanently in the way of (e.g. a right-side cart on a host app while drawer is also pinned right).
+- BEFORE force-clicking via JS. Force-clicks skip the genuine UI interactions the user wants to verify; moving the drawer first preserves the real flow.
+
+The narration is REQUIRED — it's appended to the agent feed at the bottom of the drawer so the user knows why the chrome just shifted. Plain language, one short sentence ("Drawer covered the Place Order button — switching to left."). Without it, the move looks like a glitch.
+
+Persists to the same localStorage the drawer's chrome buttons write to, so the change survives reload. Pass at least one of position/size; both is fine.`,
+    inputSchema: {
+      type: "object",
+      required: ["sessionId", "narration"],
+      properties: {
+        sessionId: { type: "string" },
+        position: {
+          type: "string",
+          enum: ["right", "left", "floating"],
+          description: "Where to dock the drawer. Omit to leave position unchanged.",
+        },
+        size: {
+          type: "string",
+          enum: ["standard", "compact", "strip"],
+          description:
+            "Drawer size. 'strip' minimizes to a 32px rail. Omit to leave size unchanged.",
+        },
+        narration: {
+          type: "string",
+          description:
+            "REQUIRED. One-sentence reason for the move. Lands in the AgentFeed so the user isn't surprised. E.g. 'Cart button is under the drawer — moving to left.'",
+        },
+      },
+    },
+  },
 ];
 
-const server = new Server({ name: "pitstop", version: "0.3.27" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "pitstop", version: "0.3.31" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {

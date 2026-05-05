@@ -117,6 +117,23 @@ for (const file of PACKAGES) {
   await writeFile(file, JSON.stringify(pkg, null, 2) + "\n");
   console.log(`  ${file}`);
 }
+
+// Sync the MCP server identity version string. The Server constructor in
+// mcp-adapter/src/index.ts hardcodes a `version: "x.y.z"` literal; if it
+// drifts from the package version, `claude mcp list` shows a stale tag and
+// nothing else fails noisily. Patch it in place.
+const adapterSrc = "packages/mcp-adapter/src/index.ts";
+const original = await readFile(adapterSrc, "utf8");
+const patched = original.replace(
+  /(name:\s*"pitstop",\s*version:\s*")[\d.]+(")/,
+  `$1${version}$2`,
+);
+if (patched === original) {
+  console.error(`  could not find Server({ name: "pitstop", version: ... }) literal in ${adapterSrc}`);
+  process.exit(1);
+}
+await writeFile(adapterSrc, patched);
+console.log(`  ${adapterSrc} (Server version literal)`);
 console.log("");
 
 // 5. Rebuild inject so the published bundle reflects this version.

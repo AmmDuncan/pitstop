@@ -32,7 +32,15 @@ export const ItemZ = z.object({
 
 export const ResponseZ = z.object({
   itemId: z.string(),
-  kind: z.enum(["approve", "comment", "answer"]),
+  /**
+   * 'approve'           — user clicked LOOKS_GOOD; final user trust signal.
+   * 'comment'           — user feedback awaiting agent action.
+   * 'answer'            — user reply to an `ask_user` question.
+   * 'agent-addressed'   — agent reports it has addressed an open user comment
+   *                       and is moving on. NOT a substitute for user approve;
+   *                       the user can still re-approve or re-comment.
+   */
+  kind: z.enum(["approve", "comment", "answer", "agent-addressed"]),
   body: z.string().optional(),
   /** Set when kind === 'answer' — the question text the user was responding
    *  to. Helps the agent correlate without relying on session-state ordering. */
@@ -132,7 +140,19 @@ export type SseEvent =
    * created for a projectRoot. Lets a drawer that was mounted before the
    * session existed react instantly instead of waiting for a manual reload.
    */
-  | { type: "session-hello"; session: Session };
+  | { type: "session-hello"; session: Session }
+  /**
+   * Agent-driven chrome control via `set_drawer`. The agent calls when the
+   * drawer is covering UI it needs to interact with; inject reacts by
+   * updating its mode signals (position/size) and the change is rendered
+   * through the existing CSS transitions.
+   */
+  | {
+      type: "drawer-control";
+      sessionId: string;
+      position?: "right" | "left" | "floating";
+      size?: "standard" | "compact" | "strip";
+    };
 
 export type PokeKind =
   | { kind: "claude-resume" }

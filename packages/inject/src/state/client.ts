@@ -35,7 +35,14 @@ export async function fetchMostRecentActiveSession(): Promise<Session | null> {
 
 export function openEventStream(sessionId: string, on: (e: SseEvent) => void): () => void {
   const es = new EventSource(`${baseUrl}/api/sessions/${sessionId}/events`);
-  for (const t of ["state-snapshot", "state-changed", "item-added", "agent-activity", "complete"] as const) {
+  for (const t of [
+    "state-snapshot",
+    "state-changed",
+    "item-added",
+    "agent-activity",
+    "complete",
+    "drawer-control",
+  ] as const) {
     es.addEventListener(t, (m) => on(JSON.parse((m as MessageEvent).data)));
   }
   return () => es.close();

@@ -50,7 +50,12 @@ export const AgentFeed: Component = () => {
 
   const all = () => {
     const entries = (session.s?.agentActivity ?? []).filter(
-      (e) => e.narration && (e.tool === "mark_addressing" || e.tool === "ask_user"),
+      (e) =>
+        e.narration &&
+        (e.tool === "mark_addressing" ||
+          e.tool === "ask_user" ||
+          e.tool === "set_drawer" ||
+          e.tool === "agent_address_comment"),
     );
     return entries.slice().reverse();
   };

@@ -5,6 +5,10 @@ import { theme } from "./state/modes";
 
 class PitstopDrawer extends HTMLElement {
   connectedCallback() {
+    // Stable identifier so any tool inspecting the obscuring element of a
+    // blocked click (Playwright, agent-browser, etc.) can recognize this
+    // host as pitstop's drawer and react accordingly (e.g. via set_drawer).
+    this.setAttribute("data-pitstop", "drawer");
     const root = this.attachShadow({ mode: "open" });
     render(() => <App />, root);
     const isDrawerEvent = (e: Event): boolean => {

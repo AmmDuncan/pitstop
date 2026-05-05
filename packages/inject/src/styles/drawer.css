@@ -36,6 +36,13 @@
   overflow: hidden;
   z-index: 2147483600;
   pointer-events: auto;
+  /* Smooth size changes (especially when set_drawer or the size button
+     swap standard ↔ compact, or strip-mode width snaps). Position flips
+     left ↔ right involve `auto` ↔ `0` on right/left and can't be CSS-
+     transitioned cleanly, so those snap instantly. The user-driven
+     resize-handle drag is fine — small per-frame deltas over 220ms read
+     as a tiny smoothing, not lag. */
+  transition: width 220ms ease, height 220ms ease;
 }
 
 /* Host element covers the viewport at the top of the document stacking
@@ -630,6 +637,12 @@
 }
 .pip.commented {
   color: var(--amber);
+}
+.pip.agent-addressed {
+  /* Distinct from approved (green) and commented (amber). Reads as
+     "agent says done, your final say still applies." Cyan-teal works
+     against both light and dark themes. */
+  color: oklch(0.74 0.10 200);
 }
 .pip.focused {
   background: var(--bg-panel);

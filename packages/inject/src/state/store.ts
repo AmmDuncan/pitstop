@@ -2,6 +2,7 @@ import type { Session, SseEvent } from "@pitstop/shared";
 import { createEffect, createMemo, createRoot, createSignal } from "solid-js";
 import { createStore, produce, reconcile } from "solid-js/store";
 import { fetchActiveSession, fetchMostRecentActiveSession, openEventStream } from "./client";
+import { setPosition, setSize } from "./modes";
 
 export const [session, setSession] = createStore<{ s: Session | null }>({ s: null });
 export const [currentItemIdx, setCurrentItemIdx] = createSignal(0);
@@ -34,12 +35,22 @@ createRoot(() => {
  * Approved/commented/left counts for the current session. Counts each item
  * once even when it carries both an approve AND a comment, so `left` can't
  * go negative (regression fixed in v0.3.6).
+ *
+ * `commented` excludes items the agent has since marked as addressed via
+ * `agent_address_comment` — once the fix is in, the queue is no longer
+ * pending the agent's action. The pip-strip still surfaces the
+ * agent-addressed state via its own color so the user can re-approve.
  */
 export const responseCounts = createMemo(() => {
   const items = session.s?.items ?? [];
   const responses = session.s?.responses ?? [];
   const approved = items.filter((i) => responses.some((r) => r.itemId === i.id && r.kind === "approve")).length;
-  const commented = items.filter((i) => responses.some((r) => r.itemId === i.id && r.kind === "comment")).length;
+  const commented = items.filter((i) => {
+    const itemResponses = responses.filter((r) => r.itemId === i.id);
+    const hasOpenComment = itemResponses.some((r) => r.kind === "comment");
+    const isAgentAddressed = itemResponses.some((r) => r.kind === "agent-addressed");
+    return hasOpenComment && !isAgentAddressed;
+  }).length;
   const addressedIds = new Set(responses.map((r) => r.itemId));
   const left = Math.max(0, items.length - addressedIds.size);
   return { approved, commented, left };
@@ -113,6 +124,12 @@ export function applyEvent(e: SseEvent): void {
           if (s) s.status = "complete";
         }),
       );
+      break;
+    case "drawer-control":
+      // Agent-driven chrome change via set_drawer. Persisted by the modes
+      // effect so the drawer stays where the agent put it after reload.
+      if (e.position) setPosition(e.position);
+      if (e.size) setSize(e.size);
       break;
   }
 }

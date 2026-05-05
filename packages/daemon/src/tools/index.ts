@@ -158,6 +158,65 @@ export const tools = {
     return { ok: true };
   },
 
+  async agent_address_comment(ctx: Ctx, params: unknown) {
+    const P = z.object({
+      sessionId: z.string(),
+      itemId: z.string(),
+      narration: z.string().min(1),
+    });
+    const { sessionId, itemId, narration } = P.parse(params);
+    const cur = await ctx.store.get(sessionId);
+    if (!cur) throw new Error("NOT_FOUND");
+    if (!cur.items.some((it) => it.id === itemId)) throw new Error(`UNKNOWN_ITEM_ID:${itemId}`);
+    const at = Date.now();
+    const response = {
+      itemId,
+      kind: "agent-addressed" as const,
+      body: narration,
+      at,
+      addressed: true,
+    };
+    const entry = { at, tool: "agent_address_comment", narration, itemId };
+    const session = await ctx.store.update(sessionId, (s) => ({
+      ...s,
+      responses: [...s.responses, response],
+      agentActivity: [...s.agentActivity, entry].slice(-50),
+      lastAgentActivityAt: at,
+      pokeFailed: false,
+    }));
+    ctx.bus.publish(sessionId, { type: "agent-activity", sessionId, entry });
+    ctx.bus.publish(sessionId, { type: "state-changed", session });
+    return { ok: true };
+  },
+
+  async set_drawer(ctx: Ctx, params: unknown) {
+    const P = z
+      .object({
+        sessionId: z.string(),
+        position: z.enum(["right", "left", "floating"]).optional(),
+        size: z.enum(["standard", "compact", "strip"]).optional(),
+        narration: z.string().min(1),
+      })
+      .refine((p) => p.position !== undefined || p.size !== undefined, {
+        message: "set_drawer requires at least one of position or size",
+      });
+    const { sessionId, position, size, narration } = P.parse(params);
+    const cur = await ctx.store.get(sessionId);
+    if (!cur) throw new Error("NOT_FOUND");
+    const at = Date.now();
+    const entry = { at, tool: "set_drawer", narration };
+    const session = await ctx.store.update(sessionId, (s) => ({
+      ...s,
+      agentActivity: [...s.agentActivity, entry].slice(-50),
+      lastAgentActivityAt: at,
+      pokeFailed: false,
+    }));
+    ctx.bus.publish(sessionId, { type: "agent-activity", sessionId, entry });
+    ctx.bus.publish(sessionId, { type: "state-changed", session });
+    ctx.bus.publish(sessionId, { type: "drawer-control", sessionId, position, size });
+    return { ok: true };
+  },
+
   async set_current_item(ctx: Ctx, params: unknown) {
     const P = z.object({ sessionId: z.string(), itemId: z.string() });
     const { sessionId, itemId } = P.parse(params);

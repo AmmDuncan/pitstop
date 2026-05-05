@@ -5,10 +5,16 @@ import { ItemListSheet } from "./ItemListSheet";
 
 const WINDOWED_THRESHOLD = 26;
 
-type PipState = "approved" | "commented" | "focused" | "pending";
+type PipState = "approved" | "agent-addressed" | "commented" | "focused" | "pending";
 
 function glyphFor(state: PipState): string {
-  return { approved: "✓", commented: "•", focused: "▸", pending: "·" }[state];
+  return {
+    approved: "✓",
+    "agent-addressed": "↻",
+    commented: "•",
+    focused: "▸",
+    pending: "·",
+  }[state];
 }
 
 type Slot = { kind: "pip"; item: Item; index: number } | { kind: "ellipsis"; key: string };
@@ -52,12 +58,22 @@ export const PipStrip: Component = () => {
   const [sheetOpen, setSheetOpen] = createSignal(false);
 
   const items = () => session.s?.items ?? [];
+  // Precedence (strongest wins): approved (user) > agent-addressed (agent
+  // says comment is fixed, awaiting user confirmation) > commented (open
+  // user feedback). User's approve always overrides — they have the final
+  // say. agent-addressed beats commented because it's a more recent signal
+  // about the same comment.
   const responsesByItem = createMemo(() => {
-    const m = new Map<string, "approved" | "commented">();
+    const m = new Map<string, "approved" | "agent-addressed" | "commented">();
     for (const r of session.s?.responses ?? []) {
       const cur = m.get(r.itemId);
-      if (r.kind === "comment") m.set(r.itemId, "commented");
-      else if (cur !== "commented") m.set(r.itemId, "approved");
+      if (r.kind === "approve") {
+        m.set(r.itemId, "approved");
+      } else if (r.kind === "agent-addressed") {
+        if (cur !== "approved") m.set(r.itemId, "agent-addressed");
+      } else if (r.kind === "comment") {
+        if (cur === undefined) m.set(r.itemId, "commented");
+      }
     }
     return m;
   });
