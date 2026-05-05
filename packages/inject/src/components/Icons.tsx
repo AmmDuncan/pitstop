@@ -54,7 +54,7 @@ export const FloatIcon: Component = () => {
   );
 };
 
-/** Size icon — varies by current size: full panel, short panel, or thin strip. */
+/** Size icon — full panel for standard, short panel for compact. Strip mode lives on the minimize button. */
 export const SizeIcon: Component = () => {
   const s = () => size();
   return (
@@ -65,9 +65,6 @@ export const SizeIcon: Component = () => {
       </Show>
       <Show when={s() === "compact"}>
         <rect x="3" y="8" width="18" height="8" rx="1.5" />
-      </Show>
-      <Show when={s() === "strip"}>
-        <rect x="9" y="4" width="6" height="16" rx="1" />
       </Show>
     </svg>
   );

@@ -88,7 +88,6 @@ createRoot(() => {
   });
 });
 
-const SIZES: Size[] = ["standard", "compact", "strip"];
 
 /**
  * Flip the dock side (right ↔ left).
@@ -117,9 +116,14 @@ export function toggleFloat() {
   setPosition("floating");
 }
 
-export function cycleSize() {
-  const i = SIZES.indexOf(size());
-  setSize(SIZES[(i + 1) % SIZES.length]!);
+/**
+ * Binary toggle between `standard` and `compact`. `strip` is reached only via
+ * the dedicated minimize button or the empty-state collapse — keeping it out
+ * of the cycle means the size button can't strand the user in a mode where
+ * it's no longer visible.
+ */
+export function toggleSize() {
+  setSize(size() === "standard" ? "compact" : "standard");
 }
 
 export function toggleTheme() {

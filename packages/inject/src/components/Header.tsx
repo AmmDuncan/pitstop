@@ -1,7 +1,7 @@
 import { type Component, Show } from "solid-js";
 import { baseUrl } from "../state/client";
 import {
-  cycleSize,
+  toggleSize,
   floatingLeft,
   floatingTop,
   position,
@@ -132,8 +132,8 @@ export const Header: Component = () => {
       </div>
       <button
         class="x-btn size-btn"
-        onClick={cycleSize}
-        title={`Size: ${size()} · Click to cycle (standard/compact/strip)`}
+        onClick={toggleSize}
+        title={`Size: ${size()} · Click to switch to ${size() === "standard" ? "compact" : "standard"}`}
       >
         <SizeIcon />
       </button>

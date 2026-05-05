@@ -1,6 +1,6 @@
 import { type Component, For, onCleanup, onMount } from "solid-js";
 import { submitResponse } from "../state/client";
-import { cycleSize, toggleFloat, togglePinSide, toggleTheme } from "../state/modes";
+import { toggleFloat, togglePinSide, toggleSize, toggleTheme } from "../state/modes";
 import { currentItemIdx, session, setCurrentItemIdx, setHelpOpen } from "../state/store";
 
 type Shortcut = {
@@ -53,7 +53,7 @@ const GROUPS: Group[] = [
     shortcuts: [
       { keys: ["["], label: "FLIP_SIDE (RIGHT/LEFT)", action: togglePinSide, keepOpen: true },
       { keys: ["]"], label: "TOGGLE_FLOAT (PINNED/FLOATING)", action: toggleFloat, keepOpen: true },
-      { keys: ["="], label: "CYCLE_SIZE (STANDARD/COMPACT/STRIP)", action: cycleSize, keepOpen: true },
+      { keys: ["="], label: "TOGGLE_SIZE (STANDARD/COMPACT)", action: toggleSize, keepOpen: true },
     ],
   },
   {

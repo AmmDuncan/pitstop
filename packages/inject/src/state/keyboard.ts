@@ -1,6 +1,6 @@
 import { onCleanup } from "solid-js";
 import { submitResponse } from "./client";
-import { cycleSize, toggleFloat, togglePinSide, toggleTheme } from "./modes";
+import { toggleFloat, togglePinSide, toggleSize, toggleTheme } from "./modes";
 import {
   currentItemIdx,
   helpOpen,
@@ -96,8 +96,8 @@ export function installKeyboard(getCommentEl: () => HTMLTextAreaElement | null) 
     },
     "[": togglePinSide,
     "]": toggleFloat,
-    "=": cycleSize,
-    "+": cycleSize,
+    "=": toggleSize,
+    "+": toggleSize,
     t: () => toggleTheme(),
   };
 
