@@ -38,15 +38,10 @@ const GROUPS: Group[] = [
   {
     title: "STATUS · pip strip",
     shortcuts: [
-      { keys: [], label: "FOCUSED — item you're viewing", pip: { state: "focused", glyph: "▸", num: "03" } },
-      { keys: [], label: "APPROVED — you marked it LOOKS_GOOD", pip: { state: "approved", glyph: "✓", num: "01" } },
-      {
-        keys: [],
-        label: "AGENT_ADDRESSED — agent says fixed; click to verify",
-        pip: { state: "agent-addressed", glyph: "↻", num: "02" },
-      },
-      { keys: [], label: "COMMENTED — your feedback is open", pip: { state: "commented", glyph: "•", num: "04" } },
-      { keys: [], label: "PENDING — no response yet", pip: { state: "pending", glyph: "·", num: "05" } },
+      { keys: [], label: "APPROVED", pip: { state: "approved", glyph: "✓", num: "01" } },
+      { keys: [], label: "AGENT_ADDRESSED", pip: { state: "agent-addressed", glyph: "↻", num: "02" } },
+      { keys: [], label: "COMMENTED", pip: { state: "commented", glyph: "•", num: "04" } },
+      { keys: [], label: "PENDING", pip: { state: "pending", glyph: "·", num: "05" } },
     ],
   },
   {
