@@ -2,6 +2,21 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.31 — 2026-05-05
+
+### Added
+- `data-pitstop="drawer"` attribute on the drawer host so blocked-click error inspection (Playwright, agent-browser, etc.) can identify the obscuring element specifically.
+- `set_drawer` MCP tool. Agent flips drawer position (right/left/floating) and/or size (standard/compact/strip) — most useful when its own click is being blocked by the drawer. Required `narration` lands in the AgentFeed so the chrome shift is explained, not surprising.
+- `agent_address_comment` MCP tool. Agent reports it has fixed a user comment on an item before moving on. Pip strip gets a new color (cyan-teal `↻`) distinct from approved (green) and commented (amber); the user retains the final approval gate. Footer's `_QUEUED` count excludes agent-addressed items, so the visible "still queued for the agent" number drops as expected.
+- CSS transitions (220ms ease) on `.drawer` width/height so size cycles (standard ↔ compact) and strip collapses feel intentional instead of jumpy. Position flip stays instantaneous — animating between `right: 0` and `left: 0` doesn't lerp cleanly.
+
+### Changed
+- `ask_user` tool description strengthened: when calling `ask_user`, the agent must ALSO render the full question + every option (label + description) as readable text in its chat reply. The chat is canonical history; the drawer is one surface, not the only one. A one-line "asking via drawer" teaser is no longer enough.
+- `/api/sessions/:id/retry-poke` (used by the POKE button) was changed in v0.3.30 to always poke; v0.3.31 documents the context-adapting behavior.
+
+### Fixed
+- `release.ts` now syncs the MCP `Server({ name: "pitstop", version })` literal in lockstep with package.json bumps, so `claude mcp list` no longer shows a stale version tag (it had been stuck at 0.3.27 across v0.3.28–v0.3.30 because the release script wasn't touching that string).
+
 ## v0.3.30 — 2026-05-05
 
 ### Added

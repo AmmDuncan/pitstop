@@ -123,16 +123,14 @@ for (const file of PACKAGES) {
 // drifts from the package version, `claude mcp list` shows a stale tag and
 // nothing else fails noisily. Patch it in place.
 const adapterSrc = "packages/mcp-adapter/src/index.ts";
+const adapterPattern = /(name:\s*"pitstop",\s*version:\s*")[\d.]+(")/;
 const original = await readFile(adapterSrc, "utf8");
-const patched = original.replace(
-  /(name:\s*"pitstop",\s*version:\s*")[\d.]+(")/,
-  `$1${version}$2`,
-);
-if (patched === original) {
+if (!adapterPattern.test(original)) {
   console.error(`  could not find Server({ name: "pitstop", version: ... }) literal in ${adapterSrc}`);
   process.exit(1);
 }
-await writeFile(adapterSrc, patched);
+const patched = original.replace(adapterPattern, `$1${version}$2`);
+if (patched !== original) await writeFile(adapterSrc, patched);
 console.log(`  ${adapterSrc} (Server version literal)`);
 console.log("");
 
