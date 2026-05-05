@@ -119,9 +119,16 @@ for (const file of PACKAGES) {
 }
 console.log("");
 
-// 5. Rebuild inject so the published bundle reflects this version
+// 5. Rebuild inject so the published bundle reflects this version.
+// `bun --cwd <dir> run <script>` silently no-ops on Bun 1.3.13 (prints the
+// script list with exit 0 instead of executing). Use `bun run --cwd <dir>`.
 console.log("▸ rebuilding inject.js...");
-await $`bun --cwd packages/inject run build`.quiet();
+await $`bun run --cwd packages/inject build`.quiet();
+const injectDist = "packages/inject/dist/inject.js";
+if (!(await Bun.file(injectDist).exists())) {
+  console.error(`  build claimed success but ${injectDist} is missing.`);
+  process.exit(1);
+}
 console.log("  rebuilt.\n");
 
 // 5b. Rebuild mcp-adapter bundle (Claude Code launches this via node)
@@ -134,6 +141,11 @@ console.log("  rebuilt.\n");
 // can `node packages/mcp-adapter/dist/index.js` without bun installed.
 console.log("▸ rebuilding mcp-adapter bundle...");
 await $`bun build packages/mcp-adapter/src/index.ts --outfile packages/mcp-adapter/dist/index.js --target=node --format=esm`.quiet();
+const adapterDist = "packages/mcp-adapter/dist/index.js";
+if (!(await Bun.file(adapterDist).exists())) {
+  console.error(`  build claimed success but ${adapterDist} is missing.`);
+  process.exit(1);
+}
 console.log("  rebuilt.\n");
 
 // 6. Commit, tag, push

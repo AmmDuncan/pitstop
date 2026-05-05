@@ -60,14 +60,29 @@ async function writeJson(path: string, data: any): Promise<void> {
 }
 
 // ─── 1. Build dist bundles ────────────────────────────────────────────────
+async function assertBuilt(target: string) {
+  if (!existsSync(target)) {
+    throw new Error(
+      `build claimed success but ${target} is missing. ` +
+        `This usually means the underlying command exited 0 without producing output. ` +
+        `Try \`bun run --cwd packages/inject build\` directly to surface the error.`,
+    );
+  }
+}
+
 step("building mcp-adapter dist (node-targeted ESM)");
 await $`bun build packages/mcp-adapter/src/index.ts --outfile packages/mcp-adapter/dist/index.js --target=node --format=esm`
   .cwd(REPO_ROOT)
   .quiet();
+await assertBuilt(join(REPO_ROOT, "packages/mcp-adapter/dist/index.js"));
 ok(`packages/mcp-adapter/dist/index.js`);
 
+// `bun --cwd <dir> run <script>` silently no-ops on Bun 1.3.13 (prints the
+// script list with exit 0 instead of executing). Use `bun run --cwd <dir>`
+// instead, which Bun parses correctly.
 step("building inject drawer bundle");
-await $`bun --cwd ${REPO_ROOT}/packages/inject run build`.quiet();
+await $`bun run --cwd ${REPO_ROOT}/packages/inject build`.quiet();
+await assertBuilt(join(REPO_ROOT, "packages/inject/dist/inject.js"));
 ok(`packages/inject/dist/inject.js`);
 
 // ─── 2. Register MCP server in ~/.claude.json ──────────────────────────────

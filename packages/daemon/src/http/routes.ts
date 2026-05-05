@@ -383,6 +383,17 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     const projectRoot = c.req.query("pitstop-project");
     if (projectRoot) drawerSeen.set(projectRoot, Date.now());
     const file = Bun.file(new URL("../../../inject/dist/inject.js", import.meta.url));
+    // If the bundle is missing, Bun.file() returns an HTML error fallback —
+    // the browser would load that as JS, the custom element would never
+    // register, and the user would see no drawer with no obvious reason
+    // why. Catch it here, return plaintext + 503 with a recovery hint.
+    if (!(await file.exists())) {
+      return c.text(
+        "pitstop: inject bundle not built. Run `bun run setup` (or `bun run --cwd packages/inject build`) in the pitstop checkout.",
+        503,
+        { "content-type": "text/plain; charset=utf-8" },
+      );
+    }
     return new Response(file, {
       headers: { "content-type": "application/javascript", "cache-control": "no-cache" },
     });

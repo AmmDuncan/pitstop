@@ -131,6 +131,10 @@ export const Drawer: Component = () => {
                     collapse
                   </button>
                 </div>
+                <ResizeHandle
+                  direction="edge-left"
+                  onDrag={(dx) => setWidth(clamp(width() - dx, MIN_W, MAX_W))}
+                />
               </aside>
             }
           >
