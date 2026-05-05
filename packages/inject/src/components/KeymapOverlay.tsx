@@ -36,13 +36,6 @@ async function approveAndAdvance() {
 
 const GROUPS: Group[] = [
   {
-    title: "NAVIGATION",
-    shortcuts: [
-      { keys: ["J", "↓"], label: "NEXT_ITEM", action: next },
-      { keys: ["K", "↑"], label: "PREV_ITEM", action: prev },
-    ],
-  },
-  {
     title: "STATUS · pip strip",
     shortcuts: [
       { keys: [], label: "FOCUSED — item you're viewing", pip: { state: "focused", glyph: "▸", num: "03" } },
@@ -54,6 +47,13 @@ const GROUPS: Group[] = [
       },
       { keys: [], label: "COMMENTED — your feedback is open", pip: { state: "commented", glyph: "•", num: "04" } },
       { keys: [], label: "PENDING — no response yet", pip: { state: "pending", glyph: "·", num: "05" } },
+    ],
+  },
+  {
+    title: "NAVIGATION",
+    shortcuts: [
+      { keys: ["J", "↓"], label: "NEXT_ITEM", action: next },
+      { keys: ["K", "↑"], label: "PREV_ITEM", action: prev },
     ],
   },
   {
