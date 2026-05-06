@@ -2,6 +2,26 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.40 — 2026-05-06
+
+### Update-availability check + chip
+
+- Daemon makes one HTTPS call to `api.github.com/repos/AmmDuncan/pitstop/releases/latest` at startup and caches the result for its lifetime. Skipped entirely when `PITSTOP_DISABLE_UPDATE_CHECK=1` is set in the env.
+- New endpoint `GET /api/update-status` returns `{ current, latest, updateAvailable, releaseUrl, installPath, checkedAt, disabled }`.
+- Drawer's metabar replaces the dead `T=…` slot with an amber `↑ <version>` chip when an update is available. Click opens a small popover with the pre-filled `cd <installPath> && git pull && bun run setup` command, a Copy button, and a Release notes link. No banner, no nag — chip only appears when there's a new release; otherwise the slot is empty.
+- `start_review` also returns the update info as an optional `update: { current, latest, releaseUrl, installPath }` field. The MCP description instructs the agent to offer ONCE at session start ("Pitstop has X.Y.Z out — want me to run the update?") and run via Bash with the standard Claude Code permission gate. Never silent. Don't re-offer mid-review.
+- README documents the outbound api.github.com call and the disable flag.
+
+### Floating-mode edge resize handles
+
+Floating drawer now has `edge-left`, `edge-right`, and `edge-bottom` resize handles in addition to the four corners. Top intentionally absent — the header owns that strip as the move handle, and a top-edge resize zone would compete. Matches standard desktop-window behavior.
+
+### Pending-question scroll-into-view
+
+When `ask_user` lands a question banner, the drawer now scrolls the question banner to the top of `.detail-scroll` (block: start, smooth) so the full question is visible — not just the bottom edge.
+
+For floating drawers dragged partially off-screen, `scrollIntoView` alone doesn't help (drawer is `position: fixed`, not in page scroll flow). The mount also nudges `floatingTop` / `floatingLeft` to bring the drawer back into the viewport with a 24px margin, so a question banner is always reachable.
+
 ## v0.3.39 — 2026-05-06
 
 ### narrate() — conversational beats for the CLAUDE feed
