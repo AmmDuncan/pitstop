@@ -61,7 +61,8 @@ export const AgentFeed: Component = () => {
         (e.tool === "mark_addressing" ||
           e.tool === "ask_user" ||
           e.tool === "set_drawer" ||
-          e.tool === "agent_address_comment"),
+          e.tool === "agent_address_comment" ||
+          e.tool === "narrate"),
     );
     return entries.slice().reverse();
   };

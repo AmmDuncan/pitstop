@@ -156,6 +156,26 @@ export const tools = {
     );
   },
 
+  async narrate(ctx: Ctx, params: unknown) {
+    const P = z.object({
+      sessionId: z.string(),
+      narration: z.string().min(1),
+      itemId: z.string().optional(),
+    });
+    const { sessionId, narration, itemId } = P.parse(params);
+    const at = Date.now();
+    const entry = { at, tool: "narrate" as const, narration, itemId };
+    const session = await ctx.store.update(sessionId, (s) => ({
+      ...s,
+      agentActivity: [...s.agentActivity, entry].slice(-50),
+      lastAgentActivityAt: at,
+      pokeFailed: false,
+    }));
+    ctx.bus.publish(sessionId, { type: "agent-activity", sessionId, entry });
+    ctx.bus.publish(sessionId, { type: "state-changed", session });
+    return { ok: true };
+  },
+
   async mark_addressing(ctx: Ctx, params: unknown) {
     const P = z.object({
       sessionId: z.string(),

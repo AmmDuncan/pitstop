@@ -133,13 +133,18 @@ ${AUTHORING_HINT}`,
   },
   {
     name: "get_unread_responses",
-    description:
-      "Drain all unread reviewer responses; marks them addressed atomically. Call this every time your Monitor watcher fires a stdout-line notification — that line means the reviewer pressed approve or sent a comment, and you need to read what they said before deciding what to do next. Returns an array; for each entry decide: navigate to the next item's surface (call set_current_item + mark_addressing), or, if it's a comment that requires action, fix the issue and add a follow-up item or carry on to the next.",
+    description: `Drain all unread reviewer responses; marks them addressed atomically. Call this every time your Monitor watcher fires a stdout-line notification — that line means the reviewer pressed approve or sent a comment, and you need to read what they said before deciding what to do next. Returns an array; for each entry decide: navigate to the next item's surface (call set_current_item + mark_addressing), or, if it's a comment that requires action, fix the issue and add a follow-up item or carry on to the next.
+
+POSITIVE OBLIGATION on receiving a comment: your FIRST move is a narrate() acknowledgement beat ("Got it, looking now" / "Good catch — checking the spacing rule") sent within one tool call. THEN investigate. Silence after a comment reads as ignoring it; the reviewer is parked in the drawer and only sees the CLAUDE feed.`,
     inputSchema: { type: "object", required: ["sessionId"], properties: { sessionId: { type: "string" } } },
   },
   {
     name: "mark_addressing",
-    description: `Append a one-line narration to the CLAUDE feed at the bottom of the drawer. The reviewer sees the last ~5 lines, newest highlighted. Keep narrations one short sentence in plain language ("Driving you to /rides", "Showing the validation banner"). NOT a tool-call log.
+    description: `Push an ARRIVAL narration to the CLAUDE feed for a specific item, paired with set_current_item. The reviewer sees the last ~5 lines, newest highlighted. Keep narrations one short sentence in plain language ("Driving you to /rides", "Showing the validation banner"). NOT a tool-call log.
+
+THIS TOOL IS FOR ARRIVALS, NOT CONVERSATION.
+- For acknowledgements, reasoning beats, or status chatter ("Got it — looking now", "Two ways to fix this; going with grid-rows", "HMR'ing, give it a sec"), use narrate() instead. mark_addressing carries arrival semantics (button visibility via 'arrived' flag, item association); narrate is just a feed line with no state effects.
+- Use mark_addressing only when you've navigated the user to a specific surface and want to tell them what you're showing.
 
 ARRIVED FLAG (controls when the action buttons unlock for the user):
 - arrived: false → mid-drive narration. Buttons stay hidden, AWAITING CLAUDE strip persists. Use this for every narration WHILE you're still navigating to / loading / setting up the surface.
@@ -165,6 +170,46 @@ If you only narrate once per item (arrive immediately), omit the flag — the de
           type: "boolean",
           description:
             'Default true. Pass false on mid-drive narrations to keep the action buttons hidden until the final "user can act now" narration.',
+        },
+      },
+    },
+  },
+  {
+    name: "narrate",
+    description: `Push a CONVERSATIONAL beat to the CLAUDE feed at the bottom of the drawer. NO state changes — no pip flips, no button toggles, no arrival semantics. The line just lands in the feed and flashes briefly so the reviewer sees you're with them. Cheap to call; meant to be used freely between other tool calls.
+
+THE BEATS THAT BELONG HERE:
+- ACKNOWLEDGEMENT: "Good catch — that's a real issue."
+- REASONING ALOUD: "Two ways: reserve space or animate height. Going with grid-rows."
+- STATUS: "HMR'ing now, give it a sec." / "Running the test suite."
+- BACKCHANNEL: "I see what you mean about the jank."
+- THINKING ALOUD: "Hmm, that gap might be coming from the parent flex."
+
+THE RULE:
+The reviewer is parked in the drawer; they shouldn't have to look at the chat. The CLAUDE feed is the only channel they're watching. After ANY user comment, send an acknowledgement beat within one tool call BEFORE you investigate or fix — silence on a comment reads as ignoring it. While working a fix, send reasoning beats so they follow your thinking. Status beats before known short pauses ("HMR'ing", "running tests", "reading the file").
+
+Heuristic: if you'd say it out loud watching over the reviewer's shoulder, send it to the feed.
+
+WHEN TO USE narrate vs mark_addressing vs agent_address_comment:
+- narrate(): conversational beats. No pip change, no button toggle. Fire freely between calls.
+- mark_addressing(itemId): "I'm at this surface." Paired with set_current_item; toggles button visibility via the 'arrived' flag.
+- agent_address_comment(itemId): "I think I've handled your comment." Flips the pip to cyan ↻; called after fixing or acknowledging a comment, before set_current_item.
+
+Keep narrations one short sentence in plain conversational language.`,
+    inputSchema: {
+      type: "object",
+      required: ["sessionId", "narration"],
+      properties: {
+        sessionId: { type: "string" },
+        narration: {
+          type: "string",
+          description:
+            "One short conversational sentence — what you'd say out loud watching over the reviewer's shoulder. Plain prose, not tool-call jargon.",
+        },
+        itemId: {
+          type: "string",
+          description:
+            "Optional. Item the beat is about; lets the feed colocate it with related arrival narrations.",
         },
       },
     },
