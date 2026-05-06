@@ -44,7 +44,9 @@ createRoot(() => {
 export const responseCounts = createMemo(() => {
   const items = session.s?.items ?? [];
   const responses = session.s?.responses ?? [];
-  const approved = items.filter((i) => responses.some((r) => r.itemId === i.id && r.kind === "approve")).length;
+  const approved = items.filter((i) =>
+    responses.some((r) => r.itemId === i.id && r.kind === "approve"),
+  ).length;
   const commented = items.filter((i) => {
     const itemResponses = responses.filter((r) => r.itemId === i.id);
     const hasOpenComment = itemResponses.some((r) => r.kind === "comment");
@@ -142,6 +144,10 @@ export async function bootstrap(projectRoot: string | null): Promise<() => void>
   const initial = projectRoot ? await fetchActiveSession(projectRoot) : await fetchMostRecentActiveSession();
   if (initial) {
     setSession("s", initial);
+    // Fresh session starts at item 0 — without this the cursor can carry
+    // over from a previous session and land out-of-bounds when the next
+    // one has fewer items.
+    setCurrentItemIdx(0);
     return openEventStream(initial.id, applyEvent);
   }
   return () => {};

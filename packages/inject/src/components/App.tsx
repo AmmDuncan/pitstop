@@ -1,4 +1,4 @@
-import { type Component, Show, createSignal, onCleanup, onMount } from "solid-js";
+import { type Component, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { fetchMostRecentActiveSession, openProjectEventStream } from "../state/client";
 import { installKeyboard } from "../state/keyboard";
 import { bootstrap, session } from "../state/store";
@@ -55,6 +55,31 @@ export const App: Component = () => {
 
   let lobbyClose: (() => void) | null = null;
 
+  // Subscribe to the project lobby so we can pick up the next start_review
+  // for this projectRoot — used both at first mount (no session yet) and
+  // again after a session completes (so the drawer reconnects to the next
+  // pitstop without a tab reload).
+  const openLobby = () => {
+    if (lobbyClose || !projectRoot || isExtensionMode) return;
+    lobbyClose = openProjectEventStream(projectRoot, async (e) => {
+      if (e.type === "session-hello") {
+        lobbyClose?.();
+        lobbyClose = null;
+        // Close the SSE for the prior (completed) session before binding the
+        // new one — otherwise its EventSource leaks until the tab reloads.
+        closer()();
+        await tryBootstrap();
+      }
+    });
+  };
+
+  // Re-arm the lobby whenever the bound session transitions to 'complete'.
+  // Without this, the drawer is stuck on REVIEW_COMPLETE for the old session
+  // and a fresh start_review on the same projectRoot has no subscriber.
+  createEffect(() => {
+    if (session.s?.status === "complete") openLobby();
+  });
+
   onMount(async () => {
     await tryBootstrap();
     if (!session.s && isExtensionMode) {
@@ -70,18 +95,7 @@ export const App: Component = () => {
       }, POLL_INTERVAL_MS);
     } else {
       setBootstrapped(true);
-      if (!session.s && projectRoot) {
-        // Script-tag mode with no active session yet: open the lobby SSE so
-        // the drawer reacts the instant `start_review` creates one for this
-        // projectRoot — no manual reload required.
-        lobbyClose = openProjectEventStream(projectRoot, async (e) => {
-          if (e.type === "session-hello") {
-            lobbyClose?.();
-            lobbyClose = null;
-            await tryBootstrap();
-          }
-        });
-      }
+      if (!session.s) openLobby();
     }
 
     installKeyboard(() => {
