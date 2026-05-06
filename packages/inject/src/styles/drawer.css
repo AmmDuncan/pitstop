@@ -12,6 +12,14 @@
   padding: 0;
 }
 
+/* Stop scroll-chaining: when the user wheel/touch-scrolls past the edge of
+   any scrollable region inside the drawer, the wheel event was bubbling up
+   and scrolling the host dev page. `contain` keeps the scroll inside the
+   drawer (no-op on non-scrollable elements). */
+* {
+  overscroll-behavior: contain;
+}
+
 @keyframes pulse {
   0%,
   100% {
