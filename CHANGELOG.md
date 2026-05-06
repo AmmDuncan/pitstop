@@ -2,6 +2,14 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.42 — 2026-05-06
+
+### Fixes
+
+- **Drawer auto-reconnects to the next `start_review` after a `complete_review`.** Previously, once a session was completed in the same dev tab, the drawer stayed parked on REVIEW_COMPLETE and a fresh `start_review` for the same `projectRoot` had no subscriber — the only workaround was a tab reload. Two compounding bugs, both fixed:
+  - The MCP `start_review` tool now publishes `session-hello` to the per-project lobby (mirroring the `POST /api/sessions` HTTP path). Previously only the per-session bus was notified, so an MCP-driven create was invisible to lobby subscribers.
+  - The drawer now re-arms the project lobby SSE the moment its bound session transitions to `complete`, closes the prior session's SSE on receipt of `session-hello`, and resets the cursor to item 0 so a smaller next-session can't land out-of-bounds.
+
 ## v0.3.41 — 2026-05-06
 
 ### Pip color reflects status, not "active"

@@ -404,7 +404,7 @@ Persists to the same localStorage the drawer's chrome buttons write to, so the c
   },
 ];
 
-const server = new Server({ name: "pitstop", version: "0.3.41" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "pitstop", version: "0.3.42" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
