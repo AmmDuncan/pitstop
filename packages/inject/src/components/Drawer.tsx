@@ -22,11 +22,11 @@ import { Detail } from "./Detail";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { KeymapOverlay } from "./KeymapOverlay";
-import { UpdateChip } from "./UpdateChip";
 import { PipStrip } from "./PipStrip";
 import { ResizeHandle } from "./ResizeHandle";
 import { ReviewComplete } from "./ReviewComplete";
 import { ReviewSummary } from "./ReviewSummary";
+import { UpdateChip } from "./UpdateChip";
 
 const MIN_W = 360;
 const MAX_W = 800;

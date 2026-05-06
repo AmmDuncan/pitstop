@@ -110,11 +110,9 @@ export const PipStrip: Component = () => {
             // commented), with an amber underline laid on top to signal
             // "you are here." Items with no response yet fall back to
             // `focused` (amber + ▸) when current, `pending` (dim · ) otherwise.
-            const responseState = (): PipState | null =>
-              responsesByItem().get(slot.item.id) ?? null;
+            const responseState = (): PipState | null => responsesByItem().get(slot.item.id) ?? null;
             const isActive = () => slot.index === currentItemIdx();
-            const state = (): PipState =>
-              responseState() ?? (isActive() ? "focused" : "pending");
+            const state = (): PipState => responseState() ?? (isActive() ? "focused" : "pending");
             return (
               <div
                 class={`pip ${state()}`}

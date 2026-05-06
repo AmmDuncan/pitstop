@@ -65,10 +65,7 @@ export const Detail: Component = () => {
       .reduce((max, r) => (r.at > max ? r.at : max), 0);
     return (session.s?.agentActivity ?? []).some(
       (e) =>
-        e.tool === "mark_addressing" &&
-        e.itemId === id &&
-        e.arrived !== false &&
-        e.at > lastUserCommentAt,
+        e.tool === "mark_addressing" && e.itemId === id && e.arrived !== false && e.at > lastUserCommentAt,
     );
   };
   const stripState = () => {

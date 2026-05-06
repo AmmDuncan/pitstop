@@ -1,7 +1,6 @@
-import { type Component, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { type Component, Show, createSignal, onCleanup, onMount } from "solid-js";
 import { baseUrl } from "../state/client";
 import {
-  toggleSize,
   floatingLeft,
   floatingTop,
   position,
@@ -13,17 +12,11 @@ import {
   theme,
   toggleFloat,
   togglePinSide,
+  toggleSize,
   toggleTheme,
 } from "../state/modes";
 import { currentItemIdx, session, setHelpOpen } from "../state/store";
-import {
-  KebabIcon,
-  MinimizeIcon,
-  PadlockIcon,
-  PositionIcon,
-  SizeIcon,
-  ThemeIcon,
-} from "./Icons";
+import { KebabIcon, MinimizeIcon, PadlockIcon, PositionIcon, SizeIcon, ThemeIcon } from "./Icons";
 import { StatusTag, derivePill } from "./StatusTag";
 
 /** Pixel width below which secondary controls collapse into the kebab menu.
@@ -118,14 +111,12 @@ export const Header: Component = () => {
     document.body.style.userSelect = "none";
   };
 
-  const sideTitle = () =>
-    `Drawer on ${side()} · Click to move to ${side() === "right" ? "left" : "right"}`;
+  const sideTitle = () => `Drawer on ${side()} · Click to move to ${side() === "right" ? "left" : "right"}`;
   const padlockTitle = () =>
     position() === "floating"
       ? `Drawer floating · Click to dock to ${side()}`
       : "Drawer pinned · Click to float";
-  const themeTitle = () =>
-    `Theme: ${theme()} · Click to switch to ${theme() === "dark" ? "light" : "dark"}`;
+  const themeTitle = () => `Theme: ${theme()} · Click to switch to ${theme() === "dark" ? "light" : "dark"}`;
   const sizeTitle = () =>
     `Size: ${size()} · Click to switch to ${size() === "standard" ? "compact" : "standard"}`;
 
@@ -185,11 +176,7 @@ export const Header: Component = () => {
         <button class="x-btn theme-btn" onClick={toggleTheme} title={themeTitle()}>
           <ThemeIcon />
         </button>
-        <button
-          class="x-btn help-btn"
-          onClick={() => setHelpOpen(true)}
-          title="Show keyboard shortcuts"
-        >
+        <button class="x-btn help-btn" onClick={() => setHelpOpen(true)} title="Show keyboard shortcuts">
           ?
         </button>
       </Show>
@@ -206,21 +193,13 @@ export const Header: Component = () => {
           </button>
           <Show when={kebabOpen()}>
             <div class="kebab-menu" role="menu">
-              <button
-                class="kebab-item"
-                onClick={closeKebabAfter(toggleTheme)}
-                role="menuitem"
-              >
+              <button class="kebab-item" onClick={closeKebabAfter(toggleTheme)} role="menuitem">
                 <span class="kebab-glyph">
                   <ThemeIcon />
                 </span>
                 <span>Theme · {theme()}</span>
               </button>
-              <button
-                class="kebab-item"
-                onClick={closeKebabAfter(() => setHelpOpen(true))}
-                role="menuitem"
-              >
+              <button class="kebab-item" onClick={closeKebabAfter(() => setHelpOpen(true))} role="menuitem">
                 <span class="kebab-glyph">?</span>
                 <span>Help</span>
               </button>

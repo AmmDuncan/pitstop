@@ -836,7 +836,7 @@
   /* Distinct from approved (green) and commented (amber). Reads as
      "agent says done, your final say still applies." Cyan-teal works
      against both light and dark themes. */
-  color: oklch(0.74 0.10 200);
+  color: oklch(0.74 0.1 200);
 }
 /* `focused` = active item with NO response yet. Amber + ▸ glyph reads as
    "currently being worked on, no decision yet." When the active item has
@@ -1166,7 +1166,8 @@
   letter-spacing: 0.06em;
 }
 @keyframes feed-pip-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.55;
     box-shadow: 0 0 4px rgba(244, 191, 94, 0.4);
   }

@@ -1,13 +1,7 @@
 import type { PendingQuestion as PendingQuestionType } from "@pitstop/shared";
 import { type Component, For, Show, createSignal, onMount } from "solid-js";
 import { submitResponse } from "../state/client";
-import {
-  floatingLeft,
-  floatingTop,
-  position,
-  setFloatingLeft,
-  setFloatingTop,
-} from "../state/modes";
+import { floatingLeft, floatingTop, position, setFloatingLeft, setFloatingTop } from "../state/modes";
 import { flagSent, session, setSubmitState } from "../state/store";
 
 type Props = {

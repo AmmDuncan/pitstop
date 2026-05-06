@@ -392,8 +392,7 @@ Persists to the same localStorage the drawer's chrome buttons write to, so the c
         size: {
           type: "string",
           enum: ["standard", "compact", "strip"],
-          description:
-            "Drawer size. 'strip' minimizes to a 32px rail. Omit to leave size unchanged.",
+          description: "Drawer size. 'strip' minimizes to a 32px rail. Omit to leave size unchanged.",
         },
         narration: {
           type: "string",

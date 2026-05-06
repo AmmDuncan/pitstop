@@ -114,7 +114,6 @@ createRoot(() => {
   });
 });
 
-
 /**
  * Flip the dock side (right ↔ left).
  * While pinned, also moves the drawer to the new side immediately.

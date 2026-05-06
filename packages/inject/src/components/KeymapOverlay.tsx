@@ -13,7 +13,11 @@ type Shortcut = {
   chord?: boolean;
   /** When set, the row renders a pip badge instead of kbd buttons. Used by the
    *  STATUS group to legend the pip-strip colors. */
-  pip?: { state: "approved" | "agent-addressed" | "commented" | "focused" | "pending"; glyph: string; num: string };
+  pip?: {
+    state: "approved" | "agent-addressed" | "commented" | "focused" | "pending";
+    glyph: string;
+    num: string;
+  };
 };
 type Group = { title: string; shortcuts: Shortcut[] };
 

@@ -1,4 +1,4 @@
-import { type Component, createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { type Component, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { type UpdateStatusResponse, fetchUpdateStatus } from "../state/client";
 
 const [updateStatus, setUpdateStatus] = createSignal<UpdateStatusResponse | null>(null);

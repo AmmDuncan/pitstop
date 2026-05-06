@@ -132,11 +132,7 @@ export const AgentFeed: Component = () => {
             <span class="agent-feed-new">{unreadCount()} NEW</span>
           </Show>
         </div>
-        <ol
-          class="agent-feed-list"
-          style={{ "max-height": `${feedMaxHeight()}px` }}
-          onScroll={markSeen}
-        >
+        <ol class="agent-feed-list" style={{ "max-height": `${feedMaxHeight()}px` }} onScroll={markSeen}>
           <For each={visible()}>
             {(entry, i) => (
               <li
