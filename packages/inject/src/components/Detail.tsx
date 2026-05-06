@@ -48,11 +48,27 @@ export const Detail: Component = () => {
   // strip has been up and lets them re-engage Claude when it seems stuck. The
   // POKE button calls /retry-poke; the daemon adapts the context to the
   // pending state (unread comments vs user-initiated nudge).
+  // An item is "addressed" only if the agent has marked-addressing it with
+  // arrived:true AFTER the user's most recent comment on it. Without this
+  // recency check, the buttons reappear (and the AWAITING CLAUDE strip
+  // disappears) the moment the user comments, because the agent's ORIGINAL
+  // arrival narration is still sitting in agentActivity. With it, every
+  // comment puts the item back into "needs re-addressing" until the agent
+  // calls mark_addressing(arrived:true) again — the only signal that
+  // genuinely means "ready, re-check this surface."
   const itemAddressed = () => {
     const id = item()?.id;
     if (!id) return false;
+    const responses = session.s?.responses ?? [];
+    const lastUserCommentAt = responses
+      .filter((r) => r.itemId === id && r.kind === "comment")
+      .reduce((max, r) => (r.at > max ? r.at : max), 0);
     return (session.s?.agentActivity ?? []).some(
-      (e) => e.tool === "mark_addressing" && e.itemId === id && e.arrived !== false,
+      (e) =>
+        e.tool === "mark_addressing" &&
+        e.itemId === id &&
+        e.arrived !== false &&
+        e.at > lastUserCommentAt,
     );
   };
   const stripState = () => {

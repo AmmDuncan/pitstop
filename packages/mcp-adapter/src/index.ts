@@ -326,22 +326,29 @@ wire_drawer NEVER writes files — that's you, so the user can review your edit.
   },
   {
     name: "agent_address_comment",
-    description: `Acknowledge a user comment on an item, BEFORE set_current_item moves the user to the next one. Pushes a response of kind "agent-addressed" onto the item, which flips the amber pip to a third color (cyan ↻ — distinct from amber/commented and from green/approved) and lands a narration in the CLAUDE feed.
+    description: `Mark that you've HANDLED a user comment on an item — fix shipped, decided-not-to-act with reason given, or otherwise consciously closed the loop. Pushes a response of kind "agent-addressed" onto the item, which flips the amber pip to a third color (cyan ↻ — distinct from amber/commented and from green/approved) and lands a narration in the CLAUDE feed.
 
-THE RULE — call this after EVERY comment, regardless of tone:
-After any user comment on item X — fix-required, just-noting, positive ("yes unchanged"), neutral, anything they typed in the comment box — call agent_address_comment(itemId: X, narration: ...) BEFORE set_current_item(itemId: Y). The call itself is non-optional; only the narration adapts to what their comment actually said. Without the call, the user's amber pip stays amber as you walk past — they're left looking at a TODO they don't realize you saw.
+THIS IS THE "I'M DONE WITH IT" SIGNAL — NOT THE EARLY-ACK SIGNAL.
+- For early acknowledgement BEFORE you investigate ("Got it, looking now" / "Good catch — checking"), use narrate() instead. narrate doesn't flip the pip, so the user's amber comment stays amber until you've actually addressed it.
+- For mid-fix progress beats ("Two ways to fix this; going with grid-rows", "HMR'ing"), use narrate() — same reason.
+- Use agent_address_comment ONLY when there's nothing more for the agent to do on the comment. The pip color carries the "considered" semantics; flipping it pre-fix is dishonest.
+
+WHEN TO CALL — after EVERY user comment, AFTER you've actually handled it:
+- Fix-required + you've shipped the fix → call this with the fix description.
+- Approval-by-comment ("yes unchanged", "looks good") → call this with "Noted — confirmed correct."
+- Disagreement-but-deferring → call this with the reason ("Hearing you — keeping pattern; flagged for separate review.").
+- Concern parked for later → call this with the parking note ("Captured — addressing after this round.").
 
 WHEN NOT TO CALL:
-- After a LOOKS_GOOD click (response kind: "approve"): the pip is already green; calling agent_address_comment here would override their approval. Skip.
-- When the user hasn't responded yet (no entry in get_unread_responses for item X): stay on item X, wait for the next Monitor notification. There is NO scenario where moving on (set_current_item) with an amber pip is correct.
+- For early acknowledgement before investigation. → narrate()
+- For mid-fix progress beats. → narrate()
+- After a LOOKS_GOOD click (response kind: "approve"): pip is already green; this would override their approval. Skip.
+- When the user hasn't responded yet: stay on item X, wait for the next Monitor notification. NO scenario where set_current_item with an unaddressed amber pip is correct.
 
-NARRATION PATTERNS:
-- Fix shipped: "Fixed the slideover overlap — refresh to confirm."
-- Approval-by-comment ("yes unchanged" / "looks good" / "good"): "Noted — confirmed correct, moving on."
-- Disagreement but deferring: "Hearing you — keeping the current pattern; flagging for separate review."
-- Question/concern parked: "Captured your concern; addressing after this round."
+PAIRING WITH mark_addressing:
+After agent_address_comment closes the comment, if you've shipped a fix the user should re-check, call mark_addressing(itemId, arrived: true, "Refresh to confirm") — that's what unlocks the action buttons again. agent_address_comment alone doesn't unlock buttons (intentional — pip flip is the agent's signal; user still needs to click LOOKS_GOOD to finalize).
 
-NOT a substitute for user approval — they retain the final say (clicking LOOKS_GOOD still flips the cyan ↻ to green). You're saying "I think this is handled"; they confirm.`,
+NOT a substitute for user approval — they retain final say (clicking LOOKS_GOOD on the cyan ↻ flips it to green).`,
     inputSchema: {
       type: "object",
       required: ["sessionId", "itemId", "narration"],
