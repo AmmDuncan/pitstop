@@ -2,6 +2,28 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.38 — 2026-05-06
+
+### Daemon-side guardrails for projectRoot mismatch + tool-description fixes
+
+Three structural fixes to keep agents from silently producing dead-ends:
+
+- **start_review detects projectRoot mismatch.** When `/inject.js` hasn't been fetched recently with the exact requested `projectRoot`, the daemon now scans `drawerSeen` for ancestor/descendant paths (`/repo` vs `/repo/apps/shop` is the canonical case). If a related path is found, `drawerStatus.hint` says "projectRoot mismatch likely" with the related paths listed, instead of the generic "drawer not wired" hint that pointed agents at `wire_drawer` even when the drawer was already wired (with a different key).
+- **wire_drawer cross-checks active sessions.** If any active session has a different `projectRoot` than the one being wired, a LOUD warning is prepended to the result's `notes` array spelling out the mismatch. Agents calling `wire_drawer({"/repo/apps/shop"})` while a session exists at `/repo` now see the conflict before they edit any files.
+- **Next.js `recommended: "committed"`.** Previously `wire_drawer` returned `recommended: "local-only"` for Next.js, but Next.js's local-only option literally says "skip — Next.js has no clean local-only point." Self-defeating. Forced to `committed` for Next.js regardless of the team-repo heuristic.
+
+### Tool-description rewrites
+
+- **`agent_address_comment`** description used to say *"NOT for items the user only approved (no open comment). Skip if there was no comment to address."* Agents read positive comments like *"yes unchanged"* as approval and skipped the call, leaving amber pips stranded as the agent walked past. Rewrote the rule: call after EVERY user comment regardless of tone (narration adapts); skip only after LOOKS_GOOD clicks (pip already green) or when the user hasn't responded yet. Added concrete narration patterns for fix-shipped, approval-by-comment, deferral, and parked-concern.
+- **`start_review`'s `projectRoot` field** description now states explicitly that it's the binding key — `wire_drawer` MUST be called with the EXACT same string for the drawer to render the session. Different paths (e.g. `/repo` vs `/repo/apps/shop`) do not match.
+
+### wire_drawer output: Playwright caveat + post-wire next-step (rolled in)
+
+- **Chrome-extension Playwright caveat surfaced in tool output**, not just the README. Both Next.js options now state the agent-driven-vs-human-driven distinction up front, and a framework-conditional note appears in `notes` when the extension is on the table. Agents in agent-browser flows no longer recommend the extension.
+- **Wiring ≠ review.** Added a `notes` line saying wiring is setup, not the end of the flow — the next step is `start_review` with actual items, or asking the user what to pitstop if there's nothing concrete yet.
+
+Daemon-side change. Existing running daemons keep the old behavior until restarted.
+
 ## v0.3.37 — 2026-05-06
 
 ### Fix: empty-state drawer resize was lagging behind cursor
