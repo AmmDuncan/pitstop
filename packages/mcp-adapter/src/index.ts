@@ -85,7 +85,7 @@ ${AUTHORING_HINT}`,
         projectRoot: {
           type: "string",
           description:
-            "Absolute path to the project the review is for (e.g. '/Users/foo/work/dvla-idtms-frontend'). Used to bind the session to a specific dev app.",
+            "Absolute path to the project the review is for (e.g. '/Users/foo/work/dvla-idtms-frontend'). This is the BINDING KEY between the session and the drawer — wire_drawer MUST be called with the EXACT same projectRoot string for the drawer to render this session. Different paths (e.g. '/repo' vs '/repo/apps/shop') do NOT match: the session will be created but the drawer will sit on the empty start screen.",
         },
         branch: {
           type: "string",
@@ -281,15 +281,22 @@ wire_drawer NEVER writes files — that's you, so the user can review your edit.
   },
   {
     name: "agent_address_comment",
-    description: `Mark that you've addressed (fixed/done) a user comment on an item, BEFORE you call set_current_item to move on. The pip for that item flips to a third color (agent-addressed, distinct from amber/commented and from green/approved) and a narration lands in the feed at the bottom of the drawer ("Addressed your comment on item N — moving on.").
+    description: `Acknowledge a user comment on an item, BEFORE set_current_item moves the user to the next one. Pushes a response of kind "agent-addressed" onto the item, which flips the amber pip to a third color (cyan ↻ — distinct from amber/commented and from green/approved) and lands a narration in the CLAUDE feed.
 
-WHY THIS EXISTS:
-The user's amber pip on a commented item is a visible TODO; if you just navigate away, they're left looking at the next item with the previous still amber, wondering if you actually fixed it. Calling this clears the ambiguity without overstepping — you're saying "I think it's done"; they retain final say (clicking LOOKS_GOOD on that item still flips it to green).
+THE RULE — call this after EVERY comment, regardless of tone:
+After any user comment on item X — fix-required, just-noting, positive ("yes unchanged"), neutral, anything they typed in the comment box — call agent_address_comment(itemId: X, narration: ...) BEFORE set_current_item(itemId: Y). The call itself is non-optional; only the narration adapts to what their comment actually said. Without the call, the user's amber pip stays amber as you walk past — they're left looking at a TODO they don't realize you saw.
 
-WHEN TO CALL:
-After you've actually shipped the fix for the comment on item X, BEFORE set_current_item(item Y). Pair with mark_addressing for the new item as the next call.
+WHEN NOT TO CALL:
+- After a LOOKS_GOOD click (response kind: "approve"): the pip is already green; calling agent_address_comment here would override their approval. Skip.
+- When the user hasn't responded yet (no entry in get_unread_responses for item X): stay on item X, wait for the next Monitor notification. There is NO scenario where moving on (set_current_item) with an amber pip is correct.
 
-NOT a substitute for user approval. NOT for items the user only approved (no open comment). Skip if there was no comment to address.`,
+NARRATION PATTERNS:
+- Fix shipped: "Fixed the slideover overlap — refresh to confirm."
+- Approval-by-comment ("yes unchanged" / "looks good" / "good"): "Noted — confirmed correct, moving on."
+- Disagreement but deferring: "Hearing you — keeping the current pattern; flagging for separate review."
+- Question/concern parked: "Captured your concern; addressing after this round."
+
+NOT a substitute for user approval — they retain the final say (clicking LOOKS_GOOD still flips the cyan ↻ to green). You're saying "I think this is handled"; they confirm.`,
     inputSchema: {
       type: "object",
       required: ["sessionId", "itemId", "narration"],

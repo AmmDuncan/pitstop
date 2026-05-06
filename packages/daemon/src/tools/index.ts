@@ -57,17 +57,43 @@ export const tools = {
     // Drawer-wiring sniff: if /inject.js has not been requested for this
     // projectRoot in the last 10 min, the agent should warn the user before
     // driving anything — they'll otherwise sit watching a session URL that
-    // 404s with no clue why.
+    // 404s with no clue why. Also catches the common bug where the agent
+    // wired the drawer with a different projectRoot (e.g. /repo/apps/shop)
+    // than it called start_review with (e.g. /repo) — the drawer fetches
+    // /inject.js with its own key and the daemon won't bind the session.
     const lastSeen = ctx.drawerSeen?.get(p.projectRoot);
     const drawerLikelyConnected = lastSeen !== undefined && Date.now() - lastSeen < DRAWER_FRESHNESS_MS;
-    const drawerStatus = drawerLikelyConnected
-      ? { connected: true as const, lastSeenAt: lastSeen! }
-      : {
+    let drawerStatus:
+      | { connected: true; lastSeenAt: number }
+      | { connected: false; hint: string };
+    if (drawerLikelyConnected) {
+      drawerStatus = { connected: true as const, lastSeenAt: lastSeen! };
+    } else {
+      // Look for recently-seen projectRoots that are ancestors or descendants
+      // of the requested one. These are almost always the agent calling
+      // start_review and wire_drawer with mismatched paths.
+      const now = Date.now();
+      const seenRecently = Array.from(ctx.drawerSeen?.entries() ?? [])
+        .filter(([root, ts]) => root !== p.projectRoot && now - ts < DRAWER_FRESHNESS_MS)
+        .map(([root]) => root);
+      const related = seenRecently.filter(
+        (r) => r.startsWith(`${p.projectRoot}/`) || p.projectRoot.startsWith(`${r}/`),
+      );
+      if (related.length > 0) {
+        drawerStatus = {
+          connected: false as const,
+          hint:
+            `projectRoot mismatch likely — the session and the drawer must share the EXACT same projectRoot string for the drawer to bind. No /inject.js fetch seen for "${p.projectRoot}" in the last 10 minutes, but a drawer IS wired with a related path: ${related.map((r) => `"${r}"`).join(", ")}. Probable cause: start_review and wire_drawer were called with different projectRoots. Either retry start_review with one of the related paths above, or re-wire the drawer with "${p.projectRoot}". The drawer will sit on the empty start screen until they match.`,
+        };
+      } else {
+        drawerStatus = {
           connected: false as const,
           hint:
             "No /inject.js fetch seen for this projectRoot in the last 10 minutes — the drawer probably is not wired into the dev app yet. " +
             `Call wire_drawer({ projectRoot: ${JSON.stringify(p.projectRoot)} }) — it returns the framework + two wiring options (committed conditional snippet vs local-only gitignored file) with exact snippets and file paths. Surface the options to the user via AskUserQuestion, then perform the file edit yourself. Do NOT paste raw snippets into the conversation and ask the user to do it.`,
         };
+      }
+    }
 
     return {
       sessionId: session.id,
@@ -233,8 +259,24 @@ export const tools = {
     return { ok: true };
   },
 
-  async wire_drawer(_ctx: Ctx, params: unknown) {
-    return wire_drawer(params);
+  async wire_drawer(ctx: Ctx, params: unknown) {
+    const result = await wire_drawer(params);
+    // Cross-check active sessions: if any have a different projectRoot than
+    // the one being wired, the agent has almost certainly called start_review
+    // and wire_drawer with mismatched paths. Surface this LOUDLY so the agent
+    // doesn't proceed to edit files for the wrong projectRoot.
+    const all = await ctx.store.list();
+    const mismatched = all.filter(
+      (s) => s.status !== "complete" && s.projectRoot !== result.projectRoot,
+    );
+    if (mismatched.length > 0) {
+      result.notes.unshift(
+        `WARNING — projectRoot mismatch with active session(s): ${mismatched
+          .map((s) => `"${s.projectRoot}" (session ${s.id})`)
+          .join(", ")}. The session and the drawer must share the EXACT same projectRoot string to bind. After wiring with "${result.projectRoot}", the drawer will NOT render those sessions. Verify which path is correct: if "${result.projectRoot}" is the typo, retry wire_drawer with the matching path; if the existing session is wrong, complete_review or restart it with "${result.projectRoot}".`,
+      );
+    }
+    return result;
   },
 
   async ask_user(ctx: Ctx, params: unknown) {

@@ -289,6 +289,9 @@ export async function wire_drawer(params: unknown): Promise<WireResult> {
   // multi-person repo (CODEOWNERS / CONTRIBUTING.md / a populated AUTHORS file)
   // lean committed so teammates benefit. For solo / fresh projects, default
   // to local-only so we don't slip wiring into a repo the user might not own.
+  // EXCEPT Next.js — its local-only branch literally says "skip, there is no
+  // clean local-only hook," so recommending it is self-defeating. Force
+  // committed for Next.js regardless of team-repo heuristic.
   const looksLikeTeamRepo = fileExists(
     projectRoot,
     "CONTRIBUTING.md",
@@ -296,7 +299,8 @@ export async function wire_drawer(params: unknown): Promise<WireResult> {
     "CODEOWNERS",
     ".github/PULL_REQUEST_TEMPLATE.md",
   );
-  const recommended: "committed" | "local-only" = looksLikeTeamRepo ? "committed" : "local-only";
+  const recommended: "committed" | "local-only" =
+    framework === "next" ? "committed" : looksLikeTeamRepo ? "committed" : "local-only";
 
   const notes: string[] = [];
   if (framework === "unknown") {
