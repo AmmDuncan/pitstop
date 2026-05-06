@@ -142,7 +142,7 @@ export default mergeConfig(baseConfig, defineConfig({
           id: "committed",
           label: "Add to your root layout",
           description:
-            "App Router → app/layout.tsx; Pages Router → pages/_document.tsx. Gated by NODE_ENV so prod drops it.",
+            "App Router → app/layout.tsx; Pages Router → pages/_document.tsx. Gated by NODE_ENV so prod drops it. REQUIRED if any part of the review is agent-driven (agent-browser, Claude in Chrome via Playwright, CI) — the Chrome extension fallback below does NOT load in Playwright-driven Chromium.",
           file: "app/layout.tsx (App Router) or pages/_document.tsx (Pages Router)",
           snippet: `{process.env.NODE_ENV === 'development' && (
   <script src="http://localhost:7773/inject.js?pitstop-project=${encodeURIComponent(projectRoot)}" defer />
@@ -152,7 +152,7 @@ export default mergeConfig(baseConfig, defineConfig({
           id: "local-only",
           label: "Skip — Next.js has no clean local-only point",
           description:
-            "Next.js doesn't expose a hook for local-only HTML injection. Either commit the conditional snippet (Option A) or use the Chrome extension instead.",
+            "Next.js doesn't expose a hook for local-only HTML injection. Two paths: (a) commit the conditional snippet from Option A — works in any browser context including agent-browser / Playwright; or (b) install the Chrome extension at packages/extension — no repo edits, but ONLY works in your real Chrome / Edge. The extension does NOT load in Playwright-driven Chromium, so it's unsuitable for agent-driven reviews via agent-browser. Pick (a) when the agent will drive the browser; pick (b) only for human-driven free-form review.",
           file: "app/layout.tsx",
           snippet: `{process.env.NODE_ENV === 'development' && (
   <script src="http://localhost:7773/inject.js?pitstop-project=${encodeURIComponent(projectRoot)}" defer />
@@ -318,6 +318,24 @@ export async function wire_drawer(params: unknown): Promise<WireResult> {
   notes.push(
     "If the user's dev app sets a Content Security Policy (nuxt-security, Next.js headers, helmet middleware, or a <meta http-equiv=\"Content-Security-Policy\"> tag), allowlist `http://localhost:7773` in BOTH `script-src` AND `connect-src`. Dev-only — production CSPs stay strict. Concrete pattern (spread into each list):\n\n  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:7773'] : []),\n\nMention this preemptively when the user is using nuxt-security / helmet / strict CSP, OR if they report 'drawer doesn't appear' after wiring.",
   );
+
+  // Wiring is one-time setup, NOT the end of the review flow. Agents that
+  // call wire_drawer often stop after the snippet is added and tell the
+  // user "all set" — but the drawer is still empty until start_review is
+  // called with actual items. Make the next step explicit in tool output
+  // so the agent doesn't think it's done.
+  notes.push(
+    "Wiring the drawer is SETUP, not the review itself. After the user confirms the drawer renders in their browser at the host page, the next step is `start_review` with the actual items the user should look at — title, body (markdown), lookFor, concerns, question on each item. Don't tell the user 'all set' or 'done' after just wiring; the drawer will sit empty until items arrive. If you have nothing concrete to review yet, ask the user what they want pitstopped before calling start_review.",
+  );
+
+  // Chrome extension as a Next.js fallback (only path where extension is
+  // surfaced in this tool's output). The README has the full caveat but
+  // agents reading wire_drawer's response don't necessarily read the README.
+  if (framework === "next") {
+    notes.push(
+      "If the user picks the Chrome extension fallback for Next.js: the extension matches `http://localhost/*` only and does NOT load in Playwright-driven Chromium. Any review driven via agent-browser, Claude in Chrome (Playwright variants), or CI will see a tab with no drawer. For agent-driven flows the committed snippet (Option A) is the only path that works.",
+    );
+  }
 
   return { framework, projectRoot, options, recommended, notes };
 }
