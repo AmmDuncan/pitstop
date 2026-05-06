@@ -2,6 +2,33 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.39 — 2026-05-06
+
+### narrate() — conversational beats for the CLAUDE feed
+
+Adds a lightweight MCP tool for ambient feed narrations between other tool calls. No pip flip, no button toggle, no arrival semantics — just the line lands in the feed and flashes briefly so the reviewer parked in the drawer sees you're with them.
+
+Until now agents only landed feed entries via `mark_addressing` (heavy — arrival semantics) and `agent_address_comment` (heavy — pip transition). Everything in between (acknowledgements, reasoning aloud, status beats) happened silently in the chat the reviewer isn't watching. Long stretches of WAITING with no signal that the agent received a comment, agreed with it, and is working on it.
+
+The tool description spells out the four flavors that matter — acknowledgement, reasoning, status, backchannel — with examples, plus the contrast against `mark_addressing` and `agent_address_comment` so agents pick the right tool. Heuristic: *"if you'd say it out loud watching over the reviewer's shoulder, send it to the feed."*
+
+### itemAddressed resets on user comment
+
+The drawer's `itemAddressed()` check (controls AWAITING CLAUDE strip + action button visibility) was a one-shot: once the agent had ever called `mark_addressing(arrived: true)` on an item, the item stayed "addressed" forever — even after the user submitted a fresh comment. In practice: user comments → POKED · WAITING strip drops on the next agent activity → buttons reappear because the original arrival narration is still in `agentActivity` → user can act on a surface the agent hasn't actually re-checked. The flow lied.
+
+`itemAddressed()` now only counts `mark_addressing(arrived: true)` entries that landed AFTER the user's most recent comment on the item. Each user comment puts the item back into "needs re-addressing" state until the agent calls `mark_addressing(arrived: true)` again — the only signal that genuinely means "ready, re-check this surface."
+
+### `agent_address_comment` description rewrite
+
+Tightens the contrast with `narrate()`. `agent_address_comment` is now explicitly the "I've handled it" signal — fix shipped, decided-not-to-act with reason given, or otherwise consciously closed the loop. Early acks ("Got it, looking now") and mid-fix progress beats ("Two ways to fix this; going with grid-rows") belong in `narrate()`. The pip flip carries "considered" semantics; flipping it pre-fix is dishonest. Description walks through narration patterns for fix-shipped vs approval-by-comment vs deferral vs parked-concern, plus the pairing rule with `mark_addressing(arrived: true)` for re-checking.
+
+### Other description tightening
+
+- `get_unread_responses` now states the positive obligation: first move on a comment is a `narrate()` ack beat, before any investigation. Silence reads as ignoring it.
+- `mark_addressing` description points at `narrate()` for non-arrival narrations so agents stop overloading mark_addressing for casual reactions.
+
+Daemon-side runtime change for the new `narrate` tool. Existing running daemons will need a restart to surface the new tool to MCP clients.
+
 ## v0.3.38 — 2026-05-06
 
 ### Daemon-side guardrails for projectRoot mismatch + tool-description fixes
