@@ -114,12 +114,22 @@ export const Detail: Component = () => {
     if (!session.s || poking()) return;
     setPoking(true);
     try {
-      await fetch(`${baseUrl}/api/sessions/${session.s.id}/retry-poke`, { method: "POST" });
+      const r = await fetch(`${baseUrl}/api/sessions/${session.s.id}/retry-poke`, { method: "POST" });
+      if (r.ok) {
+        // Show "POKED · WAITING" strip with the elapsed counter so the user
+        // sees the click landed; the strip transitions back to AWAITING
+        // CLAUDE on the next agent-activity event (the daemon's listener
+        // already handles that). Plus keep the button disabled for ~5s so
+        // spamming doesn't stack pokes — claude --resume only takes one at
+        // a time anyway, and the second-and-after attempts 409 silently.
+        flagSent();
+        setTimeout(() => setPoking(false), 5000);
+        return;
+      }
     } catch (err) {
       console.error("poke failed", err);
-    } finally {
-      setPoking(false);
     }
+    setPoking(false);
   };
 
   const onApprove = async () => {

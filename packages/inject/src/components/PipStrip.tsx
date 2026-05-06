@@ -104,13 +104,21 @@ export const PipStrip: Component = () => {
                 </div>
               );
             }
-            const state = (): PipState => {
-              if (slot.index === currentItemIdx()) return "focused";
-              return responsesByItem().get(slot.item.id) ?? "pending";
-            };
+            // The "is this the current item" marker is orthogonal to the
+            // response state. Active items show their response color/glyph
+            // (green ✓ if approved, cyan ↻ if agent-addressed, amber • if
+            // commented), with an amber underline laid on top to signal
+            // "you are here." Items with no response yet fall back to
+            // `focused` (amber + ▸) when current, `pending` (dim · ) otherwise.
+            const responseState = (): PipState | null =>
+              responsesByItem().get(slot.item.id) ?? null;
+            const isActive = () => slot.index === currentItemIdx();
+            const state = (): PipState =>
+              responseState() ?? (isActive() ? "focused" : "pending");
             return (
               <div
                 class={`pip ${state()}`}
+                classList={{ "is-active": isActive() }}
                 data-idx={slot.index}
                 onClick={() => setCurrentItemIdx(slot.index)}
               >
