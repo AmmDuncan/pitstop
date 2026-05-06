@@ -2,6 +2,12 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.37 — 2026-05-06
+
+### Fix: empty-state drawer resize was lagging behind cursor
+
+The empty-state aside (`<aside class="drawer pos-right size-standard empty">`) had its class hardcoded and never picked up the `.resizing` modifier that the main session-drawer adds via `interactiveResize()`. So the base `.drawer { transition: width 220ms ease-out }` rule kept lerping on every pointer move, and the drawer rubber-banded behind the cursor while dragging the left edge. Same fix as the main drawer: toggle `.resizing` on the empty-state aside via `classList` so the transition is suppressed during an active drag.
+
 ## v0.3.36 — 2026-05-05
 
 ### Retire reflow mode
