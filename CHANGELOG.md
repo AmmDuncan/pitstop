@@ -2,6 +2,28 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.41 — 2026-05-06
+
+### Pip color reflects status, not "active"
+
+The currently-focused pip rendered amber regardless of its actual response state, so an active item that the user had approved (or that the agent had marked addressed) still showed amber + ▸ instead of green ✓ or cyan ↻. That conflated "you are here" with "this one's commented."
+
+Split into two orthogonal axes: the **status color and glyph** come from the response state (approved / agent-addressed / commented / focused / pending), and the **"you are here" marker** is now a separate `.is-active` class that lays an amber underline + bold weight on top. So:
+
+- Active + approved → green ✓ + amber underline
+- Active + agent-addressed → cyan ↻ + amber underline
+- Active + commented → amber • + amber underline (still amber, but underline disambiguates from "current")
+- Active + no response → amber ▸ (still uses `focused`)
+- Non-active items unchanged
+
+### POKE feedback
+
+Clicking POKE now triggers the existing POKED · WAITING lifecycle strip (via `flagSent`) so the user sees the click landed, with the elapsed counter restarting from zero. The button stays disabled for ~5 seconds after a successful poke so spam-clicking doesn't stack pokes — `claude --resume` only takes one at a time and subsequent attempts 409 silently anyway. The strip transitions back to AWAITING CLAUDE on the next agent-activity event, exactly as it does after a comment submit.
+
+### REVIEW_COMPLETE side padding
+
+Stats line + buttons were sitting close to the drawer's side borders on narrow widths. Bumped `.review-complete` horizontal padding from 36px to 48px and added `flex-wrap` + `justify-content: center` on `.rc-stats` so the line breaks gracefully on very narrow drawers instead of overflowing.
+
 ## v0.3.40 — 2026-05-06
 
 ### Update-availability check + chip
