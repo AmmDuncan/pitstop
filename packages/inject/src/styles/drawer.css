@@ -338,7 +338,11 @@
   color: var(--t4);
   border-bottom: 1px solid var(--rule-1);
   background: var(--bg-rail);
-  overflow: hidden;
+  /* overflow: visible so the update-chip popover can escape the metabar
+     downward; individual cells still clip their own text via the rule
+     below. */
+  overflow: visible;
+  position: relative;
 }
 .metabar > * {
   overflow: hidden;
@@ -351,6 +355,126 @@
 }
 .metabar .right {
   text-align: right;
+  /* Right slot hosts the optional update chip + host text, and the chip's
+     popover needs to escape out the bottom — so the slot itself can't clip. */
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.metabar .metabar-host {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Update-chip lives in the metabar's right slot when the daemon's startup
+   GitHub Releases check finds a newer tag. Click opens a popover with a
+   pre-filled update command + release-notes link. Chip is the only
+   user-facing surface for update-availability; agents may also read the
+   `update` field on start_review. */
+.update-chip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  overflow: visible;
+}
+.update-chip {
+  background: transparent;
+  border: 1px solid var(--rule-2);
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  cursor: pointer;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.update-chip:hover {
+  border-color: var(--amber);
+}
+.update-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 280px;
+  background: var(--bg-paper);
+  border: 1px solid var(--rule-2);
+  box-shadow: 0 8px 24px rgba(7, 26, 43, 0.18);
+  border-radius: 6px;
+  padding: 12px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  white-space: normal;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--t2);
+  letter-spacing: normal;
+  text-transform: none;
+}
+.update-popover-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.update-popover-eyebrow {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--amber);
+}
+.update-popover-versions {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--t1);
+}
+.update-popover-cmd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  background: var(--bg-rail);
+  border: 1px solid var(--rule-1);
+  padding: 8px 10px;
+  border-radius: 3px;
+  color: var(--t1);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.4;
+}
+.update-popover-actions {
+  display: flex;
+  gap: 8px;
+}
+.update-popover-btn {
+  background: transparent;
+  border: 1px solid var(--rule-2);
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.update-popover-btn:hover {
+  color: var(--t1);
+  border-color: var(--rule-3);
+}
+.update-popover-foot {
+  font-size: 11px;
+  color: var(--t3);
+  margin: 0;
 }
 
 .dheader {
@@ -1835,6 +1959,13 @@
   bottom: 0;
   width: 6px;
   cursor: ew-resize;
+}
+.resize-handle.edge-bottom {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  cursor: ns-resize;
 }
 .resize-handle.corner-se {
   right: 0;

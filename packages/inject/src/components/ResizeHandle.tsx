@@ -1,7 +1,14 @@
 import type { Component } from "solid-js";
 import { setInteractiveResize } from "../state/modes";
 
-type Direction = "edge-left" | "edge-right" | "corner-se" | "corner-sw" | "corner-ne" | "corner-nw";
+type Direction =
+  | "edge-left"
+  | "edge-right"
+  | "edge-bottom"
+  | "corner-se"
+  | "corner-sw"
+  | "corner-ne"
+  | "corner-nw";
 
 type Props = {
   direction: Direction;
@@ -11,6 +18,7 @@ type Props = {
 const cursors: Record<Direction, string> = {
   "edge-left": "ew-resize",
   "edge-right": "ew-resize",
+  "edge-bottom": "ns-resize",
   "corner-se": "nwse-resize",
   "corner-sw": "nesw-resize",
   "corner-ne": "nesw-resize",

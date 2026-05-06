@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { buildApp } from "./http/server";
 import { IdleTracker } from "./lifecycle/idle";
+import { initUpdateCheck } from "./lifecycle/update-check";
 
 const port = Number(process.env.PITSTOP_PORT ?? 7773);
 const dataDir = join(homedir(), ".claude", "pitstop");
@@ -35,3 +36,8 @@ try {
 }
 
 console.log(`pitstop-daemon listening on http://localhost:${server.port}`);
+
+// Fire-and-forget — populates the in-memory cache for /api/update-status
+// and start_review's `update` field. Failures (offline, rate limit) are
+// silently absorbed; the chip + start_review.update simply don't appear.
+void initUpdateCheck();

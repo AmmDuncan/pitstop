@@ -22,6 +22,7 @@ import { Detail } from "./Detail";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { KeymapOverlay } from "./KeymapOverlay";
+import { UpdateChip } from "./UpdateChip";
 import { PipStrip } from "./PipStrip";
 import { ResizeHandle } from "./ResizeHandle";
 import { ReviewComplete } from "./ReviewComplete";
@@ -121,7 +122,10 @@ export const Drawer: Component = () => {
                 <div class="metabar">
                   <span>pitstop · idle</span>
                   <span class="center">NO SESSION</span>
-                  <span class="right">localhost:7773</span>
+                  <span class="right">
+                    <UpdateChip />
+                    <span class="metabar-host">localhost:7773</span>
+                  </span>
                 </div>
                 <div class="empty-body">
                   <div class="empty-headline">No active review</div>
@@ -181,7 +185,9 @@ export const Drawer: Component = () => {
             <div class="metabar">
               <span>~/.claude/pitstop/sessions/{session.s?.id}.json</span>
               <span class="center">S#{session.s?.id}</span>
-              <span class="right">T=…</span>
+              <span class="right">
+                <UpdateChip />
+              </span>
             </div>
             <Header />
             <PipStrip />
@@ -215,6 +221,26 @@ export const Drawer: Component = () => {
               />
             </Show>
             <Show when={position() === "floating"}>
+              {/* Edges — single-axis resize. Top edge is intentionally absent:
+                  the header already owns that strip as the move handle. */}
+              <ResizeHandle
+                direction="edge-left"
+                onDrag={(dx) => {
+                  const nextW = clamp(width() - dx, MIN_W, MAX_W);
+                  const appliedDx = width() - nextW;
+                  setWidth(nextW);
+                  setFloatingLeft(floatingLeft() + appliedDx);
+                }}
+              />
+              <ResizeHandle
+                direction="edge-right"
+                onDrag={(dx) => setWidth(clamp(width() + dx, MIN_W, MAX_W))}
+              />
+              <ResizeHandle
+                direction="edge-bottom"
+                onDrag={(_dx, dy) => setHeight(clamp(height() + dy, MIN_H, MAX_H))}
+              />
+              {/* Corners — two-axis resize. */}
               <ResizeHandle
                 direction="corner-se"
                 onDrag={(dx, dy) => {

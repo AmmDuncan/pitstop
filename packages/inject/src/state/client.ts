@@ -22,6 +22,29 @@ export async function fetchActiveSession(projectRoot: string): Promise<Session |
  *  / proxy. Sends `location.origin` so the daemon only returns sessions whose
  *  devUrls include this tab; falls back to a loose match (no devUrls set) if
  *  no scoped session matches. */
+export type UpdateStatusResponse = {
+  current: string;
+  latest: string | null;
+  updateAvailable: boolean;
+  releaseUrl?: string | null;
+  installPath?: string;
+  checkedAt?: number | null;
+  disabled?: boolean;
+};
+
+/** Read the daemon's cached update-status. Returns null on any error so the
+ *  drawer can simply skip rendering the chip when the daemon's offline or
+ *  the lookup hasn't completed yet. */
+export async function fetchUpdateStatus(): Promise<UpdateStatusResponse | null> {
+  try {
+    const r = await fetch(`${baseUrl}/api/update-status`);
+    if (!r.ok) return null;
+    return (await r.json()) as UpdateStatusResponse;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchMostRecentActiveSession(): Promise<Session | null> {
   const origin = typeof window !== "undefined" ? window.location.origin : undefined;
   const url = origin

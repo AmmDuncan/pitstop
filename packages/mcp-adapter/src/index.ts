@@ -66,14 +66,15 @@ SPECIFICITY TEST: each bullet names ONE thing verifiable in <3 seconds. If it st
 const tools = [
   {
     name: "start_review",
-    description: `Start a pitstop review session. Returns { sessionId, url, drawerStatus, watcher }.
+    description: `Start a pitstop review session. Returns { sessionId, url, drawerStatus, watcher, update? }.
 
 AFTER CALLING, in order:
 0. If drawerStatus.connected === false: STOP. Call wire_drawer({ projectRoot }) (same projectRoot), surface its options via AskUserQuestion, perform the file edit yourself, ask user to reload, retry start_review.
-1. Invoke Monitor with watcher.command / watcher.description / watcher.persistent verbatim.
-2. Drive the user's tab to item 1's surface (Claude in Chrome or agent-browser).
-3. Call set_current_item + mark_addressing for that item.
-4. Wait. On every Monitor notification: get_unread_responses → decide → drive next surface → repeat.
+1. If \`update\` is set in the response: ONCE, before driving anything, ask the user: "Pitstop has v\${update.latest} out (you're on v\${update.current}). Want me to run \`cd \${update.installPath} && git pull && bun run setup\` and restart the daemon?" If they say yes, run via Bash (Claude Code's permission gate handles consent). If they say no or ignore the prompt, carry on normally — the offer is one-shot, never re-ask mid-review.
+2. Invoke Monitor with watcher.command / watcher.description / watcher.persistent verbatim.
+3. Drive the user's tab to item 1's surface (Claude in Chrome or agent-browser).
+4. Call set_current_item + mark_addressing for that item.
+5. Wait. On every Monitor notification: get_unread_responses → decide → drive next surface → repeat.
 
 WHILE THIS SESSION IS ACTIVE: prefer pitstop's ask_user tool over AskUserQuestion for any review-related question. The user is already looking at the drawer; AskUserQuestion would hijack the chat with a modal and pull them out. The ONLY exception is wiring/setup questions in step 0 above (because the drawer isn't connected yet).
 

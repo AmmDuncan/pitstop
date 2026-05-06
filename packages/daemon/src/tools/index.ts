@@ -95,6 +95,21 @@ export const tools = {
       }
     }
 
+    // Surface a one-shot update offer. Agent reads this and decides whether
+    // to ask the user "want me to run git pull && bun run setup?" — only on
+    // the initial offer, not on subsequent calls during the same review.
+    const { getUpdateStatus } = await import("../lifecycle/update-check");
+    const updateStatus = getUpdateStatus();
+    const update =
+      updateStatus && updateStatus.updateAvailable && updateStatus.latest
+        ? {
+            current: updateStatus.current,
+            latest: updateStatus.latest,
+            releaseUrl: updateStatus.releaseUrl,
+            installPath: updateStatus.installPath,
+          }
+        : undefined;
+
     return {
       sessionId: session.id,
       url: `${ctx.baseUrl}/?session=${session.id}`,
@@ -104,6 +119,7 @@ export const tools = {
         description: `pitstop unread responses · session ${session.id}`,
         persistent: true,
       },
+      ...(update ? { update } : {}),
     };
   },
 

@@ -241,6 +241,12 @@ packages/
 docs/            — design brief, specs, plans
 ```
 
+## Update checks
+
+When the daemon starts, it makes one outbound HTTPS call to `api.github.com/repos/AmmDuncan/pitstop/releases/latest` to find out the most recent published release. The result is cached for the daemon's lifetime; restarting the daemon is the only thing that re-checks. When an update is available, the drawer's metabar shows a small `↑ <version>` chip — clicking it opens a popover with the pre-filled update command (`cd <install path> && git pull && bun run setup`) and a link to the release notes. Agents calling `start_review` also receive the same info as an `update` field on the response and may offer once to run the update for the user (subject to Claude Code's permission gate — never silent).
+
+To opt out: set `PITSTOP_DISABLE_UPDATE_CHECK=1` in the daemon's environment. The daemon skips the network call entirely and the drawer renders no chip.
+
 ## Limitations
 
 - The daemon-spawned `claude --resume` is a fallback for offline sessions. It often no-ops in active sessions; that's expected. The live MCP path is the load-bearing one.

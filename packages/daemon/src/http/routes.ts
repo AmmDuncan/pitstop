@@ -489,5 +489,16 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     return Response.json(config, { headers: { "cache-control": "no-cache" } });
   });
 
+  // Update status — drawer reads this on mount to decide whether to render
+  // the metabar update chip. Returns whatever's in the in-memory cache
+  // (populated by initUpdateCheck on daemon startup); never blocks on the
+  // GitHub fetch. Returns null fields when the lookup hasn't completed yet
+  // or failed; the drawer just renders no chip in that case.
+  app.get("/api/update-status", async () => {
+    const { getUpdateStatus } = await import("../lifecycle/update-check");
+    const status = getUpdateStatus();
+    return Response.json(status ?? { current: "unknown", latest: null, updateAvailable: false });
+  });
+
   Object.assign(app, { _store: store, _bus: bus });
 }
