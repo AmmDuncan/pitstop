@@ -113,7 +113,11 @@ export const Drawer: Component = () => {
           <Show
             when={size() === "strip"}
             fallback={
-              <aside class="drawer pos-right size-standard empty" style={{ width: `${width()}px` }}>
+              <aside
+                class="drawer pos-right size-standard empty"
+                classList={{ resizing: interactiveResize() }}
+                style={{ width: `${width()}px` }}
+              >
                 <div class="metabar">
                   <span>pitstop · idle</span>
                   <span class="center">NO SESSION</span>
