@@ -1,7 +1,16 @@
 import { type Component, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { type UpdateStatusResponse, fetchUpdateStatus } from "../state/client";
+import { type UpdateStatusResponse, baseUrl, fetchUpdateStatus } from "../state/client";
+import { session } from "../state/store";
 
 const [updateStatus, setUpdateStatus] = createSignal<UpdateStatusResponse | null>(null);
+/** Module-level so the metabar's right-slot logic (Drawer.tsx) can read it
+ *  and let the CLAUDE# diagnostic chip take the slot once dismissed. Resets
+ *  on drawer remount (no persistence — the offer is a fresh prompt every
+ *  page load if the user hasn't acted on it yet). */
+export const [updateDismissed, setUpdateDismissed] = createSignal(false);
+/** True iff there's an actionable update offer the user hasn't dismissed. */
+export const updateChipShown = () =>
+  !updateDismissed() && Boolean(updateStatus()?.updateAvailable && updateStatus()?.latest);
 
 /** Lazily fetch the update status the first time any drawer instance mounts.
  *  The result is cached in the daemon for its lifetime, so re-calling on
@@ -50,8 +59,41 @@ export const UpdateChip: Component = () => {
     } catch {}
   };
 
+  /** Send the update command to the bound agent so it runs the update for
+   *  the user — same delivery channel as a comment, so the existing
+   *  comment-poke path picks it up and spawns `claude --resume`. The body
+   *  is human-readable; the agent handles it like any other inbound message. */
+  const onAskAgent = async (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!session.s) return;
+    const cmd = command();
+    if (!cmd) return;
+    const itemId = session.s.items[0]?.id;
+    if (!itemId) return;
+    const directive = `Pitstop update available: please run \`${cmd}\` and then restart the daemon. Once it's restarted, continue the review where we left off.`;
+    try {
+      await fetch(`${baseUrl}/api/sessions/${session.s.id}/responses`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ itemId, kind: "comment", body: directive }),
+      });
+      setUpdateDismissed(true);
+      setOpen(false);
+    } catch (err) {
+      console.error("update directive failed", err);
+    }
+  };
+
+  const onDismiss = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setUpdateDismissed(true);
+    setOpen(false);
+  };
+
   return (
-    <Show when={updateStatus()?.updateAvailable && updateStatus()?.latest}>
+    <Show when={updateChipShown()}>
       <span class="update-chip-wrap" ref={wrapRef}>
         <button
           type="button"
@@ -66,6 +108,15 @@ export const UpdateChip: Component = () => {
         </button>
         <Show when={open()}>
           <div class="update-popover" role="dialog" aria-label="Pitstop update">
+            <button
+              type="button"
+              class="update-popover-dismiss"
+              onClick={onDismiss}
+              title="Dismiss for this session"
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
             <div class="update-popover-head">
               <span class="update-popover-eyebrow">UPDATE_AVAILABLE</span>
               <span class="update-popover-versions">
@@ -76,6 +127,11 @@ export const UpdateChip: Component = () => {
               <pre class="update-popover-cmd">{command()}</pre>
             </Show>
             <div class="update-popover-actions">
+              <Show when={command() && session.s}>
+                <button type="button" class="update-popover-btn primary" onClick={onAskAgent}>
+                  Update now
+                </button>
+              </Show>
               <Show when={command()}>
                 <button type="button" class="update-popover-btn" onClick={onCopy}>
                   {copied() ? "Copied" : "Copy command"}
@@ -93,7 +149,9 @@ export const UpdateChip: Component = () => {
                 </a>
               </Show>
             </div>
-            <p class="update-popover-foot">Restart the daemon after running the command.</p>
+            <p class="update-popover-foot">
+              "Update now" asks the bound agent to run it. Restart the daemon after.
+            </p>
           </div>
         </Show>
       </span>

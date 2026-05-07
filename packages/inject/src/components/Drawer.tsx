@@ -26,7 +26,34 @@ import { PipStrip } from "./PipStrip";
 import { ResizeHandle } from "./ResizeHandle";
 import { ReviewComplete } from "./ReviewComplete";
 import { ReviewSummary } from "./ReviewSummary";
-import { UpdateChip } from "./UpdateChip";
+import { UpdateChip, updateChipShown } from "./UpdateChip";
+
+/** Diagnostic chip showing the Claude Code session this pitstop is bound to.
+ *  When the bind is missing (env var wasn't captured at start_review time),
+ *  the chip renders in the warning color and reads UNPOKEABLE — the only
+ *  diagnostic surface you have without opening devtools. Hidden when
+ *  UpdateChip is showing (sessions usually have only one slot's worth of
+ *  attention to spend; the update offer is more time-sensitive). */
+const ClaudeBindChip: Component = () => {
+  const cc = () => session.s?.clientSessionId;
+  const short = () => cc()?.slice(0, 8);
+  return (
+    <Show when={!updateChipShown() && session.s}>
+      <Show
+        when={cc()}
+        fallback={
+          <span class="claude-chip claude-chip-warn" title="Pitstop didn't capture this Claude Code session — pokes will fail. Restart Claude Code after `bun run setup` to pick up the env-var fix.">
+            CLAUDE# UNBOUND
+          </span>
+        }
+      >
+        <span class="claude-chip" title={`Bound to Claude Code session ${cc()}`}>
+          CLAUDE#{short()}
+        </span>
+      </Show>
+    </Show>
+  );
+};
 
 const MIN_W = 360;
 const MAX_W = 800;
@@ -177,7 +204,10 @@ export const Drawer: Component = () => {
                 </div>
                 <div class="strip-bottom">
                   <span class="v-num">{String(session.s?.items.length ?? 0).padStart(2, "0")}</span>
-                  <span class="v-dot" />
+                  {/* unpokeable: tint the dot warning so the failure is visible
+                      even while collapsed — otherwise the strip carries no other
+                      diagnostic surface */}
+                  <span class="v-dot" classList={{ unpokeable: !session.s?.clientSessionId }} />
                 </div>
               </div>
             }
@@ -187,6 +217,7 @@ export const Drawer: Component = () => {
               <span class="center">S#{session.s?.id}</span>
               <span class="right">
                 <UpdateChip />
+                <ClaudeBindChip />
               </span>
             </div>
             <Header />

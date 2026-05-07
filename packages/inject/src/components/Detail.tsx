@@ -107,9 +107,11 @@ export const Detail: Component = () => {
     return `${mm}:${String(ss).padStart(2, "0")}`;
   };
   const [poking, setPoking] = createSignal(false);
+  const [pokeError, setPokeError] = createSignal<string | null>(null);
   const onPoke = async () => {
     if (!session.s || poking()) return;
     setPoking(true);
+    setPokeError(null);
     try {
       const r = await fetch(`${baseUrl}/api/sessions/${session.s.id}/retry-poke`, { method: "POST" });
       if (r.ok) {
@@ -123,8 +125,16 @@ export const Detail: Component = () => {
         setTimeout(() => setPoking(false), 5000);
         return;
       }
+      // Surface the daemon's error inline. Pre-v0.3.43 we silently swallowed
+      // non-2xx responses, which made bugs like NO_CLIENT_SESSION_ID
+      // (env-var-name regression) invisible from the UI.
+      const body = await r.json().catch(() => ({}) as { error?: string });
+      setPokeError(body.error ? `POKE_FAILED · ${body.error}` : `POKE_FAILED · HTTP ${r.status}`);
+      setTimeout(() => setPokeError(null), 6000);
     } catch (err) {
       console.error("poke failed", err);
+      setPokeError("POKE_FAILED · network error");
+      setTimeout(() => setPokeError(null), 6000);
     }
     setPoking(false);
   };
@@ -241,21 +251,34 @@ export const Detail: Component = () => {
               <Show
                 when={!stripState()}
                 fallback={
-                  <div class="lifecycle-strip" data-state={stripState()!.kind}>
-                    <span class="lifecycle-dot" />
-                    <span class="lifecycle-label">{stripState()!.label}</span>
-                    <Show when={stripState()!.kind !== "sending"}>
-                      <span class="lifecycle-elapsed">{elapsedFormatted()}</span>
-                      <button
-                        class="lifecycle-poke"
-                        onClick={onPoke}
-                        disabled={poking()}
-                        title="Poke Claude — re-engage if it seems stuck"
-                      >
-                        POKE
-                      </button>
+                  <>
+                    <div class="lifecycle-strip" data-state={stripState()!.kind}>
+                      <span class="lifecycle-dot" />
+                      <span class="lifecycle-label">{stripState()!.label}</span>
+                      {/* Elapsed counter on poked + awaiting; sending is too brief to show. */}
+                      <Show when={stripState()!.kind !== "sending"}>
+                        <span class="lifecycle-elapsed">{elapsedFormatted()}</span>
+                      </Show>
+                      {/* POKE only on AWAITING — re-poking during POKED is a no-op
+                          (daemon 409s the second /retry-poke while one's in flight)
+                          and confused users into clicking a button that did nothing. */}
+                      <Show when={stripState()!.kind === "awaiting"}>
+                        <button
+                          class="lifecycle-poke"
+                          onClick={onPoke}
+                          disabled={poking()}
+                          title="Poke Claude — re-engage if it seems stuck"
+                        >
+                          POKE
+                        </button>
+                      </Show>
+                    </div>
+                    <Show when={pokeError()}>
+                      <div class="lifecycle-error" role="alert">
+                        {pokeError()}
+                      </div>
                     </Show>
-                  </div>
+                  </>
                 }
               >
                 <Show when={session.s?.status !== "complete"}>

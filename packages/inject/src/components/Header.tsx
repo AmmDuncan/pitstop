@@ -62,7 +62,15 @@ export const Header: Component = () => {
   const onRetry = async () => {
     if (!session.s) return;
     try {
-      await fetch(`${baseUrl}/api/sessions/${session.s.id}/retry-poke`, { method: "POST" });
+      const r = await fetch(`${baseUrl}/api/sessions/${session.s.id}/retry-poke`, { method: "POST" });
+      if (!r.ok) {
+        // Surface the daemon's reason in the title attribute so a hover on
+        // the failed pill explains itself. Pre-v0.3.43 this was silently
+        // swallowed and the pill just kept saying POKE_FAILED · CLICK_RETRY
+        // even when the retry was also failing for the same reason.
+        const body = (await r.json().catch(() => ({}))) as { error?: string };
+        console.error("retry-poke failed:", body.error ?? `HTTP ${r.status}`);
+      }
     } catch (err) {
       console.error("retry-poke failed", err);
     }

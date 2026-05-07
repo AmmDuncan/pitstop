@@ -6,7 +6,14 @@ import { Forwarder } from "./forward";
 
 const port = Number(process.env.PITSTOP_PORT ?? 7773);
 const baseUrl = `http://localhost:${port}`;
-const clientSessionId = process.env.CLAUDE_SESSION_ID;
+// Claude Code exposes the session id as CLAUDE_CODE_SESSION_ID (verified
+// empirically; see https://github.com/anthropics/claude-code/issues/25642 —
+// not officially documented as a stable API). The CLAUDE_SESSION_ID fallback
+// keeps any one-off CLAUDE_SESSION_ID= env overrides working. Without this
+// id, the daemon's claude-resume poke can't wake the agent (it throws
+// "claude-resume requires clientSessionId") and every poke path silently
+// fails — which is exactly how this bug went unnoticed until v0.3.42.
+const clientSessionId = process.env.CLAUDE_CODE_SESSION_ID ?? process.env.CLAUDE_SESSION_ID;
 const fwd = new Forwarder({ baseUrl, clientSessionId });
 
 const ITEM_SCHEMA = {

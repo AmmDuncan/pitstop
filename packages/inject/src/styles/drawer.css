@@ -328,6 +328,12 @@
   background: var(--amber);
   animation: pulse 1.5s ease-in-out infinite;
 }
+/* Unpokeable bind — dot turns danger color so the failure is visible even
+   while the drawer is collapsed to strip. */
+.drawer.collapsed .strip .v-dot.unpokeable,
+.drawer.size-strip .strip .v-dot.unpokeable {
+  background: var(--err);
+}
 .drawer.collapsed .strip:hover,
 .drawer.size-strip .strip:hover {
   background: var(--bg-panel);
@@ -483,6 +489,65 @@
   font-size: 11px;
   color: var(--t3);
   margin: 0;
+}
+/* Dismiss × in the popover's top-right. Sets the chip's local "dismissed"
+   signal and lets the CLAUDE# diagnostic chip claim the slot for the rest
+   of this drawer mount. No persistence — fresh mount, fresh offer. */
+.update-popover-dismiss {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  color: var(--t3);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.update-popover-dismiss:hover {
+  background: var(--bg-rail);
+  color: var(--t1);
+}
+/* Primary button — the "Update now" path that asks the bound agent to run
+   the update for the user. Visually leads the action group. */
+.update-popover-btn.primary {
+  border-color: var(--amber);
+  color: var(--amber-text);
+  background: color-mix(in oklab, var(--amber) 10%, transparent);
+}
+.update-popover-btn.primary:hover {
+  background: var(--amber-soft);
+  color: var(--amber-text);
+  border-color: var(--amber);
+}
+
+/* Diagnostic chip showing the bound Claude Code session id. Lives in the
+   metabar's right slot, hidden while UpdateChip is showing (sessions only
+   have one slot's worth of attention to spend). When the bind is missing
+   the chip flips to the danger color so you don't have to open devtools
+   to know pokes will fail. */
+.claude-chip {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--t3);
+  padding: 1px 4px;
+  white-space: nowrap;
+  cursor: default;
+}
+.claude-chip-warn {
+  color: var(--err);
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--err);
+  text-underline-offset: 2px;
 }
 
 .dheader {
@@ -1559,6 +1624,22 @@
   color: transparent;
   animation: lifecycle-shimmer 2.6s linear infinite;
 }
+/* Inline failure surface for /retry-poke + similar — sits directly under
+   the lifecycle strip so the user immediately sees why their click did
+   nothing. Auto-clears after a few seconds; pre-v0.3.43 we silently
+   swallowed non-2xx responses and you had no way to know. */
+.lifecycle-error {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--err);
+  background: color-mix(in oklab, var(--err) 12%, transparent);
+  color: var(--err);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 @keyframes lifecycle-shimmer {
   0% {
     background-position: 200% 0;

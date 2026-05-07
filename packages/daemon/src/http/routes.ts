@@ -413,6 +413,19 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     if (!fn) return c.json({ error: `UNKNOWN_TOOL: ${parsed.data.method}` }, 404);
     try {
       const clientSessionId = c.req.header("x-client-session-id") ?? undefined;
+      // Self-heal: backfill clientSessionId on any pre-existing session that
+      // was created before the MCP adapter was reading the right env var
+      // (CLAUDE_CODE_SESSION_ID, fixed in v0.3.43). Without this, sessions
+      // that pre-date the fix stay permanently unpokeable — every retry-poke
+      // would 400 NO_CLIENT_SESSION_ID forever. Now: the agent's next tool
+      // call on the session repairs it.
+      const params = parsed.data.params as { sessionId?: string } | undefined;
+      if (clientSessionId && params?.sessionId) {
+        const existing = await store.get(params.sessionId);
+        if (existing && !existing.clientSessionId) {
+          await store.update(params.sessionId, (s) => ({ ...s, clientSessionId }));
+        }
+      }
       const baseUrl = `http://localhost:${opts.port}`;
       const result = await fn(
         { store, bus, baseUrl, clientSessionId, scriptsDir, drawerSeen },
