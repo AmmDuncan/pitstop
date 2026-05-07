@@ -8,6 +8,7 @@ import { z } from "zod";
 import pkg from "../../package.json" with { type: "json" };
 import { PokeWatch } from "../lifecycle/poke-watch";
 import { Store } from "../store/sessions";
+import { DRAWER_FRESHNESS_MS } from "../tools";
 import type { DaemonOpts } from "./server";
 import { Bus } from "./sse";
 
@@ -519,6 +520,18 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
 </html>`,
       { headers: { "content-type": "text/html; charset=utf-8" } },
     );
+  });
+
+  // Wired check — hook scripts poll this to decide whether to emit the
+  // steering reminder. Returns { wired: true } when /inject.js has been
+  // fetched for the given projectRoot within the last 10 minutes (the same
+  // DRAWER_FRESHNESS_MS window used by start_review's drawerStatus check).
+  app.get("/api/wired", (c) => {
+    const projectRoot = c.req.query("projectRoot");
+    if (!projectRoot) return c.json({ error: "projectRoot required" }, 400);
+    const lastSeen = drawerSeen.get(projectRoot);
+    const wired = lastSeen !== undefined && Date.now() - lastSeen < DRAWER_FRESHNESS_MS;
+    return c.json({ wired });
   });
 
   app.get("/api/config", async () => {

@@ -23,7 +23,7 @@ type Ctx = {
   drawerSeen?: Map<string, number>;
 };
 
-const DRAWER_FRESHNESS_MS = 10 * 60 * 1000;
+export const DRAWER_FRESHNESS_MS = 10 * 60 * 1000;
 
 const StartReviewZ = z.object({
   projectRoot: z.string(),
@@ -136,6 +136,8 @@ export const tools = {
       // one: chat-only beats during a session never reach the user-in-
       // drawer, fail silently, look like the agent is hung.
       activeSessionRules: {
+        verificationSurface:
+          'ANY surface the user needs to verify, check, or look at — call start_review or add_items, never "could you check this in the browser?"',
         conversationalBeat: "narrate(narration) — feed line, no state effects",
         surfaceArrival: "mark_addressing(itemId, narration[, arrived]) — pairs with set_current_item",
         blockingQuestion:

@@ -84,7 +84,7 @@ const ASK_USER_CROSSREF =
 const tools = [
   {
     name: "start_review",
-    description: `Start a pitstop review session. Returns { sessionId, url, drawerStatus, watcher, toolsToPreload, activeSessionRules, update? }.
+    description: `Whenever you would ask the user to verify, check, or look at something in the browser — use this tool instead. That is its entire purpose. Start a pitstop review session. Returns { sessionId, url, drawerStatus, watcher, toolsToPreload, activeSessionRules, update? }.
 
 AFTER CALLING, in order:
 0. If drawerStatus.connected === false: STOP. Call wire_drawer({ projectRoot }) (same projectRoot), surface its options via AskUserQuestion, perform the file edit yourself, ask user to reload, retry start_review.
