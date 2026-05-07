@@ -30,9 +30,7 @@ else note("no running daemon to stop");
 
 log("");
 log("▸ killing pitstop MCP subprocesses");
-const adapterCount = (
-  await $`pgrep -f "mcp-adapter/dist/index.js" | wc -l`.text()
-).trim();
+const adapterCount = (await $`pgrep -f "mcp-adapter/dist/index.js" | wc -l`.text()).trim();
 const adapterResult = await $`pkill -f "mcp-adapter/dist/index.js"`.quiet().nothrow();
 if (adapterResult.exitCode === 0) ok(`${adapterCount} adapter subprocess(es) stopped`);
 else note("no running adapter subprocesses to stop");

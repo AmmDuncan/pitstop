@@ -74,9 +74,7 @@ export class Store {
 
   async list(): Promise<Session[]> {
     if (!existsSync(this.sessionsDir)) return [];
-    const files = (await readdir(this.sessionsDir)).filter(
-      (f) => f.endsWith(".json") && !f.endsWith(".tmp"),
-    );
+    const files = (await readdir(this.sessionsDir)).filter((f) => f.endsWith(".json") && !f.endsWith(".tmp"));
     // Parallel reads — readdir just enumerated these files so the inner
     // existsSync that `get()` does is redundant. readFile directly and let
     // a missing file (race with delete) collapse to null via the catch.

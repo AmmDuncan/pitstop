@@ -3,13 +3,13 @@ import { fileURLToPath } from "node:url";
 import { ItemZ, SessionStatusZ } from "@pitstop/shared";
 import type { Hono } from "hono";
 import { z } from "zod";
+// Bun supports JSON imports natively at runtime — release script bumps
+// packages/daemon/package.json so DAEMON_VERSION stays in sync.
+import pkg from "../../package.json" with { type: "json" };
 import { PokeWatch } from "../lifecycle/poke-watch";
 import { Store } from "../store/sessions";
 import type { DaemonOpts } from "./server";
 import { Bus } from "./sse";
-// Bun supports JSON imports natively at runtime — release script bumps
-// packages/daemon/package.json so DAEMON_VERSION stays in sync.
-import pkg from "../../package.json" with { type: "json" };
 
 const DAEMON_VERSION: string = pkg.version;
 
@@ -416,15 +416,12 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
       const adapterVersion = c.req.header("x-pitstop-adapter-version") ?? undefined;
       const adapterPid = c.req.header("x-pitstop-adapter-pid") ?? undefined;
       const adapterStale = adapterVersion !== undefined && adapterVersion !== DAEMON_VERSION;
-      const params = parsed.data.params as
-        | { sessionId?: string; projectRoot?: string }
-        | undefined;
+      const params = parsed.data.params as { sessionId?: string; projectRoot?: string } | undefined;
       // Single store.get for both self-heal and stale-adapter projectRoot
       // lookup. start_review carries projectRoot directly in params; other
       // tools take sessionId, so we read the session for its projectRoot.
       let existingSession: Awaited<ReturnType<typeof store.get>> = null;
-      const needLookup =
-        params?.sessionId !== undefined && (clientSessionId !== undefined || adapterStale);
+      const needLookup = params?.sessionId !== undefined && (clientSessionId !== undefined || adapterStale);
       if (needLookup && params?.sessionId) {
         existingSession = await store.get(params.sessionId);
       }

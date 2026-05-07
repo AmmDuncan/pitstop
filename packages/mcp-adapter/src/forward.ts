@@ -20,9 +20,7 @@ export class Forwarder {
       headers: {
         "content-type": "application/json",
         ...(this.opts.clientSessionId ? { "x-client-session-id": this.opts.clientSessionId } : {}),
-        ...(this.opts.adapterVersion
-          ? { "x-pitstop-adapter-version": this.opts.adapterVersion }
-          : {}),
+        ...(this.opts.adapterVersion ? { "x-pitstop-adapter-version": this.opts.adapterVersion } : {}),
         ...(this.opts.adapterPid ? { "x-pitstop-adapter-pid": this.opts.adapterPid } : {}),
       },
       body: JSON.stringify({ method, params }),
