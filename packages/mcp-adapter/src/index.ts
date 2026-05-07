@@ -20,7 +20,16 @@ const clientSessionId = process.env.CLAUDE_CODE_SESSION_ID ?? process.env.CLAUDE
 // telling the user to restart Claude Code so the new dist is loaded.
 // Bumped by scripts/release.ts alongside the other version literals.
 const ADAPTER_VERSION = "0.3.50";
-const fwd = new Forwarder({ baseUrl, clientSessionId, adapterVersion: ADAPTER_VERSION });
+// Sent alongside the version so the daemon's stale-adapter banner can name
+// the exact pid you need to kill — no more "which of my five Claude Code
+// instances is the stale one?" guess game.
+const ADAPTER_PID = String(process.pid);
+const fwd = new Forwarder({
+  baseUrl,
+  clientSessionId,
+  adapterVersion: ADAPTER_VERSION,
+  adapterPid: ADAPTER_PID,
+});
 
 const ITEM_SCHEMA = {
   type: "object",
@@ -87,16 +96,17 @@ const ASK_USER_CROSSREF =
 const tools = [
   {
     name: "start_review",
-    description: `Start a pitstop review session. Returns { sessionId, url, drawerStatus, watcher, toolsToPreload, update? }.
+    description: `Start a pitstop review session. Returns { sessionId, url, drawerStatus, watcher, toolsToPreload, activeSessionRules, update? }.
 
 AFTER CALLING, in order:
 0. If drawerStatus.connected === false: STOP. Call wire_drawer({ projectRoot }) (same projectRoot), surface its options via AskUserQuestion, perform the file edit yourself, ask user to reload, retry start_review.
-1. PRELOAD: If \`toolsToPreload\` is set, immediately call ToolSearch with \`select:<comma-separated names>\` so every pitstop tool is available without per-call ToolSearch latency mid-review. The list is small (~10 tools); load them all up front. ask_user is in the list specifically so you don't reach for AskUserQuestion later out of habit.
-2. If \`update\` is set in the response: ONCE, before driving anything, ask the user: "Pitstop has v\${update.latest} out (you're on v\${update.current}). Want me to run \`cd \${update.installPath} && git pull && bun run setup\` and restart the daemon?" If they say yes, run via Bash (Claude Code's permission gate handles consent). If they say no or ignore the prompt, carry on normally — the offer is one-shot, never re-ask mid-review.
-3. Invoke Monitor with watcher.command / watcher.description / watcher.persistent verbatim.
-4. Drive the user's tab to item 1's surface (Claude in Chrome or agent-browser).
-5. Call set_current_item + mark_addressing for that item.
-6. Wait. On every Monitor notification: get_unread_responses → decide → drive next surface → repeat.
+1. READ \`activeSessionRules\` — short cross-tool inversion table for which channel each kind of utterance belongs in. The load-bearing item: any chat sentence the user-in-drawer needs ALSO goes via narrate(). Chat-only beats during a session are invisible to a user parked in the drawer and fail silently (they look at a stalled CLAUDE feed and assume you're hung). Default: narrate first, chat second.
+2. PRELOAD: If \`toolsToPreload\` is set, immediately call ToolSearch with \`select:<comma-separated names>\` so every pitstop tool is available without per-call ToolSearch latency mid-review. The list is small (~11 tools); load them all up front. ask_user is in the list specifically so you don't reach for AskUserQuestion later out of habit.
+3. If \`update\` is set in the response: ONCE, before driving anything, ask the user: "Pitstop has v\${update.latest} out (you're on v\${update.current}). Want me to run \`cd \${update.installPath} && git pull && bun run setup\` and restart the daemon?" If they say yes, run via Bash (Claude Code's permission gate handles consent). If they say no or ignore the prompt, carry on normally — the offer is one-shot, never re-ask mid-review.
+4. Invoke Monitor with watcher.command / watcher.description / watcher.persistent verbatim.
+5. Drive the user's tab to item 1's surface (Claude in Chrome or agent-browser).
+6. Call set_current_item + mark_addressing for that item.
+7. Wait. On every Monitor notification: get_unread_responses → decide → drive next surface → repeat.
 
 WHILE THIS SESSION IS ACTIVE: prefer pitstop's ask_user tool over AskUserQuestion for any review-related question. The user is already looking at the drawer; AskUserQuestion would hijack the chat with a modal and pull them out. The ONLY exception is wiring/setup questions in step 0 above (because the drawer isn't connected yet).
 
@@ -222,6 +232,20 @@ The reviewer is parked in the drawer; they shouldn't have to look at the chat. T
 
 Heuristic: if you'd say it out loud watching over the reviewer's shoulder, send it to the feed.
 
+═══ DUAL-SURFACE RULE (mirror of ask_user's, equally bolded) ═══
+
+While a pitstop session is active, the drawer's CLAUDE feed is the CANONICAL surface for in-flight conversational beats — status updates, transitions, "what I'm doing next," acknowledgements, mid-drive announcements. The user is parked in the drawer, NOT the terminal. If you would write a one-liner in chat as a progress beat — *especially* the kind of pre-tool-call announcement Claude Code's system prompt asks for ("about to read X", "switching to file Y", "done with the migration, moving on") — narrate it FIRST. Default order: narrate first, chat second. Chat stays for tool-call results, longer reasoning, structured analysis the drawer can't render.
+
+WHY THIS RULE NEEDS STRONGER FRAMING THAN ask_user's: ask_user blocks until answered — the user is going to look at the drawer either way. The miss cost is "have to flip terminals." narrate-able beats are non-blocking by definition; if they only land in chat, the user-in-drawer never sees them AND never knows they missed them. They watch the feed go silent and assume you're hung. The miss is silent. So when in doubt, narrate.
+
+Concrete examples of beats that BELONG in narrate (NOT chat-only):
+- "Drawer is up. Let me check the slideover gating logic."
+- "Bill rendered. Navigating back to reopen the slideover."
+- "Reopen Bill is showing now. Marking the surface ready."
+- "Click Reopen Bill yourself if you want to inspect the modal."
+
+If you've already written a beat in chat during a pitstop session, that's a miss — narrate the same beat now, even retrospectively, so the drawer catches up.
+
 WHEN TO USE narrate vs mark_addressing vs agent_address_comment vs ask_user:
 - narrate(): conversational beats. No pip change, no button toggle. Fire freely between calls.
 - mark_addressing(itemId): "I'm at this surface." Paired with set_current_item; toggles button visibility via the 'arrived' flag.
@@ -277,7 +301,9 @@ DUAL-SURFACE RULE (required): whenever you call ask_user, ALSO render the FULL q
 
 If you're certain there's no active pitstop session for this projectRoot, fall back to AskUserQuestion as normal.
 
-Returns: { ok: true }. The answer comes back asynchronously through the responses queue. Drain via get_unread_responses; the answer entry will have kind: 'answer', body: <user's answer>, questionText: <the question you asked>.`,
+Returns: { ok: true }. The answer comes back asynchronously through the responses queue. Drain via get_unread_responses; the answer entry will have kind: 'answer', body: <user's answer>, questionText: <the question you asked>.
+
+OUT-OF-BAND ANSWER (chat instead of drawer): if the user answers your question by typing in the chat instead of clicking an option in the drawer, the drawer's banner stays up forever — pitstop has no idea the question got handled because the only normal clear path is an answer-kind response from a drawer click. As soon as you've captured the chat answer, call \`dismiss_pending_question({ sessionId, answer })\` to clear the banner and record the answer in the session history. Do NOT skip this step — a stuck banner makes the drawer look broken.`,
     inputSchema: {
       type: "object",
       required: ["sessionId", "question"],
@@ -358,6 +384,26 @@ wire_drawer NEVER writes files — that's you, so the user can review your edit.
     description:
       "End the review session. Flips the drawer status pill to REVIEW_COMPLETE. Call this only after every item has at least one response (approve or comment).",
     inputSchema: { type: "object", required: ["sessionId"], properties: { sessionId: { type: "string" } } },
+  },
+  {
+    name: "dismiss_pending_question",
+    description: `Clear the drawer's pending-question banner when the user answered an \`ask_user\` question via chat instead of clicking an option in the drawer. Without this, the banner stays up forever — pitstop has no idea the question got handled because the only normal clear path is an answer-kind response from a drawer click.
+
+Pass \`answer\` (the body of what the user said in chat) so the session's response history records it — drawers reading \`get_state\` later will see the resolution. If you only need to clear the banner without recording, omit \`answer\` (rare; usually you want the record).
+
+WHEN TO CALL: any time you receive an answer to your most recent \`ask_user\` from the chat side rather than the drawer. Right after you read the user's chat reply, before you act on it.`,
+    inputSchema: {
+      type: "object",
+      required: ["sessionId"],
+      properties: {
+        sessionId: { type: "string" },
+        answer: {
+          type: "string",
+          description:
+            "The user's answer as captured from chat. Recorded as an answer-kind response on the session so the drawer's response timeline reflects what the agent acted on. Omit if you only need to clear the banner.",
+        },
+      },
+    },
   },
   {
     name: "agent_address_comment",

@@ -40,7 +40,10 @@
   color: var(--t1);
   font-family: var(--sans);
   display: grid;
-  grid-template-rows: 18px 48px 40px 1fr auto 42px;
+  /* First row is `auto` so the optional StaleAdapterBanner can claim a slot
+     without overlaying the metabar. When no banner is rendered, the row
+     collapses to 0 height — no visual change for the healthy state. */
+  grid-template-rows: auto 18px 48px 40px 1fr auto 42px;
   overflow: hidden;
   z-index: 2147483600;
   pointer-events: auto;
@@ -127,7 +130,7 @@
   display: none;
 }
 .drawer.size-compact {
-  grid-template-rows: 48px 40px 1fr auto 42px;
+  grid-template-rows: auto 48px 40px 1fr auto 42px;
 }
 .drawer.size-compact .agent-feed {
   display: none;
@@ -2098,60 +2101,66 @@
 }
 
 /* Stale-adapter banner — shown when the daemon detects the running MCP
-   subprocess is from an older version than the daemon (CC didn't restart
-   the subprocess). Pinned absolute at the top of the drawer so it sits
-   above the metabar without disrupting the grid layout. Dismissable per
-   drawer mount via the small ×. */
+   subprocess is from an older version than the daemon. Sits in the
+   drawer's first auto-grid-row above the metabar (in flow, not absolute),
+   so it never covers chrome content. Toned to amber rather than err
+   because this is "you should restart" guidance, not a system failure. */
 .stale-adapter-banner {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 105;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 32px 6px 10px;
-  background: color-mix(in oklab, var(--err) 18%, var(--bg-paper));
-  border-bottom: 1px solid var(--err);
-  color: var(--err);
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0.05em;
-  line-height: 1.4;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--amber-soft);
+  border-bottom: 1px solid var(--amber);
+  color: var(--amber-text);
+  font-family: var(--sans);
+  font-size: 11.5px;
+  line-height: 1.45;
 }
 .stale-adapter-icon {
-  font-size: 12px;
   flex-shrink: 0;
+  color: var(--amber);
+  display: inline-flex;
 }
 .stale-adapter-msg {
   flex: 1 1 auto;
   min-width: 0;
 }
-.stale-adapter-msg .mono {
+.stale-adapter-tag {
   font-family: var(--mono);
-  color: var(--err);
+  font-size: 10.5px;
+  color: var(--amber-text);
+  white-space: nowrap;
+}
+.stale-adapter-cmd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  background: color-mix(in oklab, var(--amber) 14%, transparent);
+  color: var(--amber-text);
+  padding: 1px 5px;
+  border-radius: 2px;
+  white-space: nowrap;
 }
 .stale-adapter-dismiss {
-  position: absolute;
-  top: 4px;
-  right: 6px;
+  flex-shrink: 0;
   width: 18px;
   height: 18px;
   background: transparent;
   border: none;
-  color: var(--err);
+  color: var(--amber-text);
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1;
   cursor: pointer;
   border-radius: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  opacity: 0.6;
 }
 .stale-adapter-dismiss:hover {
-  background: color-mix(in oklab, var(--err) 12%, transparent);
+  opacity: 1;
+  background: color-mix(in oklab, var(--amber) 18%, transparent);
 }
 
 /* Session-switch prompt — drawer-internal overlay shown when a `session-hello`
@@ -2171,7 +2180,8 @@
   background: var(--bg-paper);
   border: 1px solid var(--rule-3);
   padding: 18px 18px 16px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
   gap: 12px;

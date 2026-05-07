@@ -4,7 +4,12 @@ import { setTimeout as sleep } from "node:timers/promises";
 /** HTTP client that talks to the daemon's /api/rpc endpoint, auto-spawning the daemon if needed. */
 export class Forwarder {
   constructor(
-    private opts: { baseUrl: string; clientSessionId?: string; adapterVersion?: string },
+    private opts: {
+      baseUrl: string;
+      clientSessionId?: string;
+      adapterVersion?: string;
+      adapterPid?: string;
+    },
   ) {}
 
   /** Call a named RPC method on the daemon, spawning it first if it isn't running. */
@@ -18,6 +23,7 @@ export class Forwarder {
         ...(this.opts.adapterVersion
           ? { "x-pitstop-adapter-version": this.opts.adapterVersion }
           : {}),
+        ...(this.opts.adapterPid ? { "x-pitstop-adapter-pid": this.opts.adapterPid } : {}),
       },
       body: JSON.stringify({ method, params }),
     });

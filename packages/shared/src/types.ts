@@ -161,7 +161,15 @@ export type SseEvent =
    * Deduped per (projectRoot, adapterVersion) so it fires once per stale
    * subprocess, not per RPC call.
    */
-  | { type: "stale-adapter"; adapterVersion: string; daemonVersion: string };
+  | {
+      type: "stale-adapter";
+      adapterVersion: string;
+      daemonVersion: string;
+      /** PID of the stale MCP subprocess so the drawer banner can name it
+       *  ("kill 32146 then quit + relaunch CC") instead of leaving the
+       *  user to guess which of their CC instances is the stale one. */
+      adapterPid?: string;
+    };
 
 export type PokeKind =
   | { kind: "claude-resume" }

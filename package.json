@@ -7,7 +7,8 @@
     "test": "bun test",
     "lint": "biome check --write .",
     "setup": "bun run scripts/setup.ts",
-    "release": "bun run scripts/release.ts"
+    "release": "bun run scripts/release.ts",
+    "refresh-local": "bun run scripts/refresh-local.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

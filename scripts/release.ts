@@ -193,3 +193,10 @@ if (ghResult.status !== 0) {
 
 console.log(`✓ released ${tag}`);
 console.log(`  https://github.com/AmmDuncan/pitstop/releases/tag/${tag}`);
+console.log("");
+console.log("Local processes are still on the OLD code in memory. When you're");
+console.log("ready to refresh them (kills daemon + every running MCP subprocess),");
+console.log("run:  bun run refresh-local");
+console.log("");
+console.log("Skip if you have pitstop sessions in progress — refreshing now would");
+console.log("drop their SSE connections and yank tool access from any active chat.");

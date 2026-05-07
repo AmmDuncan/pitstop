@@ -80,6 +80,7 @@ export const App: Component = () => {
         setStaleAdapterWarning({
           adapterVersion: e.adapterVersion,
           daemonVersion: e.daemonVersion,
+          adapterPid: e.adapterPid,
         });
         return;
       }

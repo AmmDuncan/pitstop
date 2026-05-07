@@ -130,12 +130,30 @@ export const tools = {
         description: `pitstop unread responses · session ${session.id}`,
         persistent: true,
       },
+      // Cross-tool inversion table — read once at session start, sticks
+      // better than steering buried in long tool descriptions. The mirror
+      // dual-surface rule for narrate (last bullet) is the load-bearing
+      // one: chat-only beats during a session never reach the user-in-
+      // drawer, fail silently, look like the agent is hung.
+      activeSessionRules: {
+        conversationalBeat: "narrate(narration) — feed line, no state effects",
+        surfaceArrival: "mark_addressing(itemId, narration[, arrived]) — pairs with set_current_item",
+        blockingQuestion:
+          "ask_user(question[, options]) — banner in drawer; pair with chat-mirror per its dual-surface rule",
+        commentHandled:
+          "agent_address_comment(itemId, narration) — flips pip to cyan ↻ when you've shipped/decided",
+        chatAnswerToAskUser:
+          "dismiss_pending_question(sessionId, answer?) — clears banner when user answered in chat instead of drawer",
+        anyChatBeatTheUserInDrawerNeeds:
+          "ALSO narrate it — the drawer is canonical for in-flight beats while a session is live; chat-only is invisible to the user. Mirror rule (cf. ask_user's drawer→chat dual-surface).",
+      },
       // Hint: load these via ToolSearch up front so the agent doesn't
       // reach for AskUserQuestion (or do per-call ToolSearch latency)
       // mid-session. ask_user listed first because the steering against
       // AskUserQuestion only sticks if the agent has the tool loaded.
       toolsToPreload: [
         "mcp__pitstop__ask_user",
+        "mcp__pitstop__dismiss_pending_question",
         "mcp__pitstop__narrate",
         "mcp__pitstop__mark_addressing",
         "mcp__pitstop__agent_address_comment",
@@ -396,6 +414,53 @@ export const tools = {
       type: "agent-activity",
       sessionId,
       entry: { at, tool: "ask_user", narration: `❓ ${question}`, itemId },
+    });
+    ctx.bus.publish(sessionId, { type: "state-changed", session });
+    return { ok: true };
+  },
+
+  /**
+   * Clear an in-flight `pendingQuestion` from the session. Use when the
+   * user answered the question via chat instead of clicking an option in
+   * the drawer — the agent has the answer, but pitstop has no idea
+   * (the only normal clear path is an `answer`-kind response landing on
+   * `/api/sessions/:id/responses`, which only the drawer's banner clicks
+   * trigger). Without this, the drawer banner stays up indefinitely
+   * looking unanswered.
+   *
+   * If `answer` is provided, also pushes an `answer`-kind response so the
+   * session's history shows what the agent acted on (transparency for
+   * future `get_state` reads + the drawer's response timeline).
+   */
+  async dismiss_pending_question(ctx: Ctx, params: unknown) {
+    const P = z.object({
+      sessionId: z.string(),
+      answer: z.string().optional(),
+    });
+    const { sessionId, answer } = P.parse(params);
+    const at = Date.now();
+    const session = await ctx.store.update(sessionId, (s) => {
+      if (!s.pendingQuestion) return s;
+      const responses = answer
+        ? [
+            ...s.responses,
+            {
+              itemId: s.pendingQuestion.itemId ?? s.items[0]?.id ?? "",
+              kind: "answer" as const,
+              body: answer,
+              questionText: s.pendingQuestion.question,
+              at,
+              addressed: true,
+            },
+          ]
+        : s.responses;
+      return {
+        ...s,
+        pendingQuestion: undefined,
+        responses,
+        lastAgentActivityAt: at,
+        pokeFailed: false,
+      };
     });
     ctx.bus.publish(sessionId, { type: "state-changed", session });
     return { ok: true };

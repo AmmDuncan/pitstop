@@ -54,21 +54,24 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
   const drawerSeen = new Map<string, number>();
 
   /** Dedupe set for stale-adapter notifications. Keyed by
-   *  `${projectRoot}|${adapterVersion}`. Once we publish a stale-adapter
-   *  event for a (projectRoot, adapter version) tuple we won't republish
-   *  for it from the same daemon process — the drawer banner only needs to
-   *  appear once per stale subprocess, not per RPC. Cleared on daemon
-   *  restart, which is the same event that would clear the staleness
-   *  problem in practice. */
+   *  `${projectRoot}|${adapterVersion}|${adapterPid}`. Once we publish a
+   *  stale-adapter event for a tuple we won't republish for it from the
+   *  same daemon process — the drawer banner only needs to appear once
+   *  per stale subprocess, not per RPC. Cleared on daemon restart. */
   const notifiedStaleAdapters = new Set<string>();
-  const notifyStaleAdapter = (projectRoot: string, adapterVersion: string): void => {
-    const key = `${projectRoot}|${adapterVersion}`;
+  const notifyStaleAdapter = (
+    projectRoot: string,
+    adapterVersion: string,
+    adapterPid: string | undefined,
+  ): void => {
+    const key = `${projectRoot}|${adapterVersion}|${adapterPid ?? ""}`;
     if (notifiedStaleAdapters.has(key)) return;
     notifiedStaleAdapters.add(key);
     bus.publishToProject(projectRoot, {
       type: "stale-adapter",
       adapterVersion,
       daemonVersion: DAEMON_VERSION,
+      adapterPid,
     });
   };
 
@@ -411,6 +414,7 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     try {
       const clientSessionId = c.req.header("x-client-session-id") ?? undefined;
       const adapterVersion = c.req.header("x-pitstop-adapter-version") ?? undefined;
+      const adapterPid = c.req.header("x-pitstop-adapter-pid") ?? undefined;
       const adapterStale = adapterVersion !== undefined && adapterVersion !== DAEMON_VERSION;
       const params = parsed.data.params as
         | { sessionId?: string; projectRoot?: string }
@@ -448,7 +452,7 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
       // lobby so the drawer can prompt the user to restart Claude Code.
       if (adapterStale && adapterVersion) {
         const projectRoot = existingSession?.projectRoot ?? params?.projectRoot;
-        if (projectRoot) notifyStaleAdapter(projectRoot, adapterVersion);
+        if (projectRoot) notifyStaleAdapter(projectRoot, adapterVersion, adapterPid);
       }
       const baseUrl = `http://localhost:${opts.port}`;
       const result = await fn(

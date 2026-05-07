@@ -200,6 +200,7 @@ export function isSessionSwitchDismissed(id: string): boolean {
 export const [staleAdapterWarning, setStaleAdapterWarning] = createSignal<{
   adapterVersion: string;
   daemonVersion: string;
+  adapterPid?: string;
 } | null>(null);
 export function dismissStaleAdapterWarning(): void {
   setStaleAdapterWarning(null);
