@@ -492,11 +492,35 @@ const server = new Server({ name: "pitstop", version: "0.3.51" }, { capabilities
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
+  // PROBE — dump parsed tool-call request looking for a session id source.
+  // Remove after the binding mechanism is figured out.
+  try {
+    const fs = await import("node:fs");
+    fs.appendFileSync(
+      "/tmp/pitstop-probe.log",
+      `${JSON.stringify({ kind: "tool-call", ts: Date.now(), req })}\n`,
+    );
+  } catch {}
   const result = await fwd.call(req.params.name, req.params.arguments ?? {});
   return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 });
 
-await server.connect(new StdioServerTransport());
+const transport = new StdioServerTransport();
+await server.connect(transport);
+// PROBE — wrap onmessage AFTER connect (Server.connect is what sets it). This
+// is the only place we can see raw JSON-RPC frames before the SDK's Zod
+// parsers strip unknown fields like a session id buried in `_meta`.
+const originalOnmessage = transport.onmessage?.bind(transport);
+transport.onmessage = (msg) => {
+  try {
+    const fs = require("node:fs");
+    fs.appendFileSync(
+      "/tmp/pitstop-probe.log",
+      `${JSON.stringify({ kind: "raw", ts: Date.now(), msg })}\n`,
+    );
+  } catch {}
+  originalOnmessage?.(msg);
+};
 
 // Keep the event loop alive for the lifetime of the process.
 // Listening for stdin 'end'/'close' fires prematurely under Claude Code's stdio
