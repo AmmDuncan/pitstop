@@ -829,37 +829,13 @@
 .tag.complete .label-cell {
   color: var(--ok);
 }
-.tag .pulse-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--amber);
-  animation: pulse 1.5s ease-in-out infinite;
-}
 .tag .static-dot {
   width: 6px;
   height: 6px;
   background: var(--t3);
 }
-.tag .ok-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--ok);
-}
 .tag.complete .static-dot {
   background: var(--ok);
-}
-
-/* Slim variant — used while the agent is narrating into AgentFeed at the
-   bottom of the drawer, so the header doesn't double-display the same
-   status text. Renders just the pulse dot in a tight square. */
-.tag.tag-slim {
-  grid-template-columns: auto;
-  width: 22px;
-  max-width: 22px;
-  padding: 0;
-}
-.tag.tag-slim .dot-cell {
-  padding: 0;
 }
 
 /* Pip strip — horizontal item list */

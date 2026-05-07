@@ -25,28 +25,24 @@ export function derivePill(session: Session | null): { state: PillState; label: 
 export const StatusTag: Component<{ pill: ReturnType<typeof derivePill>; onRetry?: () => void }> = (
   props,
 ) => {
-  // Narration-driven states (addressing/working/writing) are surfaced by the
-  // AgentFeed at the bottom of the drawer — render a slim dot-only variant
-  // here so the header stays content-light.
-  const narrating = () =>
-    props.pill.state === "addressing" || props.pill.state === "working" || props.pill.state === "writing";
+  // Narration-driven states (addressing/working/writing) are owned by the
+  // AgentFeed at the bottom of the drawer — no need to also render a chip
+  // up here. We only surface the StatusTag for states the feed doesn't
+  // cover: failed (POKE_FAILED → click to retry) and complete.
+  const renderable = () => props.pill.state === "failed" || props.pill.state === "complete";
 
   return (
-    <Show when={props.pill.state !== "idle"}>
+    <Show when={renderable()}>
       <span
         class={`tag ${props.pill.state}`}
-        classList={{ "tag-slim": narrating() }}
         onClick={props.pill.state === "failed" ? props.onRetry : undefined}
         style={props.pill.state === "failed" ? { cursor: "pointer" } : undefined}
-        title={narrating() ? props.pill.label : undefined}
       >
         <span class="dot-cell">
-          <span class={narrating() ? "pulse-dot" : "static-dot"} />
+          <span class="static-dot" />
         </span>
-        <Show when={!narrating()}>
-          <span class="rule-cell" />
-          <span class="label-cell">{props.pill.label}</span>
-        </Show>
+        <span class="rule-cell" />
+        <span class="label-cell">{props.pill.label}</span>
       </span>
     </Show>
   );
