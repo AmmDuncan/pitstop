@@ -3,9 +3,20 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 /**
+ * Test seam — production calls with no args (uses real homedir, cwd, ppid,
+ * env). Tests pass an isolated environment to exercise each fallback step
+ * without polluting the host machine's `~/.claude` or process env.
+ */
+export type ResolveOpts = {
+  homeDir?: string;
+  cwd?: string;
+  ppid?: number;
+  env?: NodeJS.ProcessEnv;
+};
+
+/**
  * Resolves the Claude Code session id that owns this MCP adapter process.
- * Used by the daemon to target `claude --resume <id>` pokes when the user
- * comments in the drawer. Tried in order:
+ * Used by the daemon to target `claude --resume <id>` pokes. Tried in order:
  *
  *   1. Env var override — manual `CLAUDE_CODE_SESSION_ID=...` for dev/testing.
  *      Also keeps `CLAUDE_SESSION_ID` working as a legacy fallback.
@@ -14,27 +25,30 @@ import { join } from "node:path";
  *      per-CC, robust against multi-CC concurrency in the same cwd.
  *   3. Transcript scan — most-recently-modified `.jsonl` in
  *      `~/.claude/projects/<encoded-cwd>/`, whose filename IS the session
- *      id. Best-effort fallback for users who haven't run setup; works
- *      because CC writes per-session transcripts and the active session is
- *      the one being appended to.
+ *      id. Best-effort fallback for users who haven't run setup.
  *
  * Resolved per-call (not cached) so a new CC session driving the same
- * pitstop sees its own id flow through; the daemon's rebind logic reattaches
- * the session record to whoever's currently calling.
+ * pitstop sees its own id flow through; the daemon's rebind logic
+ * reattaches the session record to whoever's currently calling.
  */
-export function resolveClientSessionId(): string | undefined {
-  const env = process.env.CLAUDE_CODE_SESSION_ID ?? process.env.CLAUDE_SESSION_ID;
-  if (env) return env;
+export function resolveClientSessionId(opts: ResolveOpts = {}): string | undefined {
+  const home = opts.homeDir ?? homedir();
+  const cwd = opts.cwd ?? process.cwd();
+  const ppid = opts.ppid ?? process.ppid;
+  const env = opts.env ?? process.env;
 
-  const hookFile = join(homedir(), ".claude", "pitstop", `cc-session-${process.ppid}.txt`);
+  const fromEnv = env.CLAUDE_CODE_SESSION_ID ?? env.CLAUDE_SESSION_ID;
+  if (fromEnv) return fromEnv;
+
+  const hookFile = join(home, ".claude", "pitstop", `cc-session-${ppid}.txt`);
   try {
     const id = readFileSync(hookFile, "utf-8").trim();
     if (id) return id;
   } catch {}
 
   try {
-    const encoded = process.cwd().replace(/\//g, "-");
-    const dir = join(homedir(), ".claude", "projects", encoded);
+    const encoded = cwd.replace(/\//g, "-");
+    const dir = join(home, ".claude", "projects", encoded);
     let bestId: string | undefined;
     let bestMtime = 0;
     for (const f of readdirSync(dir)) {
