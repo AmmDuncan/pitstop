@@ -7,6 +7,11 @@ import { PokeWatch } from "../lifecycle/poke-watch";
 import { Store } from "../store/sessions";
 import type { DaemonOpts } from "./server";
 import { Bus } from "./sse";
+// Bun supports JSON imports natively at runtime — release script bumps
+// packages/daemon/package.json so DAEMON_VERSION stays in sync.
+import pkg from "../../package.json" with { type: "json" };
+
+const DAEMON_VERSION: string = pkg.version;
 
 const DEFAULT_SCRIPTS_DIR = (() => {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -47,6 +52,25 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
   // /inject.js is served with `Cache-Control: no-cache`, so the browser
   // revalidates on every reload and we get a fresh signal each time.
   const drawerSeen = new Map<string, number>();
+
+  /** Dedupe set for stale-adapter notifications. Keyed by
+   *  `${projectRoot}|${adapterVersion}`. Once we publish a stale-adapter
+   *  event for a (projectRoot, adapter version) tuple we won't republish
+   *  for it from the same daemon process — the drawer banner only needs to
+   *  appear once per stale subprocess, not per RPC. Cleared on daemon
+   *  restart, which is the same event that would clear the staleness
+   *  problem in practice. */
+  const notifiedStaleAdapters = new Set<string>();
+  const notifyStaleAdapter = (projectRoot: string, adapterVersion: string): void => {
+    const key = `${projectRoot}|${adapterVersion}`;
+    if (notifiedStaleAdapters.has(key)) return;
+    notifiedStaleAdapters.add(key);
+    bus.publishToProject(projectRoot, {
+      type: "stale-adapter",
+      adapterVersion,
+      daemonVersion: DAEMON_VERSION,
+    });
+  };
 
   /** Spawn a `claude --resume` poke and arm the session for it: writes
    *  pokePid + pokeSpawnedAt, clears pokeFailed, broadcasts state-changed,
@@ -386,18 +410,33 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     if (!fn) return c.json({ error: `UNKNOWN_TOOL: ${parsed.data.method}` }, 404);
     try {
       const clientSessionId = c.req.header("x-client-session-id") ?? undefined;
+      const adapterVersion = c.req.header("x-pitstop-adapter-version") ?? undefined;
+      const adapterStale = adapterVersion !== undefined && adapterVersion !== DAEMON_VERSION;
+      const params = parsed.data.params as
+        | { sessionId?: string; projectRoot?: string }
+        | undefined;
+      // Single store.get for both self-heal and stale-adapter projectRoot
+      // lookup. start_review carries projectRoot directly in params; other
+      // tools take sessionId, so we read the session for its projectRoot.
+      let existingSession: Awaited<ReturnType<typeof store.get>> = null;
+      const needLookup =
+        params?.sessionId !== undefined && (clientSessionId !== undefined || adapterStale);
+      if (needLookup && params?.sessionId) {
+        existingSession = await store.get(params.sessionId);
+      }
       // Self-heal: backfill clientSessionId on any pre-existing session that
       // was created before the MCP adapter was reading the right env var
       // (CLAUDE_CODE_SESSION_ID, fixed in v0.3.43). Without this, sessions
-      // that pre-date the fix stay permanently unpokeable — every retry-poke
-      // would 400 NO_CLIENT_SESSION_ID forever. Now: the agent's next tool
-      // call on the session repairs it.
-      const params = parsed.data.params as { sessionId?: string } | undefined;
-      if (clientSessionId && params?.sessionId) {
-        const existing = await store.get(params.sessionId);
-        if (existing && !existing.clientSessionId) {
-          await store.update(params.sessionId, (s) => ({ ...s, clientSessionId }));
-        }
+      // that pre-date the fix stay permanently unpokeable.
+      if (existingSession && clientSessionId && !existingSession.clientSessionId && params?.sessionId) {
+        await store.update(params.sessionId, (s) => ({ ...s, clientSessionId }));
+      }
+      // Stale-adapter detection: if the MCP subprocess is running an older
+      // version than the daemon, broadcast a one-shot warning to the project
+      // lobby so the drawer can prompt the user to restart Claude Code.
+      if (adapterStale && adapterVersion) {
+        const projectRoot = existingSession?.projectRoot ?? params?.projectRoot;
+        if (projectRoot) notifyStaleAdapter(projectRoot, adapterVersion);
       }
       const baseUrl = `http://localhost:${opts.port}`;
       const result = await fn(

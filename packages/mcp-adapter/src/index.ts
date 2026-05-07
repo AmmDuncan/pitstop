@@ -14,7 +14,13 @@ const baseUrl = `http://localhost:${port}`;
 // "claude-resume requires clientSessionId") and every poke path silently
 // fails — which is exactly how this bug went unnoticed until v0.3.42.
 const clientSessionId = process.env.CLAUDE_CODE_SESSION_ID ?? process.env.CLAUDE_SESSION_ID;
-const fwd = new Forwarder({ baseUrl, clientSessionId });
+// Adapter version, sent on every RPC call as `x-pitstop-adapter-version`.
+// The daemon compares it to its own version and emits a stale-adapter
+// SSE event to the project lobby on mismatch — the drawer renders a banner
+// telling the user to restart Claude Code so the new dist is loaded.
+// Bumped by scripts/release.ts alongside the other version literals.
+const ADAPTER_VERSION = "0.3.47";
+const fwd = new Forwarder({ baseUrl, clientSessionId, adapterVersion: ADAPTER_VERSION });
 
 const ITEM_SCHEMA = {
   type: "object",

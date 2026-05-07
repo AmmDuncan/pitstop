@@ -3,7 +3,9 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 /** HTTP client that talks to the daemon's /api/rpc endpoint, auto-spawning the daemon if needed. */
 export class Forwarder {
-  constructor(private opts: { baseUrl: string; clientSessionId?: string }) {}
+  constructor(
+    private opts: { baseUrl: string; clientSessionId?: string; adapterVersion?: string },
+  ) {}
 
   /** Call a named RPC method on the daemon, spawning it first if it isn't running. */
   async call(method: string, params: unknown): Promise<unknown> {
@@ -13,6 +15,9 @@ export class Forwarder {
       headers: {
         "content-type": "application/json",
         ...(this.opts.clientSessionId ? { "x-client-session-id": this.opts.clientSessionId } : {}),
+        ...(this.opts.adapterVersion
+          ? { "x-pitstop-adapter-version": this.opts.adapterVersion }
+          : {}),
       },
       body: JSON.stringify({ method, params }),
     });

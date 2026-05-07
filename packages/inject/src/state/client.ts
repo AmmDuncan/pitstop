@@ -80,7 +80,9 @@ export function openEventStream(sessionId: string, on: (e: SseEvent) => void): (
 export function openProjectEventStream(projectRoot: string, on: (e: SseEvent) => void): () => void {
   const url = `${baseUrl}/api/projects/events?projectRoot=${encodeURIComponent(projectRoot)}`;
   const es = new EventSource(url);
-  es.addEventListener("session-hello", (m) => on(JSON.parse((m as MessageEvent).data)));
+  for (const t of ["session-hello", "stale-adapter"] as const) {
+    es.addEventListener(t, (m) => on(JSON.parse((m as MessageEvent).data)));
+  }
   return () => es.close();
 }
 

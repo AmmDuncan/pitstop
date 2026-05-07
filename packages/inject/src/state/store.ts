@@ -192,6 +192,20 @@ export function isSessionSwitchDismissed(id: string): boolean {
 }
 
 /**
+ * Stale-adapter warning — set when the daemon detects the MCP adapter
+ * subprocess is running an older version than itself. Drawer renders a
+ * banner above the metabar telling the user to restart Claude Code so the
+ * new dist is loaded. Dismissable per drawer mount; reload re-arms.
+ */
+export const [staleAdapterWarning, setStaleAdapterWarning] = createSignal<{
+  adapterVersion: string;
+  daemonVersion: string;
+} | null>(null);
+export function dismissStaleAdapterWarning(): void {
+  setStaleAdapterWarning(null);
+}
+
+/**
  * Per-item comment drafts. Survives component remount when the drawer collapses to strip
  * or position changes cause re-render. Cleared after successful submission.
  */

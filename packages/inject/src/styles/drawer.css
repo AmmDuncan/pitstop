@@ -2097,6 +2097,63 @@
   top: 3px;
 }
 
+/* Stale-adapter banner — shown when the daemon detects the running MCP
+   subprocess is from an older version than the daemon (CC didn't restart
+   the subprocess). Pinned absolute at the top of the drawer so it sits
+   above the metabar without disrupting the grid layout. Dismissable per
+   drawer mount via the small ×. */
+.stale-adapter-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 105;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 32px 6px 10px;
+  background: color-mix(in oklab, var(--err) 18%, var(--bg-paper));
+  border-bottom: 1px solid var(--err);
+  color: var(--err);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+}
+.stale-adapter-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.stale-adapter-msg {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.stale-adapter-msg .mono {
+  font-family: var(--mono);
+  color: var(--err);
+}
+.stale-adapter-dismiss {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  color: var(--err);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.stale-adapter-dismiss:hover {
+  background: color-mix(in oklab, var(--err) 12%, transparent);
+}
+
 /* Session-switch prompt — drawer-internal overlay shown when a `session-hello`
    arrives for a different session id while the current one is still active.
    Backdrop dims the drawer; clicking it = STAY (graceful escape). The card

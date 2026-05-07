@@ -8,6 +8,7 @@ import {
   session,
   setCloser,
   setPendingSessionSwitch,
+  setStaleAdapterWarning,
   switchToSession,
 } from "../state/store";
 import { Drawer } from "./Drawer";
@@ -75,6 +76,13 @@ export const App: Component = () => {
   const openLobby = () => {
     if (lobbyClose || !projectRoot || isExtensionMode) return;
     lobbyClose = openProjectEventStream(projectRoot, async (e) => {
+      if (e.type === "stale-adapter") {
+        setStaleAdapterWarning({
+          adapterVersion: e.adapterVersion,
+          daemonVersion: e.daemonVersion,
+        });
+        return;
+      }
       if (e.type !== "session-hello") return;
       const incoming = e.session;
       if (session.s?.id === incoming.id) return;

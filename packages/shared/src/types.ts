@@ -152,7 +152,16 @@ export type SseEvent =
       sessionId: string;
       position?: "right" | "left" | "floating";
       size?: "standard" | "compact" | "strip";
-    };
+    }
+  /**
+   * Published on the project lobby when the daemon detects an MCP adapter
+   * subprocess running an older version than the daemon (likely a stale
+   * subprocess CC didn't restart on relaunch). Drawer renders a banner
+   * telling the user to fully quit + relaunch CC so the new dist is loaded.
+   * Deduped per (projectRoot, adapterVersion) so it fires once per stale
+   * subprocess, not per RPC call.
+   */
+  | { type: "stale-adapter"; adapterVersion: string; daemonVersion: string };
 
 export type PokeKind =
   | { kind: "claude-resume" }

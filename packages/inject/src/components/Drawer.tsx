@@ -27,6 +27,7 @@ import { ResizeHandle } from "./ResizeHandle";
 import { ReviewComplete } from "./ReviewComplete";
 import { ReviewSummary } from "./ReviewSummary";
 import { SessionSwitchPrompt } from "./SessionSwitchPrompt";
+import { StaleAdapterBanner } from "./StaleAdapterBanner";
 import { UpdateChip, updateChipShown } from "./UpdateChip";
 
 /** Diagnostic chip showing the Claude Code session this pitstop is bound to.
@@ -213,6 +214,7 @@ export const Drawer: Component = () => {
               </div>
             }
           >
+            <StaleAdapterBanner />
             <div class="metabar">
               <span>~/.claude/pitstop/sessions/{session.s?.id}.json</span>
               <span class="center">S#{session.s?.id}</span>

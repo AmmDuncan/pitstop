@@ -121,17 +121,25 @@ for (const file of PACKAGES) {
 // Sync the MCP server identity version string. The Server constructor in
 // mcp-adapter/src/index.ts hardcodes a `version: "x.y.z"` literal; if it
 // drifts from the package version, `claude mcp list` shows a stale tag and
-// nothing else fails noisily. Patch it in place.
+// nothing else fails noisily. Patch it in place. Same file also has an
+// `ADAPTER_VERSION` constant the Forwarder sends as a header so the daemon
+// can detect a stale subprocess (added v0.3.48); patch both.
 const adapterSrc = "packages/mcp-adapter/src/index.ts";
-const adapterPattern = /(name:\s*"pitstop",\s*version:\s*")[\d.]+(")/;
+const adapterPatterns: { label: string; pattern: RegExp }[] = [
+  { label: "Server version literal", pattern: /(name:\s*"pitstop",\s*version:\s*")[\d.]+(")/ },
+  { label: "ADAPTER_VERSION constant", pattern: /(const\s+ADAPTER_VERSION\s*=\s*")[\d.]+(")/ },
+];
 const original = await readFile(adapterSrc, "utf8");
-if (!adapterPattern.test(original)) {
-  console.error(`  could not find Server({ name: "pitstop", version: ... }) literal in ${adapterSrc}`);
-  process.exit(1);
+let patched = original;
+for (const { label, pattern } of adapterPatterns) {
+  if (!pattern.test(patched)) {
+    console.error(`  could not find ${label} in ${adapterSrc}`);
+    process.exit(1);
+  }
+  patched = patched.replace(pattern, `$1${version}$2`);
 }
-const patched = original.replace(adapterPattern, `$1${version}$2`);
 if (patched !== original) await writeFile(adapterSrc, patched);
-console.log(`  ${adapterSrc} (Server version literal)`);
+console.log(`  ${adapterSrc} (Server version literal + ADAPTER_VERSION)`);
 console.log("");
 
 // 5. Rebuild inject so the published bundle reflects this version.
