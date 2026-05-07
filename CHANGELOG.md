@@ -2,6 +2,21 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.53 — 2026-05-07
+
+### Changed
+- **Drawer: SEND_COMMENT stays available during AWAITING / POKED.** The lifecycle strip used to replace both action buttons whenever the agent was processing — fine for sub-second SENDING, but AWAITING can last minutes during real agent work, leaving the user typing into a textarea they couldn't submit from. Now SEND_COMMENT is enabled and LOOKS_GOOD renders disabled with a tooltip ("Agent is addressing your comment — wait for it to land, or send another comment.") so the dual-button layout stays stable across all states. The strip drops below the actions row as a status footer with the elapsed timer and POKE button.
+
+### Added
+- **Agent steering: stop punting "could you check this in the browser?"** Two complementary nudges so the model reaches for `start_review` instead of asking the user to manually verify:
+  - UserPromptSubmit hook (`pitstop-context.sh`) now also queries the new `GET /api/wired` endpoint. When the daemon's `drawerSeen` map shows a recent `/inject.js` fetch for `$PWD` (within `DRAWER_FRESHNESS_MS`, the same 10-min window `start_review`'s `drawerStatus` already uses), the hook prints a one-paragraph steering line. Silent on non-pitstop projects.
+  - `activeSessionRules.verificationSurface`: new entry in `start_review`'s response — *"ANY surface the user needs to verify, check, or look at — call start_review or add_items, never 'could you check this in the browser?'"* — so the model sees the same nudge in every active-session tool description.
+- `GET /api/wired?projectRoot=...` — daemon endpoint exposing whether the drawer has been seen recently for a given project. Backed by 3 new tests.
+
+### Internal
+- `DRAWER_FRESHNESS_MS` exported from `packages/daemon/src/tools/index.ts` as a single source of truth for both `start_review`'s `drawerStatus.connected` check and the new `/api/wired` query.
+- Hook curls have `--max-time 2` so a stuck daemon can't hold up the user's prompt.
+
 ## v0.3.52 — 2026-05-07
 
 ### Fixed
