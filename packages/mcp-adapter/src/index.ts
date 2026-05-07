@@ -431,7 +431,7 @@ ${ASK_USER_CROSSREF}`,
   },
 ];
 
-const server = new Server({ name: "pitstop", version: "0.3.46" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "pitstop", version: "0.3.47" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {

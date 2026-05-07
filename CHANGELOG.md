@@ -2,6 +2,29 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.47 — 2026-05-07
+
+Single audit pass over the codebase. One real bug fix, the rest are quality and efficiency wins. No behavior changes outside the named bug.
+
+### Fixes
+
+- **ItemListSheet response precedence (real bug)**: the all-items list sheet had `comment` beating `approve`, so an item the user approved AFTER commenting still showed the comment glyph (`•`) instead of the approval glyph (`✓`). PipStrip had the correct precedence (approve always wins); ItemListSheet now matches.
+
+### Daemon
+
+- **`Store.update` throws `"NOT_FOUND"`** so the `/api/rpc` handler maps missing-session errors cleanly to HTTP 404. Callers (`get_state`, `agent_address_comment`, `set_current_item`, `set_drawer`, `/status` POST) drop their pre-flight `store.get` and let `update` propagate. Item-id validation moves into the updater closure so the session is read exactly once per tool call instead of twice.
+- **`armPoke` helper** centralizes the `pokePid` / `pokeSpawnedAt` / `pokeFailed` update + `bus.publish` + `pokeWatch.arm` sequence. Used by resume-from-pause, comment-poke, and retry-poke (was 3 near-identical copies of ~40 lines each). Each caller still owns its `exited.then` cleanup since drain logic differs per site.
+- **`appendActivity` helper** for the `agentActivity` ring-buffer cap. Was 5 inline `.slice(-50)` sites with the magic number; now one helper, one constant.
+- **`Store.list` parallel reads** via `Promise.all` + skips the redundant per-file `existsSync` (readdir already enumerated them).
+- **Lazy `ensureDir`** in `Store` replaces the per-write `mkdir` in `writeAtomic` — one syscall per process instead of one per write.
+- **`wire-drawer`'s `detectFramework`** parses `package.json` once per call instead of up to 6× (one per `hasPkgDep` check).
+
+### Drawer
+
+- **`AgentFeed.all` and `Detail.itemAddressed`** wrapped in `createMemo` so `visible` / `olderCount` / `unreadCount` / `markSeen` (and `stripState`) don't recompute the same filter+reverse on every reactive read.
+- **`modes.ts` localStorage write batches via `requestAnimationFrame`** — one write per frame instead of one per `pointermove` during a floating-drawer drag.
+- **`Footer` / `ReviewSummary` / `UpdateChip`** route through new `client.ts` `patchSessionStatus` / existing `submitResponse` helpers instead of hand-rolling the same `fetch`. Single boundary for HTTP calls from drawer components.
+
 ## v0.3.46 — 2026-05-07
 
 ### UX
