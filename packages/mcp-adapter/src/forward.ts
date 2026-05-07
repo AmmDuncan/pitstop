@@ -6,7 +6,12 @@ export class Forwarder {
   constructor(
     private opts: {
       baseUrl: string;
-      clientSessionId?: string;
+      /**
+       * Resolves the CC session id to send as `x-client-session-id` on each
+       * RPC. Called per-call so a CC restart (with a new session id) flows
+       * through immediately — pairs with the daemon's rebind logic.
+       */
+      resolveClientSessionId: () => string | undefined;
       adapterVersion?: string;
       adapterPid?: string;
     },
@@ -15,11 +20,12 @@ export class Forwarder {
   /** Call a named RPC method on the daemon, spawning it first if it isn't running. */
   async call(method: string, params: unknown): Promise<unknown> {
     await this.ensureDaemon();
+    const clientSessionId = this.opts.resolveClientSessionId();
     const res = await fetch(`${this.opts.baseUrl}/api/rpc`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        ...(this.opts.clientSessionId ? { "x-client-session-id": this.opts.clientSessionId } : {}),
+        ...(clientSessionId ? { "x-client-session-id": clientSessionId } : {}),
         ...(this.opts.adapterVersion ? { "x-pitstop-adapter-version": this.opts.adapterVersion } : {}),
         ...(this.opts.adapterPid ? { "x-pitstop-adapter-pid": this.opts.adapterPid } : {}),
       },

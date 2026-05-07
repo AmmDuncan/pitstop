@@ -33,6 +33,7 @@ const CLAUDE_JSON = join(HOME, ".claude.json");
 const SETTINGS_JSON = join(HOME, ".claude", "settings.json");
 const ADAPTER_DIST = join(REPO_ROOT, "packages/mcp-adapter/dist/index.js");
 const HOOK_SCRIPT = join(REPO_ROOT, "packages/scripts/pitstop-context.sh");
+const SESSION_ID_HOOK = join(REPO_ROOT, "packages/scripts/pitstop-session-id.sh");
 
 function step(msg: string) {
   console.log(`\n▸ ${msg}`);
@@ -104,22 +105,32 @@ if (existing && JSON.stringify(existing) === JSON.stringify(desired)) {
   ok("registered");
 }
 
-// ─── 3. Install UserPromptSubmit hook ─────────────────────────────────────
-step(`installing UserPromptSubmit hook in ${SETTINGS_JSON}`);
+// ─── 3. Install hooks ─────────────────────────────────────────────────────
+step(`installing hooks in ${SETTINGS_JSON}`);
 const settings = await readJson(SETTINGS_JSON);
 settings.hooks ??= {};
-settings.hooks.UserPromptSubmit ??= [];
 type HookEntry = { hooks: Array<{ type: string; command: string }> };
-const ourHook: HookEntry = { hooks: [{ type: "command", command: HOOK_SCRIPT }] };
-const alreadyInstalled = (settings.hooks.UserPromptSubmit as HookEntry[]).some((entry) =>
-  entry.hooks?.some((h) => h.command === HOOK_SCRIPT),
-);
-if (alreadyInstalled) {
-  ok("already installed");
-} else {
-  (settings.hooks.UserPromptSubmit as HookEntry[]).push(ourHook);
+
+function installHook(eventName: string, scriptPath: string, label: string) {
+  settings.hooks[eventName] ??= [];
+  const list = settings.hooks[eventName] as HookEntry[];
+  const already = list.some((entry) => entry.hooks?.some((h) => h.command === scriptPath));
+  if (already) {
+    ok(`${label}: already installed`);
+    return false;
+  }
+  list.push({ hooks: [{ type: "command", command: scriptPath }] });
+  ok(`${label}: installed`);
+  return true;
+}
+
+// UserPromptSubmit: surfaces unread responses as context on every prompt.
+// SessionStart: captures CC session id so the MCP adapter can bind for pokes —
+// CC doesn't pass it via env or JSON-RPC, so the hook is the bridge.
+const promptHookAdded = installHook("UserPromptSubmit", HOOK_SCRIPT, "UserPromptSubmit (unread-context)");
+const sessionHookAdded = installHook("SessionStart", SESSION_ID_HOOK, "SessionStart (bind session-id)");
+if (promptHookAdded || sessionHookAdded) {
   await writeJson(SETTINGS_JSON, settings);
-  ok("installed");
 }
 
 // ─── 4. Sanity-check Claude Code presence ─────────────────────────────────

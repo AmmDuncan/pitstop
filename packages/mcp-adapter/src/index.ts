@@ -3,30 +3,18 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { Forwarder } from "./forward";
+import { resolveClientSessionId } from "./session-id";
 
 const port = Number(process.env.PITSTOP_PORT ?? 7773);
 const baseUrl = `http://localhost:${port}`;
-// Claude Code exposes the session id as CLAUDE_CODE_SESSION_ID (verified
-// empirically; see https://github.com/anthropics/claude-code/issues/25642 —
-// not officially documented as a stable API). The CLAUDE_SESSION_ID fallback
-// keeps any one-off CLAUDE_SESSION_ID= env overrides working. Without this
-// id, the daemon's claude-resume poke can't wake the agent (it throws
-// "claude-resume requires clientSessionId") and every poke path silently
-// fails — which is exactly how this bug went unnoticed until v0.3.42.
-const clientSessionId = process.env.CLAUDE_CODE_SESSION_ID ?? process.env.CLAUDE_SESSION_ID;
 // Adapter version, sent on every RPC call as `x-pitstop-adapter-version`.
-// The daemon compares it to its own version and emits a stale-adapter
-// SSE event to the project lobby on mismatch — the drawer renders a banner
-// telling the user to restart Claude Code so the new dist is loaded.
-// Bumped by scripts/release.ts alongside the other version literals.
+// Daemon emits a stale-adapter SSE event on mismatch so the drawer can prompt
+// the user to restart CC. Bumped by scripts/release.ts alongside the others.
 const ADAPTER_VERSION = "0.3.51";
-// Sent alongside the version so the daemon's stale-adapter banner can name
-// the exact pid you need to kill — no more "which of my five Claude Code
-// instances is the stale one?" guess game.
 const ADAPTER_PID = String(process.pid);
 const fwd = new Forwarder({
   baseUrl,
-  clientSessionId,
+  resolveClientSessionId,
   adapterVersion: ADAPTER_VERSION,
   adapterPid: ADAPTER_PID,
 });
@@ -492,35 +480,11 @@ const server = new Server({ name: "pitstop", version: "0.3.51" }, { capabilities
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
-  // PROBE — dump parsed tool-call request looking for a session id source.
-  // Remove after the binding mechanism is figured out.
-  try {
-    const fs = await import("node:fs");
-    fs.appendFileSync(
-      "/tmp/pitstop-probe.log",
-      `${JSON.stringify({ kind: "tool-call", ts: Date.now(), req })}\n`,
-    );
-  } catch {}
   const result = await fwd.call(req.params.name, req.params.arguments ?? {});
   return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 });
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
-// PROBE — wrap onmessage AFTER connect (Server.connect is what sets it). This
-// is the only place we can see raw JSON-RPC frames before the SDK's Zod
-// parsers strip unknown fields like a session id buried in `_meta`.
-const originalOnmessage = transport.onmessage?.bind(transport);
-transport.onmessage = (msg) => {
-  try {
-    const fs = require("node:fs");
-    fs.appendFileSync(
-      "/tmp/pitstop-probe.log",
-      `${JSON.stringify({ kind: "raw", ts: Date.now(), msg })}\n`,
-    );
-  } catch {}
-  originalOnmessage?.(msg);
-};
+await server.connect(new StdioServerTransport());
 
 // Keep the event loop alive for the lifetime of the process.
 // Listening for stdin 'end'/'close' fires prematurely under Claude Code's stdio

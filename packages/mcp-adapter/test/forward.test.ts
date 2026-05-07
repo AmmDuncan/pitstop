@@ -17,7 +17,10 @@ beforeAll(() => {
 afterAll(() => server.stop());
 
 test("Forwarder.call hits /api/rpc and returns the result", async () => {
-  const fwd = new Forwarder({ baseUrl: `http://localhost:${port}`, clientSessionId: "cs-1" });
+  const fwd = new Forwarder({
+    baseUrl: `http://localhost:${port}`,
+    resolveClientSessionId: () => "cs-1",
+  });
   const result = await fwd.call("start_review", {
     projectRoot: "/tmp/p",
     items: [{ title: "T", body: "B" }],
