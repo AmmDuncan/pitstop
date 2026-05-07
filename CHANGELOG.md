@@ -2,6 +2,25 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.48 — 2026-05-07
+
+### Stale MCP adapter detection
+
+Closes the loop on the unbound-state recovery story. Even after the v0.3.43 env-var fix, you could end up with a Claude Code instance running an old MCP subprocess in memory while a newer dist sits on disk — typically when CC's "restart" doesn't actually kill the subprocess. The drawer had no way to surface this; you'd discover it only by symptom (`CLAUDE# UNBOUND`, pokes failing) followed by a `ps -ef | grep mcp-adapter` expedition.
+
+Now:
+
+- **MCP adapter sends `x-pitstop-adapter-version` on every RPC** (new `ADAPTER_VERSION` constant; release script regex bumps it alongside the existing `Server({version: ...})` literal).
+- **Daemon reads its own version** from `packages/daemon/package.json` at startup via Bun's native JSON imports.
+- **On any RPC where header version != daemon version**, the daemon publishes a one-shot `stale-adapter` SSE event to the project lobby. Deduped per `(projectRoot, adapterVersion)` so a stale subprocess doesn't spam every RPC.
+- **Drawer's always-on lobby subscriber** catches it and renders a banner pinned at the top of the drawer:
+
+  > ⚠ MCP adapter is v0.3.42, daemon is v0.3.47 — fully quit Claude Code (Cmd+Q) and relaunch so the new adapter loads.
+
+  Banner is dismissable per drawer mount via a small ×. Reload re-arms.
+
+The daemon-side projectRoot lookup reuses the existing self-heal `store.get` so healthy sessions pay zero extra disk read.
+
 ## v0.3.47 — 2026-05-07
 
 Single audit pass over the codebase. One real bug fix, the rest are quality and efficiency wins. No behavior changes outside the named bug.
