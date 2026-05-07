@@ -24,6 +24,24 @@ export const Detail: Component = () => {
   const itemId = () => item()?.id ?? "";
   const comment = () => getDraft(itemId());
 
+  /** Scroll the detail body. Pass `"bottom"` to land on the action area /
+   *  lifecycle strip after submit; pass `0` to land on the item title for
+   *  navigation. Schedules through rAF so multiple effects in the same
+   *  reactive tick collapse to the last `scrollTo` call (last write wins —
+   *  used intentionally to let scroll-to-top override scroll-to-bottom on
+   *  item-change submits). */
+  const scrollDetailTo = (target: number | "bottom") => {
+    requestAnimationFrame(() => {
+      const host = document.querySelector("pitstop-drawer") as unknown as {
+        shadowRoot: ShadowRoot | null;
+      } | null;
+      const scroll = host?.shadowRoot?.querySelector(".detail-scroll");
+      if (!scroll) return;
+      const top = target === "bottom" ? scroll.scrollHeight : target;
+      scroll.scrollTo({ top, behavior: "smooth" });
+    });
+  };
+
   // When the user submits (via mouse or keyboard), the action area is
   // replaced by a status strip. If they were scrolled up reading the item
   // body, the strip lands off-screen and they get no visual confirmation.
@@ -32,13 +50,7 @@ export const Detail: Component = () => {
   createEffect(() => {
     const ss = submitState();
     if (prevSubmitState === "idle" && (ss === "sending" || ss === "poked")) {
-      requestAnimationFrame(() => {
-        const host = document.querySelector("pitstop-drawer") as unknown as {
-          shadowRoot: ShadowRoot | null;
-        } | null;
-        const scroll = host?.shadowRoot?.querySelector(".detail-scroll");
-        if (scroll) scroll.scrollTo({ top: scroll.scrollHeight, behavior: "smooth" });
-      });
+      scrollDetailTo("bottom");
     }
     prevSubmitState = ss;
   });
@@ -87,16 +99,26 @@ export const Detail: Component = () => {
   let prevStripKind: string | null = null;
   createEffect(() => {
     const cur = stripState()?.kind ?? null;
-    if (prevStripKind && !cur) {
-      requestAnimationFrame(() => {
-        const host = document.querySelector("pitstop-drawer") as unknown as {
-          shadowRoot: ShadowRoot | null;
-        } | null;
-        const scroll = host?.shadowRoot?.querySelector(".detail-scroll");
-        if (scroll) scroll.scrollTo({ top: scroll.scrollHeight, behavior: "smooth" });
-      });
-    }
+    if (prevStripKind && !cur) scrollDetailTo("bottom");
     prevStripKind = cur;
+  });
+
+  // Navigation to a new item — agent's set_current_item, user's j/k, pip
+  // click, auto-advance after LOOKS_GOOD — should land the user at the top
+  // of the new item's content so they can read from the title down. If the
+  // submit-side scroll-to-bottom would otherwise fire from the same advance
+  // (LOOKS_GOOD → submitState=poked → scroll-to-bottom; setCurrentItemIdx
+  // → scroll-to-top), this effect's rAF callback runs in the same frame,
+  // and `scroll.scrollTo` is "set" semantics: the last call wins. So we
+  // implicitly favor scroll-to-top, which is the right priority — reading
+  // content beats seeing the action affordance.
+  let prevItemIdx = currentItemIdx();
+  createEffect(() => {
+    const idx = currentItemIdx();
+    if (idx !== prevItemIdx) {
+      prevItemIdx = idx;
+      scrollDetailTo(0);
+    }
   });
 
   const [stripStartedAt, setStripStartedAt] = createSignal<number | null>(null);
