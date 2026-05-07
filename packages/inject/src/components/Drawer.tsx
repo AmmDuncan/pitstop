@@ -26,6 +26,7 @@ import { PipStrip } from "./PipStrip";
 import { ResizeHandle } from "./ResizeHandle";
 import { ReviewComplete } from "./ReviewComplete";
 import { ReviewSummary } from "./ReviewSummary";
+import { SessionSwitchPrompt } from "./SessionSwitchPrompt";
 import { UpdateChip, updateChipShown } from "./UpdateChip";
 
 /** Diagnostic chip showing the Claude Code session this pitstop is bound to.
@@ -235,6 +236,7 @@ export const Drawer: Component = () => {
             <AgentFeed />
             <Footer />
           </Show>
+          <SessionSwitchPrompt />
           <Show when={helpOpen()}>
             <KeymapOverlay />
           </Show>

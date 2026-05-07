@@ -122,6 +122,22 @@ export const tools = {
         description: `pitstop unread responses · session ${session.id}`,
         persistent: true,
       },
+      // Hint: load these via ToolSearch up front so the agent doesn't
+      // reach for AskUserQuestion (or do per-call ToolSearch latency)
+      // mid-session. ask_user listed first because the steering against
+      // AskUserQuestion only sticks if the agent has the tool loaded.
+      toolsToPreload: [
+        "mcp__pitstop__ask_user",
+        "mcp__pitstop__narrate",
+        "mcp__pitstop__mark_addressing",
+        "mcp__pitstop__agent_address_comment",
+        "mcp__pitstop__set_current_item",
+        "mcp__pitstop__set_drawer",
+        "mcp__pitstop__get_unread_responses",
+        "mcp__pitstop__get_state",
+        "mcp__pitstop__add_items",
+        "mcp__pitstop__complete_review",
+      ],
       ...(update ? { update } : {}),
     };
   },

@@ -2097,6 +2097,72 @@
   top: 3px;
 }
 
+/* Session-switch prompt — drawer-internal overlay shown when a `session-hello`
+   arrives for a different session id while the current one is still active.
+   Backdrop dims the drawer; clicking it = STAY (graceful escape). The card
+   itself uses pitstop's existing button + spacing aesthetic. */
+.session-switch-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+.session-switch-card {
+  background: var(--bg-paper);
+  border: 1px solid var(--rule-3);
+  padding: 18px 18px 16px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.session-switch-eyebrow {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+.session-switch-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.session-switch-id {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--t1);
+}
+.session-switch-meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--t3);
+}
+.session-switch-body {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--t2);
+  margin: 0;
+}
+.session-switch-body .mono {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--t1);
+}
+.session-switch-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.session-switch-actions .btn {
+  flex: 1;
+  justify-content: center;
+}
+
 /* Keymap overlay */
 .keymap-overlay {
   position: absolute;

@@ -7,6 +7,12 @@ import { setPosition, setSize } from "./modes";
 export const [session, setSession] = createStore<{ s: Session | null }>({ s: null });
 export const [currentItemIdx, setCurrentItemIdx] = createSignal(0);
 
+/** Cleanup function for the EventSource bound to the current session. Hoisted
+ *  to module scope so both App.tsx (initial bootstrap, lobby auto-switch) and
+ *  SessionSwitchPrompt (user-initiated switch) can swap the bound session
+ *  cleanly without leaking SSE connections. */
+export const [closer, setCloser] = createSignal<() => void>(() => {});
+
 /** Indices of items that have no response yet (in order). */
 export const unreviewedIndices = createMemo<number[]>(() => {
   const items = session.s?.items ?? [];
@@ -151,6 +157,38 @@ export async function bootstrap(projectRoot: string | null): Promise<() => void>
     return openEventStream(initial.id, applyEvent);
   }
   return () => {};
+}
+
+/**
+ * Hot-swap the bound session without re-fetching from the API. Used when a
+ * `session-hello` payload already carries the full session shape — saves a
+ * round trip and avoids `fetchActiveSession`'s "first non-complete wins"
+ * non-determinism when multiple non-complete sessions coexist for the
+ * same projectRoot.
+ */
+export function switchToSession(s: Session): () => void {
+  setSession("s", s);
+  setCurrentItemIdx(0);
+  return openEventStream(s.id, applyEvent);
+}
+
+/**
+ * Pending switch prompt — set when a `session-hello` arrives on the project
+ * lobby for a different session id while the current one is still active
+ * (not complete). The drawer renders SessionSwitchPrompt; user picks
+ * SWITCH or STAY. STAY adds the id to `dismissedSessionIds` so we don't
+ * re-prompt for that specific session within this drawer mount. In-memory
+ * Set, NOT localStorage — the offer is fresh on every page load.
+ */
+export const [pendingSessionSwitch, setPendingSessionSwitch] = createSignal<Session | null>(null);
+
+const dismissedSessionIds = new Set<string>();
+export function dismissPendingSessionSwitch(id: string): void {
+  dismissedSessionIds.add(id);
+  setPendingSessionSwitch(null);
+}
+export function isSessionSwitchDismissed(id: string): boolean {
+  return dismissedSessionIds.has(id);
 }
 
 /**

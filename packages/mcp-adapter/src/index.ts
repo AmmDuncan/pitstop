@@ -70,18 +70,27 @@ PER ITEM:
 
 SPECIFICITY TEST: each bullet names ONE thing verifiable in <3 seconds. If it starts with "Looks good" / "Could be improved" / "Tested it" — delete it.`.trim();
 
+/** One-liner appended to every active-session tool description. The "use
+ *  ask_user, not AskUserQuestion" rule was previously buried only in
+ *  start_review's prose, which the agent reads once at session creation
+ *  and forgets hours later. Repeating it on every tool the agent reaches
+ *  for during a session puts the steering wherever the agent's eye lands. */
+const ASK_USER_CROSSREF =
+  "FOR QUESTIONS during this session: use `ask_user` (NOT Claude Code's `AskUserQuestion`). The user is parked in the drawer, not the chat — `AskUserQuestion` would hijack the chat with a modal and pull them out of flow.";
+
 const tools = [
   {
     name: "start_review",
-    description: `Start a pitstop review session. Returns { sessionId, url, drawerStatus, watcher, update? }.
+    description: `Start a pitstop review session. Returns { sessionId, url, drawerStatus, watcher, toolsToPreload, update? }.
 
 AFTER CALLING, in order:
 0. If drawerStatus.connected === false: STOP. Call wire_drawer({ projectRoot }) (same projectRoot), surface its options via AskUserQuestion, perform the file edit yourself, ask user to reload, retry start_review.
-1. If \`update\` is set in the response: ONCE, before driving anything, ask the user: "Pitstop has v\${update.latest} out (you're on v\${update.current}). Want me to run \`cd \${update.installPath} && git pull && bun run setup\` and restart the daemon?" If they say yes, run via Bash (Claude Code's permission gate handles consent). If they say no or ignore the prompt, carry on normally — the offer is one-shot, never re-ask mid-review.
-2. Invoke Monitor with watcher.command / watcher.description / watcher.persistent verbatim.
-3. Drive the user's tab to item 1's surface (Claude in Chrome or agent-browser).
-4. Call set_current_item + mark_addressing for that item.
-5. Wait. On every Monitor notification: get_unread_responses → decide → drive next surface → repeat.
+1. PRELOAD: If \`toolsToPreload\` is set, immediately call ToolSearch with \`select:<comma-separated names>\` so every pitstop tool is available without per-call ToolSearch latency mid-review. The list is small (~10 tools); load them all up front. ask_user is in the list specifically so you don't reach for AskUserQuestion later out of habit.
+2. If \`update\` is set in the response: ONCE, before driving anything, ask the user: "Pitstop has v\${update.latest} out (you're on v\${update.current}). Want me to run \`cd \${update.installPath} && git pull && bun run setup\` and restart the daemon?" If they say yes, run via Bash (Claude Code's permission gate handles consent). If they say no or ignore the prompt, carry on normally — the offer is one-shot, never re-ask mid-review.
+3. Invoke Monitor with watcher.command / watcher.description / watcher.persistent verbatim.
+4. Drive the user's tab to item 1's surface (Claude in Chrome or agent-browser).
+5. Call set_current_item + mark_addressing for that item.
+6. Wait. On every Monitor notification: get_unread_responses → decide → drive next surface → repeat.
 
 WHILE THIS SESSION IS ACTIVE: prefer pitstop's ask_user tool over AskUserQuestion for any review-related question. The user is already looking at the drawer; AskUserQuestion would hijack the chat with a modal and pull them out. The ONLY exception is wiring/setup questions in step 0 above (because the drawer isn't connected yet).
 
@@ -143,7 +152,9 @@ ${AUTHORING_HINT}`,
     name: "get_unread_responses",
     description: `Drain all unread reviewer responses; marks them addressed atomically. Call this every time your Monitor watcher fires a stdout-line notification — that line means the reviewer pressed approve or sent a comment, and you need to read what they said before deciding what to do next. Returns an array; for each entry decide: navigate to the next item's surface (call set_current_item + mark_addressing), or, if it's a comment that requires action, fix the issue and add a follow-up item or carry on to the next.
 
-POSITIVE OBLIGATION on receiving a comment: your FIRST move is a narrate() acknowledgement beat ("Got it, looking now" / "Good catch — checking the spacing rule") sent within one tool call. THEN investigate. Silence after a comment reads as ignoring it; the reviewer is parked in the drawer and only sees the CLAUDE feed.`,
+POSITIVE OBLIGATION on receiving a comment: your FIRST move is a narrate() acknowledgement beat ("Got it, looking now" / "Good catch — checking the spacing rule") sent within one tool call. THEN investigate. Silence after a comment reads as ignoring it; the reviewer is parked in the drawer and only sees the CLAUDE feed.
+
+${ASK_USER_CROSSREF}`,
     inputSchema: { type: "object", required: ["sessionId"], properties: { sessionId: { type: "string" } } },
   },
   {
@@ -158,7 +169,9 @@ ARRIVED FLAG (controls when the action buttons unlock for the user):
 - arrived: false → mid-drive narration. Buttons stay hidden, AWAITING CLAUDE strip persists. Use this for every narration WHILE you're still navigating to / loading / setting up the surface.
 - arrived: true (default) → user can act on this item now. Buttons appear. Use this for the FINAL narration before you wait for the user's review (e.g. "Showing you the per-step wizard split — review now").
 
-If you only narrate once per item (arrive immediately), omit the flag — the default is true. If you narrate multiple times during driving, pass arrived: false on all but the last.`,
+If you only narrate once per item (arrive immediately), omit the flag — the default is true. If you narrate multiple times during driving, pass arrived: false on all but the last.
+
+${ASK_USER_CROSSREF}`,
     inputSchema: {
       type: "object",
       required: ["sessionId", "narration"],
@@ -198,12 +211,15 @@ The reviewer is parked in the drawer; they shouldn't have to look at the chat. T
 
 Heuristic: if you'd say it out loud watching over the reviewer's shoulder, send it to the feed.
 
-WHEN TO USE narrate vs mark_addressing vs agent_address_comment:
+WHEN TO USE narrate vs mark_addressing vs agent_address_comment vs ask_user:
 - narrate(): conversational beats. No pip change, no button toggle. Fire freely between calls.
 - mark_addressing(itemId): "I'm at this surface." Paired with set_current_item; toggles button visibility via the 'arrived' flag.
 - agent_address_comment(itemId): "I think I've handled your comment." Flips the pip to cyan ↻; called after fixing or acknowledging a comment, before set_current_item.
+- ask_user(question, options): "I need an answer to continue." Renders as a banner in the drawer with option buttons. Use whenever you'd otherwise reach for AskUserQuestion — narrate is for ambient reasoning, ask_user is for blocking questions.
 
-Keep narrations one short sentence in plain conversational language.`,
+Keep narrations one short sentence in plain conversational language.
+
+${ASK_USER_CROSSREF}`,
     inputSchema: {
       type: "object",
       required: ["sessionId", "narration"],
@@ -356,7 +372,9 @@ WHEN NOT TO CALL:
 PAIRING WITH mark_addressing:
 After agent_address_comment closes the comment, if you've shipped a fix the user should re-check, call mark_addressing(itemId, arrived: true, "Refresh to confirm") — that's what unlocks the action buttons again. agent_address_comment alone doesn't unlock buttons (intentional — pip flip is the agent's signal; user still needs to click LOOKS_GOOD to finalize).
 
-NOT a substitute for user approval — they retain final say (clicking LOOKS_GOOD on the cyan ↻ flips it to green).`,
+NOT a substitute for user approval — they retain final say (clicking LOOKS_GOOD on the cyan ↻ flips it to green).
+
+${ASK_USER_CROSSREF}`,
     inputSchema: {
       type: "object",
       required: ["sessionId", "itemId", "narration"],
@@ -385,7 +403,9 @@ WHEN TO USE:
 
 The narration is REQUIRED — it's appended to the agent feed at the bottom of the drawer so the user knows why the chrome just shifted. Plain language, one short sentence ("Drawer covered the Place Order button — switching to left."). Without it, the move looks like a glitch.
 
-Persists to the same localStorage the drawer's chrome buttons write to, so the change survives reload. Pass at least one of position/size; both is fine.`,
+Persists to the same localStorage the drawer's chrome buttons write to, so the change survives reload. Pass at least one of position/size; both is fine.
+
+${ASK_USER_CROSSREF}`,
     inputSchema: {
       type: "object",
       required: ["sessionId", "narration"],

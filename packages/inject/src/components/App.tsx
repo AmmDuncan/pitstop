@@ -1,7 +1,15 @@
-import { type Component, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { type Component, Show, createSignal, onCleanup, onMount } from "solid-js";
 import { fetchMostRecentActiveSession, openProjectEventStream } from "../state/client";
 import { installKeyboard } from "../state/keyboard";
-import { bootstrap, session } from "../state/store";
+import {
+  bootstrap,
+  closer,
+  isSessionSwitchDismissed,
+  session,
+  setCloser,
+  setPendingSessionSwitch,
+  switchToSession,
+} from "../state/store";
 import { Drawer } from "./Drawer";
 
 const projectRootFromScript = ((): string | null => {
@@ -24,7 +32,6 @@ const POLL_INTERVAL_MS = 12_000;
  *  one does. Tabs with an active session, and tabs that explicitly wired the
  *  drawer with `?pitstop-project=`, render normally. */
 export const App: Component = () => {
-  const [closer, setCloser] = createSignal<() => void>(() => {});
   const [bootstrapped, setBootstrapped] = createSignal(false);
   let poller: ReturnType<typeof setInterval> | null = null;
 
@@ -55,33 +62,39 @@ export const App: Component = () => {
 
   let lobbyClose: (() => void) | null = null;
 
-  // Subscribe to the project lobby so we can pick up the next start_review
-  // for this projectRoot — used both at first mount (no session yet) and
-  // again after a session completes (so the drawer reconnects to the next
-  // pitstop without a tab reload).
+  // Always-on project lobby. Reacts to incoming `session-hello` based on
+  // the current bind state:
+  //   - no session bound       → bootstrap into the new one (initial mount path)
+  //   - same session id        → ignore (state-snapshot SSE already covered it)
+  //   - already dismissed      → ignore (user said STAY for this id earlier)
+  //   - current is complete    → auto-switch (no surprise — old is done)
+  //   - current is still active → set pending; drawer renders the switch prompt
+  // Replaces the v0.3.42 "re-arm only on complete" effect with this single
+  // handler so kill-and-restart flows (where the agent never called
+  // complete_review) also get a chance to switch instead of being stuck.
   const openLobby = () => {
     if (lobbyClose || !projectRoot || isExtensionMode) return;
     lobbyClose = openProjectEventStream(projectRoot, async (e) => {
-      if (e.type === "session-hello") {
-        lobbyClose?.();
-        lobbyClose = null;
-        // Close the SSE for the prior (completed) session before binding the
-        // new one — otherwise its EventSource leaks until the tab reloads.
+      if (e.type !== "session-hello") return;
+      const incoming = e.session;
+      if (session.s?.id === incoming.id) return;
+      if (isSessionSwitchDismissed(incoming.id)) return;
+      if (!session.s || session.s.status === "complete") {
+        // Auto-switch path: nothing to lose.
         closer()();
-        await tryBootstrap();
+        const close = switchToSession(incoming);
+        setCloser(() => close);
+        setBootstrapped(true);
+        return;
       }
+      // Active session in flight — let the user decide.
+      setPendingSessionSwitch(incoming);
     });
   };
 
-  // Re-arm the lobby whenever the bound session transitions to 'complete'.
-  // Without this, the drawer is stuck on REVIEW_COMPLETE for the old session
-  // and a fresh start_review on the same projectRoot has no subscriber.
-  createEffect(() => {
-    if (session.s?.status === "complete") openLobby();
-  });
-
   onMount(async () => {
     await tryBootstrap();
+    openLobby();
     if (!session.s && isExtensionMode) {
       // Extension mode: no projectRoot, so we can't subscribe to a project
       // lobby. Fall back to polling for any active session to appear.
@@ -95,7 +108,6 @@ export const App: Component = () => {
       }, POLL_INTERVAL_MS);
     } else {
       setBootstrapped(true);
-      if (!session.s) openLobby();
     }
 
     installKeyboard(() => {
