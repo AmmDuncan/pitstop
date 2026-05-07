@@ -2,6 +2,32 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.51 — 2026-05-07
+
+### MCP
+
+- **New `dismiss_pending_question` tool.** When the user answers an `ask_user` question by typing in chat instead of clicking the drawer banner, the agent has the answer but the drawer's pendingQuestion never clears (the only normal clear path is an answer-kind response from a drawer click). The new tool clears the banner and optionally records the chat-captured answer into the session response history. `ask_user`'s description now tells the agent to call this on out-of-band answers. Added to `start_review`'s `toolsToPreload`.
+- **`narrate` gains a strong DUAL_SURFACE_RULE** mirroring `ask_user`'s — chat-only beats during a session never reach the user-in-drawer and fail silently, so the rule has to be wherever the agent's eye lands.
+- **`start_review`'s response now includes `activeSessionRules`** — a cheat-sheet of cross-tool inversions (use `ask_user` not `AskUserQuestion` during a session, etc.) so resuming agents have the rules at hand without skimming long descriptions.
+
+### Stale-adapter banner
+
+- **MCP adapter sends `x-pitstop-adapter-pid: <process.pid>`** alongside the version header. The daemon's stale-adapter SSE event now carries the pid, so the banner can name the exact process the user needs to kill — `kill <pid>` rendered in a code-styled mono tag so it reads as a command, not prose.
+- **Banner moved into the drawer's grid between header and pip strip** instead of overlaying the metabar. Lives below the chrome so it doesn't fight the floating-drawer drag handle, and a `.stale-adapter-slot` wrapper keeps the parent grid's child count stable when the warning is empty (Solid's `<Show>` returning nothing would otherwise shift every subsequent grid row up by one).
+- **Tone shifted from danger to amber** with a softer background and double-line border via `color-mix(in oklab, ...)` — this is "you should restart" guidance, not a system failure. ⚠ glyph replaced with a real WarningIcon SVG (Lucide TriangleAlert).
+
+### Tooling
+
+- **`bun run refresh-local` script.** Kills the daemon (auto-respawns on next call) and every running pitstop MCP subprocess (CC respawns its adapter on next launch), then lists the running CC parent pids with their cwd so you know which to fully quit + relaunch. The release script's tail message points at it but does NOT auto-invoke — pitstops in progress would be disrupted.
+
+### Drawer chrome
+
+- **Header `secondaryCollapsed` drops the `size === "compact"` signal.** `size()` is the user's drawer-height preference, not a chrome-density preference. Compact height with standard width has plenty of horizontal room — the kebab was triggering too eagerly. Width threshold alone catches the actually-narrow cases.
+
+### Docs
+
+- **README intro rewritten** around the real value: pitstop ensures you don't skip affected surfaces, and your feedback is anchored to the specific step in the flow. The agent-driven walkthrough is what makes it work, but the keystroke shortcuts are not the value prop — coverage and context are.
+
 ## v0.3.50 — 2026-05-07
 
 ### UX

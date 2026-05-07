@@ -19,7 +19,7 @@ const clientSessionId = process.env.CLAUDE_CODE_SESSION_ID ?? process.env.CLAUDE
 // SSE event to the project lobby on mismatch — the drawer renders a banner
 // telling the user to restart Claude Code so the new dist is loaded.
 // Bumped by scripts/release.ts alongside the other version literals.
-const ADAPTER_VERSION = "0.3.50";
+const ADAPTER_VERSION = "0.3.51";
 // Sent alongside the version so the daemon's stale-adapter banner can name
 // the exact pid you need to kill — no more "which of my five Claude Code
 // instances is the stale one?" guess game.
@@ -488,7 +488,7 @@ ${ASK_USER_CROSSREF}`,
   },
 ];
 
-const server = new Server({ name: "pitstop", version: "0.3.50" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "pitstop", version: "0.3.51" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
