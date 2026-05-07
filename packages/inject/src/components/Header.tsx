@@ -55,9 +55,12 @@ export const Header: Component = () => {
     onCleanup(() => document.removeEventListener("click", onDocClick, true));
   });
 
-  // Trigger collapse on either narrow header or compact size — both legitimate
-  // squeeze cases per spec. Items hop back inline when neither holds.
-  const secondaryCollapsed = () => headerWidth() < NARROW_THRESHOLD || size() === "compact";
+  // Width is the only signal that should compact the chrome — `size()` is the
+  // user's drawer-height preference, not a chrome-density preference.
+  // Compact-size mode at standard width has plenty of horizontal room, so
+  // forcing the kebab there was over-eager. The width threshold catches
+  // the actually-narrow cases regardless of size mode.
+  const secondaryCollapsed = () => headerWidth() < NARROW_THRESHOLD;
 
   const onRetry = async () => {
     if (!session.s) return;

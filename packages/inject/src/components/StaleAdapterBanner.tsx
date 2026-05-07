@@ -10,38 +10,41 @@ import { WarningIcon } from "./Icons";
  *  the drawer's grid (above the metabar), dismissable per drawer mount. */
 export const StaleAdapterBanner: Component = () => {
   const w = () => staleAdapterWarning();
+  // Always render the slot wrapper so the parent grid keeps a stable
+  // child count — without it, when the banner is empty, Solid's <Show>
+  // returns nothing and every child below shifts up by one grid row,
+  // throwing off the whole drawer layout.
   return (
-    <Show when={w()}>
-      <div class="stale-adapter-banner" role="alert">
-        <span class="stale-adapter-icon" aria-hidden="true">
-          <WarningIcon />
-        </span>
-        <span class="stale-adapter-msg">
-          MCP adapter
-          <Show when={w()!.adapterPid}>
-            {" "}
-            <span class="stale-adapter-tag">pid {w()!.adapterPid}</span>
-          </Show>{" "}
-          is <span class="stale-adapter-tag">v{w()!.adapterVersion}</span>, daemon is{" "}
-          <span class="stale-adapter-tag">v{w()!.daemonVersion}</span>.{" "}
-          <Show
-            when={w()!.adapterPid}
-            fallback="Fully quit Claude Code (Cmd+Q) and relaunch."
+    <div class="stale-adapter-slot">
+      <Show when={w()}>
+        <div class="stale-adapter-banner" role="alert">
+          <span class="stale-adapter-icon" aria-hidden="true">
+            <WarningIcon />
+          </span>
+          <span class="stale-adapter-msg">
+            MCP adapter
+            <Show when={w()!.adapterPid}>
+              {" "}
+              <span class="stale-adapter-tag">pid {w()!.adapterPid}</span>
+            </Show>{" "}
+            is <span class="stale-adapter-tag">v{w()!.adapterVersion}</span>, daemon is{" "}
+            <span class="stale-adapter-tag">v{w()!.daemonVersion}</span>.{" "}
+            <Show when={w()!.adapterPid} fallback="Fully quit Claude Code (Cmd+Q) and relaunch.">
+              Run <code class="stale-adapter-cmd">kill {w()!.adapterPid}</code>, then quit + relaunch Claude
+              Code.
+            </Show>
+          </span>
+          <button
+            type="button"
+            class="stale-adapter-dismiss"
+            onClick={dismissStaleAdapterWarning}
+            title="Dismiss for this session"
+            aria-label="Dismiss"
           >
-            Run <code class="stale-adapter-cmd">kill {w()!.adapterPid}</code>, then quit + relaunch
-            Claude Code.
-          </Show>
-        </span>
-        <button
-          type="button"
-          class="stale-adapter-dismiss"
-          onClick={dismissStaleAdapterWarning}
-          title="Dismiss for this session"
-          aria-label="Dismiss"
-        >
-          ×
-        </button>
-      </div>
-    </Show>
+            ×
+          </button>
+        </div>
+      </Show>
+    </div>
   );
 };

@@ -44,7 +44,10 @@ const ClaudeBindChip: Component = () => {
       <Show
         when={cc()}
         fallback={
-          <span class="claude-chip claude-chip-warn" title="Pitstop didn't capture this Claude Code session — pokes will fail. Restart Claude Code after `bun run setup` to pick up the env-var fix.">
+          <span
+            class="claude-chip claude-chip-warn"
+            title="Pitstop didn't capture this Claude Code session — pokes will fail. Restart Claude Code after `bun run setup` to pick up the env-var fix."
+          >
             CLAUDE# UNBOUND
           </span>
         }
@@ -214,7 +217,6 @@ export const Drawer: Component = () => {
               </div>
             }
           >
-            <StaleAdapterBanner />
             <div class="metabar">
               <span>~/.claude/pitstop/sessions/{session.s?.id}.json</span>
               <span class="center">S#{session.s?.id}</span>
@@ -224,6 +226,7 @@ export const Drawer: Component = () => {
               </span>
             </div>
             <Header />
+            <StaleAdapterBanner />
             <PipStrip />
             <Show
               when={session.s?.status === "complete" && !reviewingComplete()}

@@ -1,6 +1,6 @@
 # pitstop
 
-A drawer in your dev app where the agent leaves you items to review. You answer with one keystroke. The agent acts on your answers — driving your browser tab through each surface, in order, with the work right in front of you.
+Pitstop is an in-app review loop for AI-agent work. When your agent finishes, it walks your browser tab through every surface its work touched, in order — so nothing the agent changed quietly slips past your review. Whatever feedback you leave is pinned to the specific step you're looking at, and the agent picks it up and acts on it with full context.
 
 > Agents can smoke-test their own implementations. But that's not the same as a human looking. Humans catch UX feel, taste calls, off-by-one visual bugs, "technically works but wrong" judgements that don't surface in agent reasoning. Pitstop's job is to make the *human* review process easier and friendlier — and the agent driving the tour is what makes it friendly.
 
