@@ -2,6 +2,19 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.45 — 2026-05-07
+
+### MCP
+
+- **`ask_user` steering, repeated where the agent looks.** Previously the "use `ask_user`, never `AskUserQuestion` while a pitstop session is active" rule lived only in `start_review`'s description, which the agent reads once at session creation and forgets hours later. Now the rule is appended to every active-session tool description (`narrate`, `mark_addressing`, `agent_address_comment`, `set_drawer`, `get_unread_responses`) so the steering is wherever the agent's eye lands during a session. The `narrate` description's three-tool comparison matrix (narrate vs mark_addressing vs agent_address_comment) gains `ask_user` as a fourth sibling for "blocking question" use.
+- **`start_review` returns `toolsToPreload`.** A small array of `mcp__pitstop__*` names with `ask_user` first. `start_review`'s description gains a numbered step telling the agent to `ToolSearch select:<comma-separated names>` immediately so every pitstop tool is loaded for the session — no per-call ToolSearch latency, and the agent never reaches for `AskUserQuestion` later out of habit.
+
+### UI
+
+- **Drawer reconnects on kill-and-restart, not just complete.** The lobby SSE is now always-on (replacing the v0.3.42 "re-arm only on complete" effect). When a `session-hello` arrives for a different session id and the current session is still active (not complete), the drawer renders a `SessionSwitchPrompt` overlay with **[SWITCH]** / **[STAY]**. Closes the gap where killing the Monitor watcher and starting a new pitstop without `complete_review`'ing the old left the drawer stuck on the prior session indefinitely.
+- **Auto-switch after `complete_review` (unchanged).** The prompt only appears in the kill-and-restart-without-completing case — natural completion still hot-swaps without asking.
+- **STAY remembers per session id.** Click STAY and that specific incoming session won't re-prompt within this drawer mount (in-memory `Set`, no localStorage so the offer is fresh on every page load). The next *different* session id will prompt again.
+
 ## v0.3.44 — 2026-05-07
 
 ### UI
