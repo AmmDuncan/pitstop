@@ -1605,6 +1605,22 @@
   color: transparent;
   animation: lifecycle-shimmer 2.6s linear infinite;
 }
+/* Footer variant — when the strip appears below an action button (poked /
+   awaiting states) it acts as an inline status bar, not a replacement banner.
+   Toned down: thinner, no background fill, uses rule-2 border so it recedes
+   behind the button visually. The shimmer + dot animations still run. */
+.lifecycle-strip.is-footer {
+  padding: 6px 10px;
+  min-height: unset;
+  background: transparent;
+  border-color: var(--rule-2);
+  font-size: 10.5px;
+}
+.lifecycle-strip.is-footer .lifecycle-dot {
+  width: 6px;
+  height: 6px;
+}
+
 /* Inline failure surface for /retry-poke + similar — sits directly under
    the lifecycle strip so the user immediately sees why their click did
    nothing. Auto-clears after a few seconds; pre-v0.3.43 we silently

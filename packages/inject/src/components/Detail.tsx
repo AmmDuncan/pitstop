@@ -288,45 +288,75 @@ export const Detail: Component = () => {
         {(() => {
           // Render priority for the action area:
           //   1. PendingQuestion (ask_user is the agent's active prompt)
-          //   2. Lifecycle strip (sending / poked / awaiting Claude)
-          //   3. Action buttons (LOOKS_GOOD / SEND_COMMENT)
-          // Each subsumes the one below it — no two of these stack.
+          //   2. SENDING strip (sub-second transient) — replaces both buttons
+          //   3. POKED / AWAITING — SEND_COMMENT stays available; LOOKS_GOOD
+          //      hidden; lifecycle strip appears as a status footer below the button
+          //   4. Idle — LOOKS_GOOD + SEND_COMMENT side by side
           const pending = () => session.s?.pendingQuestion ?? null;
+          const ss = stripState;
+
+          const LifecycleStrip = (props: { isFooter?: boolean }) => {
+            const state = ss();
+            if (!state) return null;
+            return (
+              <>
+                <div
+                  class={props.isFooter ? "lifecycle-strip is-footer" : "lifecycle-strip"}
+                  data-state={state.kind}
+                >
+                  <span class="lifecycle-dot" />
+                  <span class="lifecycle-label">{state.label}</span>
+                  {/* Elapsed counter on poked + awaiting; sending is too brief to show. */}
+                  <Show when={state.kind !== "sending"}>
+                    <span class="lifecycle-elapsed">{elapsedFormatted()}</span>
+                  </Show>
+                  {/* POKE only on AWAITING — re-poking during POKED is a no-op
+                      (daemon 409s the second /retry-poke while one's in flight)
+                      and confused users into clicking a button that did nothing. */}
+                  <Show when={state.kind === "awaiting"}>
+                    <button
+                      class="lifecycle-poke"
+                      onClick={onPoke}
+                      disabled={poking()}
+                      title="Poke Claude — re-engage if it seems stuck"
+                    >
+                      POKE
+                    </button>
+                  </Show>
+                </div>
+                <Show when={pokeError()}>
+                  <div class="lifecycle-error" role="alert">
+                    {pokeError()}
+                  </div>
+                </Show>
+              </>
+            );
+          };
+
           return (
             <Show when={!pending()} fallback={<PendingQuestion question={pending()!} />}>
-              <Show
-                when={!stripState()}
-                fallback={
-                  <>
-                    <div class="lifecycle-strip" data-state={stripState()!.kind}>
-                      <span class="lifecycle-dot" />
-                      <span class="lifecycle-label">{stripState()!.label}</span>
-                      {/* Elapsed counter on poked + awaiting; sending is too brief to show. */}
-                      <Show when={stripState()!.kind !== "sending"}>
-                        <span class="lifecycle-elapsed">{elapsedFormatted()}</span>
-                      </Show>
-                      {/* POKE only on AWAITING — re-poking during POKED is a no-op
-                          (daemon 409s the second /retry-poke while one's in flight)
-                          and confused users into clicking a button that did nothing. */}
-                      <Show when={stripState()!.kind === "awaiting"}>
-                        <button
-                          class="lifecycle-poke"
-                          onClick={onPoke}
-                          disabled={poking()}
-                          title="Poke Claude — re-engage if it seems stuck"
-                        >
-                          POKE
-                        </button>
-                      </Show>
-                    </div>
-                    <Show when={pokeError()}>
-                      <div class="lifecycle-error" role="alert">
-                        {pokeError()}
-                      </div>
-                    </Show>
-                  </>
-                }
-              >
+              {/* SENDING: strip replaces both buttons — sub-second transient, not worth the new layout */}
+              <Show when={ss()?.kind === "sending"}>
+                <LifecycleStrip />
+              </Show>
+              {/* POKED / AWAITING: SEND_COMMENT stays; LOOKS_GOOD hidden; strip is a footer */}
+              <Show when={ss()?.kind === "poked" || ss()?.kind === "awaiting"}>
+                <Show when={session.s?.status !== "complete"}>
+                  <div class="actions">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      onClick={onComment}
+                      disabled={submitting() || !comment().trim()}
+                    >
+                      SEND_COMMENT <span class="kbd">⌘↵</span>
+                    </button>
+                  </div>
+                </Show>
+                <LifecycleStrip isFooter />
+              </Show>
+              {/* Idle: LOOKS_GOOD + SEND_COMMENT side by side */}
+              <Show when={!ss()}>
                 <Show when={session.s?.status !== "complete"}>
                   <div class="actions">
                     <button class="btn btn-primary" onClick={onApprove} disabled={submitting()}>
