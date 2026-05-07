@@ -2,6 +2,20 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.43 — 2026-05-07
+
+### Fixes
+
+- **Pokes actually wake the agent now.** The MCP adapter was reading `process.env.CLAUDE_SESSION_ID` — a variable Claude Code does not set. Every `start_review` since the project began stored `clientSessionId: undefined`, and every poke (auto on user comment, manual via the POKE button, retry on POKE_FAILED) silently threw `"claude-resume requires clientSessionId"` inside the daemon. The adapter now reads `CLAUDE_CODE_SESSION_ID` (with `CLAUDE_SESSION_ID` as a manual-override fallback). Daemon `/api/rpc` also self-heals: existing pre-fix sessions backfill `clientSessionId` on the agent's next tool call, so they don't stay permanently broken.
+- **The drawer no longer hides poke failures.** `/retry-poke` non-2xx responses were silently swallowed by `Detail.tsx`'s `onPoke`, leaving the button to flicker without explanation. Failures now surface as an inline `lifecycle-error` chip under the strip (`POKE_FAILED · NO_CLIENT_SESSION_ID`, etc.) for ~6 s.
+- **POKE button only on AWAITING.** During the `POKED · WAITING` state the daemon 409s a second `/retry-poke` and the local 5 s debounce makes the button effectively dead — but it was still showing, inviting clicks that did nothing. Now hidden until the strip transitions back to AWAITING CLAUDE.
+
+### UI
+
+- **`CLAUDE#<id>` diagnostic in the metabar.** Right slot of the metabar now shows the bound Claude Code session prefix (e.g. `CLAUDE#7c0d9fd1`). When the bind is missing, it reads `CLAUDE# UNBOUND` in the danger color with a dotted underline — diagnostic-at-a-glance for the failure mode that took the better part of a session to find. Hidden while `UpdateChip` is showing (right-slot swap; the update offer is more time-sensitive).
+- **Strip-mode dot turns red when unbound.** The collapsed strip's `v-dot` tints to `--err` so the unpokeable state is still visible while the drawer is minimized.
+- **`UpdateChip` popover gains dismiss + Update now.** Small `×` in the top-right of the popover dismisses the chip for the rest of the drawer mount (the `CLAUDE#` chip then takes the slot). New primary `Update now` button posts a directive comment to the session — the existing comment-poke path then asks the bound agent to run `cd <installPath> && git pull && bun run setup` and restart the daemon, so you don't have to context-switch to a shell.
+
 ## v0.3.42 — 2026-05-06
 
 ### Fixes
