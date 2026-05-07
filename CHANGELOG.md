@@ -2,6 +2,13 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.55 — 2026-05-07
+
+### Internal
+- **`packages/mcp-adapter/src/index.ts` slimmed from 496 → 40 lines.** The tool catalogue (every tool's schema, description, the `ITEM_SCHEMA` constant, the `AUTHORING_HINT` and `ASK_USER_CROSSREF` cross-tool prose) moved verbatim to a new `tool-definitions.ts`. No behavior change — same `tools` array exported, same shape. Just a much clearer landing pad for tool authoring/copyediting work, which is the most-frequent edit target in the adapter.
+- **`session-id.ts` resolver gets test coverage.** Six hermetic tests in `packages/mcp-adapter/test/session-id.test.ts` lock down the fallback chain that produced v0.3.52's silent regression: env `CLAUDE_CODE_SESSION_ID` override, legacy `CLAUDE_SESSION_ID` fallback, hook-file at matching ppid, ppid-mismatch falling through to transcript scan, transcript scan picking the newest `.jsonl`, and the all-empty undefined case. Each test isolates its own tmp HOME — no host-env pollution.
+- Small refactor to enable hermetic testing: `resolveClientSessionId` now accepts optional `{ homeDir, cwd, ppid, env }`. Production callers pass no args; defaults wire to `homedir()` / `process.cwd()` / `process.ppid` / `process.env` unchanged.
+
 ## v0.3.54 — 2026-05-07
 
 ### Fixed
