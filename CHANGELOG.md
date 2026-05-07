@@ -2,6 +2,13 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.50 — 2026-05-07
+
+### UX
+
+- **Scroll-to-top on item navigation.** When `currentItemIdx` changes — agent's `set_current_item`, user's `j`/`k`, pip click, or auto-advance after `LOOKS_GOOD` — the detail body now scrolls to the new item's title instead of carrying the prior item's scroll position over (which often left the new item's content below the fold). Last-write-wins on `requestAnimationFrame` means scroll-to-top implicitly overrides the scroll-to-bottom that fires from the action-area submit transition, which is the right priority: reading content beats seeing the action affordance after auto-advance.
+- Three scroll-target sites (submit-to-bottom, strip-resolves-to-buttons, item-change-to-top) now share a small `scrollDetailTo("bottom" | number)` helper.
+
 ## v0.3.49 — 2026-05-07
 
 ### Cross-session resume
