@@ -2,6 +2,11 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.54 — 2026-05-07
+
+### Fixed
+- **Disabled buttons preserve their variant identity.** v0.3.53 introduced disabled-LOOKS_GOOD during AWAITING/POKED, which surfaced a pre-existing CSS quirk: `.btn-primary:disabled` flattened bg + color + border to look identical to `.btn-secondary:disabled` — both ended up as outlined grey rectangles. With LOOKS_GOOD now held disabled for the entire agent-processing window (potentially minutes), users couldn't tell which button was which. Replaced the per-variant overrides with a single `opacity: 0.45` rule on `.btn:disabled` so primary stays filled, secondary stays outlined, and both just dim. Disabled-primary now reads as "this IS approve, just unavailable right now."
+
 ## v0.3.53 — 2026-05-07
 
 ### Changed
