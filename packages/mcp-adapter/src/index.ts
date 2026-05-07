@@ -19,7 +19,7 @@ const clientSessionId = process.env.CLAUDE_CODE_SESSION_ID ?? process.env.CLAUDE
 // SSE event to the project lobby on mismatch — the drawer renders a banner
 // telling the user to restart Claude Code so the new dist is loaded.
 // Bumped by scripts/release.ts alongside the other version literals.
-const ADAPTER_VERSION = "0.3.48";
+const ADAPTER_VERSION = "0.3.49";
 const fwd = new Forwarder({ baseUrl, clientSessionId, adapterVersion: ADAPTER_VERSION });
 
 const ITEM_SCHEMA = {
@@ -442,7 +442,7 @@ ${ASK_USER_CROSSREF}`,
   },
 ];
 
-const server = new Server({ name: "pitstop", version: "0.3.48" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "pitstop", version: "0.3.49" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {

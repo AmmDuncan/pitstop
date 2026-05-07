@@ -2,6 +2,20 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.49 — 2026-05-07
+
+### Cross-session resume
+
+Real-user feedback after a Claude-A → Claude-B resume of an active pitstop session uncovered three friction points. All three fixed:
+
+- **Auto-rebind on `clientSessionId` mismatch.** The existing `/api/rpc` self-heal only updated `clientSessionId` when it was missing. Generalize to "update if differs from incoming" — any tool call from a new Claude Code session for a pitstop bound to a different (likely dead) one will rebind. Pokes target the current driver from then on. Resume becomes invisible: no `rebind_session` tool to discover, no manual fixup, just works.
+- **`get_state` returns the same `watcher` shape `start_review` does.** Resuming agents land at `get_state` without seeing `start_review`'s response, so they don't know there's a canonical `pitstop-watch.sh` script — and end up rolling their own SSE poller with `awk` (not line-buffered by default), which silently buffers user clicks until the user realizes in chat. The MCP tool description now spells out the resume recipe and warns explicitly against the awk pipe-buffering trap.
+- **`get_state` returns `lastResponseAt`** (max of `responses[].at`, undefined if none) as a freshness signal. The description now says "this is a snapshot at call time, not a stream — for live changes use the watcher". Avoids the "I called get_state, saw 3 responses, but a 4th was already in the daemon" trap.
+
+### Bonus
+
+- **`Store.getActive` sorts by `updatedAt` desc.** Was taking whichever non-complete session `readdir` returned first — non-deterministic across multiple idle sessions for the same `projectRoot`. Now the most-recently-updated session wins, matching "the session being actively driven" semantic. Helps cross-CC handoffs land on the right session.
+
 ## v0.3.48 — 2026-05-07
 
 ### Stale MCP adapter detection
