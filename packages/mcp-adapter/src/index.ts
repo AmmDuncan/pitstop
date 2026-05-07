@@ -150,8 +150,13 @@ ${AUTHORING_HINT}`,
   },
   {
     name: "get_state",
-    description:
-      "Read the full session state, including items, responses, currentItemId, and recent agent activity. Useful when reconnecting mid-review or after a long pause to confirm where things stand.",
+    description: `Read the full session state, including items, responses, currentItemId, and recent agent activity. Useful when reconnecting mid-review or after a long pause to confirm where things stand.
+
+Returns the full Session shape PLUS:
+- \`watcher\`: { command, description, persistent } — invoke this via Monitor verbatim to get one stdout line per new unaddressed response. Same shape start_review returns. RESUMING AGENTS: use this watcher; do NOT roll your own SSE poller — \`awk\` is not line-buffered by default and user clicks will silently buffer. The shipped pitstop-watch.sh handles line buffering correctly.
+- \`lastResponseAt\`: epoch ms of the most recent response in the snapshot, or undefined if no responses yet. THE FRESHNESS SIGNAL — \`get_state\` is a point-in-time snapshot, not a live stream. If \`lastResponseAt\` is older than what you'd expect, run the watcher and wait for it to fire instead of polling get_state in a tight loop.
+
+THE RESUME RECIPE: get_state(sessionId) → invoke watcher.command via Monitor → drive from there. The cross-session rebind (v0.3.49) auto-attaches your CC session id to the pitstop on this very call, so subsequent pokes wake you, not the prior dead session.`,
     inputSchema: { type: "object", required: ["sessionId"], properties: { sessionId: { type: "string" } } },
   },
   {

@@ -424,11 +424,23 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
       if (needLookup && params?.sessionId) {
         existingSession = await store.get(params.sessionId);
       }
-      // Self-heal: backfill clientSessionId on any pre-existing session that
-      // was created before the MCP adapter was reading the right env var
-      // (CLAUDE_CODE_SESSION_ID, fixed in v0.3.43). Without this, sessions
-      // that pre-date the fix stay permanently unpokeable.
-      if (existingSession && clientSessionId && !existingSession.clientSessionId && params?.sessionId) {
+      // Self-heal + cross-session rebind: keep session.clientSessionId
+      // pointing at whichever Claude Code session is currently making MCP
+      // calls. Two cases this covers:
+      //   1. Pre-fix sessions where clientSessionId was never captured
+      //      (env-var name regression, fixed in v0.3.43).
+      //   2. Resume — Claude session A ended, session B picks up the
+      //      same pitstop. Without rebind, pokes target the dead A and
+      //      the user's clicks silently fail to wake B.
+      // Trust the active caller: if a different CC session is making
+      // tool calls for this pitstop, by definition they're the one
+      // currently driving and pokes should wake them.
+      if (
+        existingSession &&
+        clientSessionId &&
+        existingSession.clientSessionId !== clientSessionId &&
+        params?.sessionId
+      ) {
         await store.update(params.sessionId, (s) => ({ ...s, clientSessionId }));
       }
       // Stale-adapter detection: if the MCP subprocess is running an older

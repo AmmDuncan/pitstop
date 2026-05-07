@@ -175,7 +175,25 @@ export const tools = {
       pokeFailed: false,
     }));
     ctx.bus.publish(sessionId, { type: "state-changed", session: updated });
-    return updated;
+    // Resuming agents land here without seeing start_review's response, so
+    // they don't know there's a canonical watcher script. Returning it here
+    // means cross-session resumes use pitstop-watch.sh (correct, line-safe)
+    // instead of rolling their own SSE poller (awk pipe-buffering trap).
+    // lastResponseAt is the freshness signal — get_state is a snapshot at
+    // call time; the watcher is the way to monitor live changes.
+    const lastResponseAt =
+      updated.responses.length > 0
+        ? updated.responses.reduce((max, r) => (r.at > max ? r.at : max), 0)
+        : undefined;
+    return {
+      ...updated,
+      lastResponseAt,
+      watcher: {
+        command: `${ctx.scriptsDir}/pitstop-watch.sh ${updated.id}`,
+        description: `pitstop unread responses · session ${updated.id}`,
+        persistent: true,
+      },
+    };
   },
 
   async get_unread_responses(ctx: Ctx, params: unknown) {

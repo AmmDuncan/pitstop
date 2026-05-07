@@ -90,10 +90,18 @@ export class Store {
     return (await Promise.all(reads)).filter((s): s is Session => s !== null);
   }
 
-  /** Returns the first non-complete session for the given `projectRoot`, or null. */
+  /** Returns the most-recently-updated non-complete session for the given
+   *  `projectRoot`, or null. Sorting matters when more than one idle
+   *  session coexists for the same projectRoot — the previous "first
+   *  match wins" was non-deterministic (readdir order) and could resume
+   *  the wrong session after a cross-CC handoff. updatedAt is touched on
+   *  every store.update, which fires on every MCP tool call, so the
+   *  newest session is the one currently being driven. */
   async getActive(projectRoot: string): Promise<Session | null> {
     const all = await this.list();
-    return all.find((s) => s.projectRoot === projectRoot && s.status !== "complete") ?? null;
+    const candidates = all.filter((s) => s.projectRoot === projectRoot && s.status !== "complete");
+    if (candidates.length === 0) return null;
+    return candidates.sort((a, b) => b.updatedAt - a.updatedAt)[0]!;
   }
 
   async update(id: string, updater: (s: Session) => Session): Promise<Session> {
