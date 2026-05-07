@@ -339,10 +339,20 @@ export const Detail: Component = () => {
               <Show when={ss()?.kind === "sending"}>
                 <LifecycleStrip />
               </Show>
-              {/* POKED / AWAITING: SEND_COMMENT stays; LOOKS_GOOD hidden; strip is a footer */}
+              {/* POKED / AWAITING: LOOKS_GOOD shown but disabled (preserve layout
+                  + affordance discoverability — see "no jump on state change");
+                  SEND_COMMENT stays active; strip drops below as a status footer. */}
               <Show when={ss()?.kind === "poked" || ss()?.kind === "awaiting"}>
                 <Show when={session.s?.status !== "complete"}>
                   <div class="actions">
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      disabled
+                      title="Agent is addressing your comment — wait for it to land, or send another comment."
+                    >
+                      LOOKS_GOOD <span class="kbd">↵</span>
+                    </button>
                     <button
                       type="button"
                       class="btn btn-secondary"
