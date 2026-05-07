@@ -2,6 +2,12 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.44 — 2026-05-07
+
+### UI
+
+- **Removed the slim StatusTag chip for narrating states.** The amber pulsing dot inside an amber-bordered chip in the header drew attention like a notification but rewarded the look with nothing decodable, and the AgentFeed at the bottom was already showing the same narration in plain words. The StatusTag now only renders for `failed` (POKE_FAILED · CLICK_RETRY) and `complete` (REVIEW_COMPLETE) — the feed owns everything else. Dead `tag-slim` / `pulse-dot` CSS rules dropped.
+
 ## v0.3.43 — 2026-05-07
 
 ### Fixes
