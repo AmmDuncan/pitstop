@@ -2,6 +2,12 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.46 — 2026-05-07
+
+### UX
+
+- **Action buttons scroll into view when the lifecycle strip resolves.** The send-side already scrolled `detail-scroll` to bottom on `submitState: idle → sending/poked` so the strip landed in view. The reverse transition — strip resolving back into LOOKS_GOOD / SEND_COMMENT — had no scroll, so if the AgentFeed grew while the strip was up (new narrations during driving) the buttons could land below the visible area and the reviewer had to manually scroll to find them. Now mirrored: `createEffect` watches `stripState`, scrolls to bottom on truthy → null transitions.
+
 ## v0.3.45 — 2026-05-07
 
 ### MCP
