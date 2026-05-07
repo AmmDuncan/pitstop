@@ -75,6 +75,26 @@ export const Detail: Component = () => {
     return null;
   };
 
+  // When the lifecycle strip resolves back into the action buttons, the
+  // buttons land at the bottom of detail-scroll. If the AgentFeed grew
+  // while the strip was up (new narrations came in), the buttons can sit
+  // below the visible area — same problem the send-side scroll-to-bottom
+  // solves, just on the reverse transition. Mirror the same fix here.
+  let prevStripKind: string | null = null;
+  createEffect(() => {
+    const cur = stripState()?.kind ?? null;
+    if (prevStripKind && !cur) {
+      requestAnimationFrame(() => {
+        const host = document.querySelector("pitstop-drawer") as unknown as {
+          shadowRoot: ShadowRoot | null;
+        } | null;
+        const scroll = host?.shadowRoot?.querySelector(".detail-scroll");
+        if (scroll) scroll.scrollTo({ top: scroll.scrollHeight, behavior: "smooth" });
+      });
+    }
+    prevStripKind = cur;
+  });
+
   const [stripStartedAt, setStripStartedAt] = createSignal<number | null>(null);
   const [now, setNow] = createSignal(Date.now());
   let lastStripKind: string | null = null;
