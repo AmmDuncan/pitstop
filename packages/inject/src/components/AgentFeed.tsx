@@ -1,4 +1,4 @@
-import { type Component, For, Show, createEffect, createSignal } from "solid-js";
+import { type Component, For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import { session } from "../state/store";
 
 const FEED_SIZE = 5;
@@ -54,7 +54,11 @@ export const AgentFeed: Component = () => {
     document.body.style.cursor = "ns-resize";
   };
 
-  const all = () => {
+  // Memoized — `all` is read from visible(), olderCount(), the watermark
+  // createEffect, unreadCount(), and markSeen() (5 sites). Without the memo,
+  // each reactive read re-runs the filter+reverse on every state-changed SSE
+  // event.
+  const all = createMemo(() => {
     const entries = (session.s?.agentActivity ?? []).filter(
       (e) =>
         e.narration &&
@@ -65,7 +69,7 @@ export const AgentFeed: Component = () => {
           e.tool === "narrate"),
     );
     return entries.slice().reverse();
-  };
+  });
 
   const visible = () => (expanded() ? all() : all().slice(0, FEED_SIZE));
   const olderCount = () => Math.max(0, all().length - FEED_SIZE);

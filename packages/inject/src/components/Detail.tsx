@@ -1,6 +1,6 @@
 import type { Attachment } from "@pitstop/shared";
 import { marked } from "marked";
-import { type Component, For, Show, createEffect, createSignal, onCleanup } from "solid-js";
+import { type Component, For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { baseUrl, submitResponse } from "../state/client";
 import {
   clearDraft,
@@ -56,7 +56,11 @@ export const Detail: Component = () => {
   // comment puts the item back into "needs re-addressing" until the agent
   // calls mark_addressing(arrived:true) again — the only signal that
   // genuinely means "ready, re-check this surface."
-  const itemAddressed = () => {
+  // Memoized — read by stripState() which is itself read multiple times per
+  // render (Show conditions, the strip-resolve effect). Without the memo,
+  // every reactive read re-filters and reduces both responses and
+  // agentActivity for the current item.
+  const itemAddressed = createMemo(() => {
     const id = item()?.id;
     if (!id) return false;
     const responses = session.s?.responses ?? [];
@@ -67,7 +71,7 @@ export const Detail: Component = () => {
       (e) =>
         e.tool === "mark_addressing" && e.itemId === id && e.arrived !== false && e.at > lastUserCommentAt,
     );
-  };
+  });
   const stripState = () => {
     if (submitState() === "sending") return { kind: "sending", label: "SENDING…" };
     if (submitState() === "poked") return { kind: "poked", label: "POKED · WAITING" };

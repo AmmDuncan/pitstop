@@ -36,27 +36,35 @@ export type WireResult = {
 const fileExists = (root: string, ...names: string[]): boolean =>
   names.some((n) => existsSync(join(root, n)));
 
-const hasPkgDep = (root: string, name: string): boolean => {
+/** Combined deps map (dependencies + devDependencies merged) — null if no
+ *  package.json exists or it can't be parsed. */
+type PkgDeps = Record<string, string> | null;
+
+const readPkgDeps = (root: string): PkgDeps => {
   const pkgPath = join(root, "package.json");
-  if (!existsSync(pkgPath)) return false;
+  if (!existsSync(pkgPath)) return null;
   try {
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
-    return Boolean(pkg.dependencies?.[name] || pkg.devDependencies?.[name]);
+    return { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
   } catch {
-    return false;
+    return null;
   }
 };
 
+const hasDep = (deps: PkgDeps, name: string): boolean => Boolean(deps?.[name]);
+
 function detectFramework(root: string): Framework {
-  if (fileExists(root, "nuxt.config.ts", "nuxt.config.js") || hasPkgDep(root, "nuxt")) return "nuxt";
-  if (fileExists(root, "next.config.js", "next.config.mjs", "next.config.ts") || hasPkgDep(root, "next"))
+  // Read + parse package.json once instead of up to 6× (one per hasDep check).
+  const deps = readPkgDeps(root);
+  if (fileExists(root, "nuxt.config.ts", "nuxt.config.js") || hasDep(deps, "nuxt")) return "nuxt";
+  if (fileExists(root, "next.config.js", "next.config.mjs", "next.config.ts") || hasDep(deps, "next"))
     return "next";
-  if (fileExists(root, "astro.config.mjs", "astro.config.ts") || hasPkgDep(root, "astro")) return "astro";
-  if (fileExists(root, "svelte.config.js", "svelte.config.ts") || hasPkgDep(root, "@sveltejs/kit"))
+  if (fileExists(root, "astro.config.mjs", "astro.config.ts") || hasDep(deps, "astro")) return "astro";
+  if (fileExists(root, "svelte.config.js", "svelte.config.ts") || hasDep(deps, "@sveltejs/kit"))
     return "sveltekit";
-  if (fileExists(root, "remix.config.js", "remix.config.ts") || hasPkgDep(root, "@remix-run/react"))
+  if (fileExists(root, "remix.config.js", "remix.config.ts") || hasDep(deps, "@remix-run/react"))
     return "remix";
-  if (fileExists(root, "vite.config.ts", "vite.config.js") || hasPkgDep(root, "vite")) return "vite";
+  if (fileExists(root, "vite.config.ts", "vite.config.js") || hasDep(deps, "vite")) return "vite";
   if (fileExists(root, "index.html")) return "plain-html";
   return "unknown";
 }

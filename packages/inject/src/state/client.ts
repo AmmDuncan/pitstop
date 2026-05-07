@@ -96,6 +96,21 @@ export async function submitResponse(
   if (!r.ok) throw new Error(`submit failed: ${r.status}`);
 }
 
+/** Flip a session's status (paused/active/complete). Footer's PAUSE/RESUME
+ *  button, the DONE button, and ReviewSummary's "mark complete" all use this
+ *  — without the helper they all hand-rolled the same fetch. */
+export async function patchSessionStatus(
+  sessionId: string,
+  status: "active" | "paused" | "complete",
+): Promise<void> {
+  const r = await fetch(`${baseUrl}/api/sessions/${sessionId}/status`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!r.ok) throw new Error(`status patch failed: ${r.status}`);
+}
+
 let cachedConfig: PitstopConfig | null = null;
 
 export async function fetchConfig(): Promise<PitstopConfig> {

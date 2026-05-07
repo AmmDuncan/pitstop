@@ -1,5 +1,5 @@
 import { type Component, Show } from "solid-js";
-import { baseUrl } from "../state/client";
+import { patchSessionStatus } from "../state/client";
 import { responseCounts, reviewingComplete, session, setReviewingComplete } from "../state/store";
 
 export const Footer: Component = () => {
@@ -8,21 +8,12 @@ export const Footer: Component = () => {
 
   const togglePause = async () => {
     if (!session.s) return;
-    const next = isPaused() ? "active" : "paused";
-    await fetch(`${baseUrl}/api/sessions/${session.s.id}/status`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status: next }),
-    });
+    await patchSessionStatus(session.s.id, isPaused() ? "active" : "paused");
   };
 
   const onDone = async () => {
     if (!session.s) return;
-    await fetch(`${baseUrl}/api/sessions/${session.s.id}/status`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status: "complete" }),
-    });
+    await patchSessionStatus(session.s.id, "complete");
   };
 
   return (

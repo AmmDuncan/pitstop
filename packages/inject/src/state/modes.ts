@@ -77,8 +77,15 @@ export const [theme, setTheme] = createSignal<Theme>(initial.theme);
 export const [interactiveResize, setInteractiveResize] = createSignal(false);
 
 createRoot(() => {
+  // Collapse rapid signal changes (e.g. floatingTop/floatingLeft on every
+  // pointermove during a drag) into one localStorage write per frame. Without
+  // this, a fast drag could fire 60+ synchronous setItem calls per second on
+  // the main thread. The latest snapshot wins regardless of when the rAF
+  // callback fires.
+  let pendingWrite: number | null = null;
+  let latestSnapshot: Modes | null = null;
   createEffect(() => {
-    const m: Modes = {
+    latestSnapshot = {
       position: position(),
       side: side(),
       size: size(),
@@ -88,9 +95,14 @@ createRoot(() => {
       floatingLeft: floatingLeft(),
       theme: theme(),
     };
-    try {
-      localStorage.setItem(KEY, JSON.stringify(m));
-    } catch {}
+    if (pendingWrite !== null) return;
+    pendingWrite = requestAnimationFrame(() => {
+      pendingWrite = null;
+      if (!latestSnapshot) return;
+      try {
+        localStorage.setItem(KEY, JSON.stringify(latestSnapshot));
+      } catch {}
+    });
   });
 
   // Expose the drawer's current width on :root as --pitstop-drawer-width.

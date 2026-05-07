@@ -1,8 +1,16 @@
-import { ItemZ, type Session } from "@pitstop/shared";
+import { type ActivityEntry, ItemZ, type Session } from "@pitstop/shared";
 import { z } from "zod";
 import type { Bus } from "../http/sse";
 import type { Store } from "../store/sessions";
 import { wire_drawer } from "./wire-drawer";
+
+/** Cap on the per-session agentActivity ring buffer. The drawer's AgentFeed
+ *  only displays the most recent N entries; older ones are dropped here so
+ *  session JSON files don't grow unboundedly. Centralized in one constant
+ *  so a future change is one edit. */
+const ACTIVITY_BUFFER = 50;
+const appendActivity = (activities: ActivityEntry[], entry: ActivityEntry): ActivityEntry[] =>
+  [...activities, entry].slice(-ACTIVITY_BUFFER);
 
 type Ctx = {
   store: Store;
@@ -158,9 +166,9 @@ export const tools = {
 
   async get_state(ctx: Ctx, params: unknown) {
     const { sessionId } = z.object({ sessionId: z.string() }).parse(params);
-    const session = await ctx.store.get(sessionId);
-    if (!session) throw new Error("NOT_FOUND");
-    // Update activity (separate from get to avoid mutating on every internal read).
+    // Single read via update — store.update throws "NOT_FOUND" if the session
+    // doesn't exist, which the /api/rpc handler maps to 404. Updating
+    // activity here is intentional; tool calls count as the agent showing up.
     const updated = await ctx.store.update(sessionId, (s) => ({
       ...s,
       lastAgentActivityAt: Date.now(),
@@ -202,7 +210,7 @@ export const tools = {
     const entry = { at, tool: "narrate" as const, narration, itemId };
     const session = await ctx.store.update(sessionId, (s) => ({
       ...s,
-      agentActivity: [...s.agentActivity, entry].slice(-50),
+      agentActivity: appendActivity(s.agentActivity, entry),
       lastAgentActivityAt: at,
       pokeFailed: false,
     }));
@@ -230,7 +238,7 @@ export const tools = {
     };
     const session = await ctx.store.update(sessionId, (s) => ({
       ...s,
-      agentActivity: [...s.agentActivity, entry].slice(-50),
+      agentActivity: appendActivity(s.agentActivity, entry),
       lastAgentActivityAt: at,
       pokeFailed: false,
     }));
@@ -246,9 +254,6 @@ export const tools = {
       narration: z.string().min(1),
     });
     const { sessionId, itemId, narration } = P.parse(params);
-    const cur = await ctx.store.get(sessionId);
-    if (!cur) throw new Error("NOT_FOUND");
-    if (!cur.items.some((it) => it.id === itemId)) throw new Error(`UNKNOWN_ITEM_ID:${itemId}`);
     const at = Date.now();
     const response = {
       itemId,
@@ -258,13 +263,19 @@ export const tools = {
       addressed: true,
     };
     const entry = { at, tool: "agent_address_comment", narration, itemId };
-    const session = await ctx.store.update(sessionId, (s) => ({
-      ...s,
-      responses: [...s.responses, response],
-      agentActivity: [...s.agentActivity, entry].slice(-50),
-      lastAgentActivityAt: at,
-      pokeFailed: false,
-    }));
+    // Validation lives inside the updater so we read the session once. Item-id
+    // check throws from the closure; store.update propagates. NOT_FOUND comes
+    // from store.update itself if the session doesn't exist.
+    const session = await ctx.store.update(sessionId, (s) => {
+      if (!s.items.some((it) => it.id === itemId)) throw new Error(`UNKNOWN_ITEM_ID:${itemId}`);
+      return {
+        ...s,
+        responses: [...s.responses, response],
+        agentActivity: appendActivity(s.agentActivity, entry),
+        lastAgentActivityAt: at,
+        pokeFailed: false,
+      };
+    });
     ctx.bus.publish(sessionId, { type: "agent-activity", sessionId, entry });
     ctx.bus.publish(sessionId, { type: "state-changed", session });
     return { ok: true };
@@ -282,13 +293,12 @@ export const tools = {
         message: "set_drawer requires at least one of position or size",
       });
     const { sessionId, position, size, narration } = P.parse(params);
-    const cur = await ctx.store.get(sessionId);
-    if (!cur) throw new Error("NOT_FOUND");
     const at = Date.now();
     const entry = { at, tool: "set_drawer", narration };
+    // No item-id validation needed; store.update throws NOT_FOUND on missing session.
     const session = await ctx.store.update(sessionId, (s) => ({
       ...s,
-      agentActivity: [...s.agentActivity, entry].slice(-50),
+      agentActivity: appendActivity(s.agentActivity, entry),
       lastAgentActivityAt: at,
       pokeFailed: false,
     }));
@@ -301,15 +311,16 @@ export const tools = {
   async set_current_item(ctx: Ctx, params: unknown) {
     const P = z.object({ sessionId: z.string(), itemId: z.string() });
     const { sessionId, itemId } = P.parse(params);
-    const cur = await ctx.store.get(sessionId);
-    if (!cur) throw new Error("NOT_FOUND");
-    if (!cur.items.some((it) => it.id === itemId)) throw new Error(`UNKNOWN_ITEM_ID:${itemId}`);
-    const session = await ctx.store.update(sessionId, (s) => ({
-      ...s,
-      currentItemId: itemId,
-      lastAgentActivityAt: Date.now(),
-      pokeFailed: false,
-    }));
+    // Item-id check moves into the updater so we read the session once.
+    const session = await ctx.store.update(sessionId, (s) => {
+      if (!s.items.some((it) => it.id === itemId)) throw new Error(`UNKNOWN_ITEM_ID:${itemId}`);
+      return {
+        ...s,
+        currentItemId: itemId,
+        lastAgentActivityAt: Date.now(),
+        pokeFailed: false,
+      };
+    });
     ctx.bus.publish(sessionId, { type: "state-changed", session });
     return { ok: true };
   },
@@ -354,10 +365,12 @@ export const tools = {
       ...s,
       pendingQuestion: { question, options: options ?? [], itemId, askedAt: at },
       // Push a feed entry so the question shows in the AgentFeed history too.
-      agentActivity: [
-        ...s.agentActivity,
-        { at, tool: "ask_user", narration: `❓ ${question}`, itemId },
-      ].slice(-50),
+      agentActivity: appendActivity(s.agentActivity, {
+        at,
+        tool: "ask_user",
+        narration: `❓ ${question}`,
+        itemId,
+      }),
       lastAgentActivityAt: at,
       pokeFailed: false,
     }));

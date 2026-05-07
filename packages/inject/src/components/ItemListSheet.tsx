@@ -11,12 +11,15 @@ function glyphFor(state: PipState): string {
  *  the active item and dismiss; Esc or backdrop click also dismisses. */
 export const ItemListSheet: Component<{ onClose: () => void }> = (props) => {
   const items = () => session.s?.items ?? [];
+  // Precedence matches PipStrip: approve (user's final word) always wins,
+  // comment only fills in when there's no other response yet. Pre-fix the
+  // comparison was inverted — items the user approved AFTER commenting
+  // still showed the comment glyph in the list sheet.
   const responsesByItem = createMemo(() => {
     const m = new Map<string, "approved" | "commented">();
     for (const r of session.s?.responses ?? []) {
-      const cur = m.get(r.itemId);
-      if (r.kind === "comment") m.set(r.itemId, "commented");
-      else if (cur !== "commented") m.set(r.itemId, "approved");
+      if (r.kind === "approve") m.set(r.itemId, "approved");
+      else if (r.kind === "comment" && !m.has(r.itemId)) m.set(r.itemId, "commented");
     }
     return m;
   });

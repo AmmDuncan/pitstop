@@ -48,6 +48,38 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
   // revalidates on every reload and we get a fresh signal each time.
   const drawerSeen = new Map<string, number>();
 
+  /** Spawn a `claude --resume` poke and arm the session for it: writes
+   *  pokePid + pokeSpawnedAt, clears pokeFailed, broadcasts state-changed,
+   *  arms pokeWatch. Used by all three poke sites (resume-from-pause,
+   *  comment-poke, retry-poke). Centralizes the pokePid lifecycle invariants
+   *  so a future field added here lands in one place. Each caller still owns
+   *  its own `exited.then` cleanup (e.g. drain logic differs per site).
+   *  Returns null on spawn failure. */
+  const armPoke = async (
+    id: string,
+    clientSessionId: string,
+    context: string,
+    errLabel: string,
+  ): Promise<{ pid: number; exited: Promise<number> } | null> => {
+    const { ClaudeResumePoke } = await import("../poke/claude-resume");
+    const poke = new ClaudeResumePoke({ spawn: opts.spawn });
+    try {
+      const result = await poke.trigger({ sessionId: id, clientSessionId, context });
+      const updated = await store.update(id, (s) => ({
+        ...s,
+        pokePid: result.pid,
+        pokeSpawnedAt: Date.now(),
+        pokeFailed: false,
+      }));
+      bus.publish(id, { type: "state-changed", session: updated });
+      pokeWatch.arm(id);
+      return result;
+    } catch (err) {
+      console.error(`${errLabel} poke failed`, err);
+      return null;
+    }
+  };
+
   // Permissive CORS — drawer is injected into arbitrary local dev hosts.
   app.use("*", async (c, next) => {
     if (c.req.method === "OPTIONS") {
@@ -124,8 +156,14 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     const id = c.req.param("id");
     const parsed = StatusBodyZ.safeParse(await c.req.json());
     if (!parsed.success) return c.json({ error: parsed.error.format() }, 400);
-    const before = await store.get(id);
-    const session = await store.update(id, (s) => ({ ...s, status: parsed.data.status }));
+    // Capture the prior status inside the updater so we don't need a
+    // separate `before = store.get(id)` read (the resume-detection branch
+    // below only needed `before?.status === "paused"`, nothing else from it).
+    let prevStatus: typeof parsed.data.status | undefined;
+    const session = await store.update(id, (s) => {
+      prevStatus = s.status;
+      return { ...s, status: parsed.data.status };
+    });
     bus.publish(session.id, { type: "state-changed", session });
 
     // DONE button or any path that flips status to 'complete' — drop the
@@ -138,32 +176,16 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     }
 
     // Resume detection: paused → active with unaddressed responses → fire summarizing poke
-    const wasPaused = before?.status === "paused";
+    const wasPaused = prevStatus === "paused";
     const nowActive = parsed.data.status === "active";
     const unaddressed = session.responses.filter((r) => !r.addressed && r.kind === "comment");
     if (wasPaused && nowActive && unaddressed.length > 0 && !session.pokePid && session.clientSessionId) {
-      const { ClaudeResumePoke } = await import("../poke/claude-resume");
-      const poke = new ClaudeResumePoke({ spawn: opts.spawn });
       const ctx = `Pitstop session ${id} resumed from paused. ${unaddressed.length} comment${unaddressed.length === 1 ? "" : "s"} queued during pause. Read get_unread_responses(${id}) for the full list.`;
-      try {
-        const { pid, exited } = await poke.trigger({
-          sessionId: id,
-          clientSessionId: session.clientSessionId,
-          context: ctx,
-        });
-        const updated = await store.update(id, (s) => ({
-          ...s,
-          pokePid: pid,
-          pokeSpawnedAt: Date.now(),
-          pokeFailed: false,
-        }));
-        bus.publish(id, { type: "state-changed", session: updated });
-        pokeWatch.arm(id);
-        exited.then(async () => {
+      const result = await armPoke(id, session.clientSessionId, ctx, "resume");
+      if (result) {
+        result.exited.then(async () => {
           await store.update(id, (s) => ({ ...s, pokePid: undefined, pokeSpawnedAt: undefined }));
         });
-      } catch (err) {
-        console.error("resume poke failed", err);
       }
     }
 
@@ -308,26 +330,13 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     const shouldPoke =
       (r.kind === "comment" || r.kind === "answer") && session.status !== "paused" && !session.pokePid;
 
-    if (shouldPoke) {
-      const { ClaudeResumePoke } = await import("../poke/claude-resume");
-      const poke = new ClaudeResumePoke({ spawn: opts.spawn });
+    if (shouldPoke && session.clientSessionId) {
       const ctx = `Pitstop item ${r.itemId} got a new comment: ${r.body}. Read get_unread_responses(${id}) for the full list.`;
-      try {
-        const { pid, exited } = await poke.trigger({
-          sessionId: id,
-          clientSessionId: session.clientSessionId,
-          context: ctx,
-        });
-        const armed = await store.update(id, (s) => ({
-          ...s,
-          pokePid: pid,
-          pokeSpawnedAt: Date.now(),
-          pokeFailed: false,
-        }));
-        bus.publish(id, { type: "state-changed", session: armed });
-        pokeWatch.arm(id);
-        // When the poke subprocess exits: clear pokePid; if responses still unaddressed, fire one drain poke.
-        exited.then(async () => {
+      const result = await armPoke(id, session.clientSessionId, ctx, "comment");
+      if (result) {
+        // When the poke subprocess exits: clear pokePid; if responses still
+        // unaddressed, fire one drain poke through the same helper.
+        result.exited.then(async () => {
           const updated = await store.update(id, (s) => ({
             ...s,
             pokePid: undefined,
@@ -336,27 +345,9 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
           const stillUnread = updated.responses.some((rr) => !rr.addressed);
           if (stillUnread && updated.status !== "paused" && updated.clientSessionId) {
             const ctx2 = `Some responses queued while you were busy on session ${id}. Read get_unread_responses(${id}).`;
-            try {
-              const next = await poke.trigger({
-                sessionId: id,
-                clientSessionId: updated.clientSessionId,
-                context: ctx2,
-              });
-              const drained = await store.update(id, (s) => ({
-                ...s,
-                pokePid: next.pid,
-                pokeSpawnedAt: Date.now(),
-                pokeFailed: false,
-              }));
-              bus.publish(id, { type: "state-changed", session: drained });
-              pokeWatch.arm(id);
-            } catch (err) {
-              console.error("drain poke failed", err);
-            }
+            await armPoke(id, updated.clientSessionId, ctx2, "drain");
           }
         });
-      } catch (err) {
-        console.error("poke failed", err);
       }
     }
 
@@ -370,8 +361,6 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     if (session.pokePid) return c.json({ error: "ALREADY_IN_FLIGHT" }, 409);
     if (!session.clientSessionId) return c.json({ error: "NO_CLIENT_SESSION_ID" }, 400);
 
-    const { ClaudeResumePoke } = await import("../poke/claude-resume");
-    const poke = new ClaudeResumePoke({ spawn: opts.spawn });
     // Context tailors to what the agent should do next: pick up unread
     // comments if any, otherwise a user-initiated nudge ("are you stuck?")
     // that just asks the agent to look at current state and continue.
@@ -380,28 +369,12 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
       unaddressed.length > 0
         ? `Pitstop session ${id} retry: ${unaddressed.length} comment${unaddressed.length === 1 ? "" : "s"} pending. Read get_unread_responses(${id}).`
         : `Pitstop session ${id}: user-initiated poke from the drawer (likely thinks you're stuck). Read get_state(${id}) and continue driving the review.`;
-    try {
-      const { pid, exited } = await poke.trigger({
-        sessionId: id,
-        clientSessionId: session.clientSessionId,
-        context: ctx,
-      });
-      const updated = await store.update(id, (s) => ({
-        ...s,
-        pokePid: pid,
-        pokeSpawnedAt: Date.now(),
-        pokeFailed: false,
-      }));
-      bus.publish(id, { type: "state-changed", session: updated });
-      pokeWatch.arm(id);
-      exited.then(async () => {
-        await store.update(id, (s) => ({ ...s, pokePid: undefined, pokeSpawnedAt: undefined }));
-      });
-      return c.json({ ok: true });
-    } catch (err) {
-      console.error("retry poke failed", err);
-      return c.json({ error: "POKE_FAILED" }, 500);
-    }
+    const result = await armPoke(id, session.clientSessionId, ctx, "retry");
+    if (!result) return c.json({ error: "POKE_FAILED" }, 500);
+    result.exited.then(async () => {
+      await store.update(id, (s) => ({ ...s, pokePid: undefined, pokeSpawnedAt: undefined }));
+    });
+    return c.json({ ok: true });
   });
 
   const RpcZ = z.object({ method: z.string(), params: z.unknown() });

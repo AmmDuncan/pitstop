@@ -1,5 +1,5 @@
 import { type Component, For } from "solid-js";
-import { baseUrl } from "../state/client";
+import { patchSessionStatus } from "../state/client";
 import { session, setCurrentItemIdx, setSummaryOpen, unreviewedIndices } from "../state/store";
 
 export const ReviewSummary: Component = () => {
@@ -22,11 +22,7 @@ export const ReviewSummary: Component = () => {
       );
       if (!ok) return;
     }
-    await fetch(`${baseUrl}/api/sessions/${session.s.id}/status`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status: "complete" }),
-    });
+    await patchSessionStatus(session.s.id, "complete");
     setSummaryOpen(false);
   };
 

@@ -1,5 +1,5 @@
 import { type Component, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { type UpdateStatusResponse, baseUrl, fetchUpdateStatus } from "../state/client";
+import { type UpdateStatusResponse, fetchUpdateStatus, submitResponse } from "../state/client";
 import { session } from "../state/store";
 
 const [updateStatus, setUpdateStatus] = createSignal<UpdateStatusResponse | null>(null);
@@ -73,11 +73,7 @@ export const UpdateChip: Component = () => {
     if (!itemId) return;
     const directive = `Pitstop update available: please run \`${cmd}\` and then restart the daemon. Once it's restarted, continue the review where we left off.`;
     try {
-      await fetch(`${baseUrl}/api/sessions/${session.s.id}/responses`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ itemId, kind: "comment", body: directive }),
-      });
+      await submitResponse(session.s.id, { itemId, kind: "comment", body: directive });
       setUpdateDismissed(true);
       setOpen(false);
     } catch (err) {
