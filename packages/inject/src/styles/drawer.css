@@ -1671,22 +1671,18 @@
 .btn-secondary:hover:not(:disabled) {
   border-color: var(--t1);
 }
-/* Disabled — change colors instead of opacity so the button keeps its visual size + crisp border */
+/* Disabled — preserve each variant's visual identity (primary stays filled,
+   secondary stays outlined) and mute via opacity. Earlier we flattened
+   disabled-primary's colors to recede, but that made disabled-primary
+   indistinguishable from disabled-secondary, which became a problem once we
+   started holding LOOKS_GOOD disabled for minutes during AWAITING. */
 .btn:disabled {
   cursor: not-allowed;
-}
-.btn-primary:disabled {
-  background: var(--bg-panel);
-  color: var(--t3);
-  border-color: var(--rule-3);
-}
-.btn-secondary:disabled {
-  color: var(--t3);
-  border-color: var(--rule-2);
+  opacity: 0.45;
 }
 .btn:disabled .kbd {
-  color: var(--t3);
-  border-color: var(--t3);
+  /* kbd inherits from button color/border; opacity carries through. */
+  opacity: 1;
 }
 .btn .kbd {
   font-family: var(--mono);
