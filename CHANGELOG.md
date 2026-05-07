@@ -2,6 +2,18 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.52 — 2026-05-07
+
+### Fixed
+- **Claude Code session-id binding via SessionStart hook.** Pitstop has been silently failing to bind to the CC session for the entire project lifetime. v0.3.43's "fix" assumed `CLAUDE_CODE_SESSION_ID` was set on MCP server subprocesses; today's CC release notes clarified the env var is exposed to **Bash tool subprocesses only**, not MCP. The drawer's `CLAUDE# UNBOUND` chip has been the canonical signal — pokes never woke any agent because there was no session id to resume. v0.3.49 cross-session rebind has been a no-op for the same reason.
+  - New `packages/scripts/pitstop-session-id.sh` SessionStart hook reads `session_id` from CC's JSON stdin and writes `~/.claude/pitstop/cc-session-$PPID.txt`.
+  - New `packages/mcp-adapter/src/session-id.ts` resolves the id per RPC call: env var → hook file (by `process.ppid`) → most-recently-modified `.jsonl` in `~/.claude/projects/<encoded-cwd>/` as a zero-config fallback for users who haven't run setup.
+  - Per-call resolution pairs with the daemon's existing rebind logic so a CC restart with a new session id flows through immediately.
+  - Forwarder takes a `resolveClientSessionId` function instead of a static `clientSessionId`.
+
+### Setup
+- `bun run setup` now installs the SessionStart hook into `~/.claude/settings.json` alongside the existing UserPromptSubmit hook. Existing installs need to re-run setup or restart CC for the hook to fire.
+
 ## v0.3.51 — 2026-05-07
 
 ### MCP
