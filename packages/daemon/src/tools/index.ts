@@ -208,11 +208,26 @@ export const tools = {
   },
 
   async add_items(ctx: Ctx, params: unknown) {
-    const P = z.object({ sessionId: z.string(), items: z.array(ItemZ) });
+    const P = z.object({
+      sessionId: z.string(),
+      items: z.array(ItemZ.omit({ index: true }).partial({ id: true, attachments: true })),
+    });
     const { sessionId, items } = P.parse(params);
     const session = await ctx.store.update(sessionId, (s) => ({
       ...s,
-      items: [...s.items, ...items.map((it, i) => ({ ...it, index: s.items.length + i + 1 }))],
+      items: [
+        ...s.items,
+        ...items.map((it, i) => {
+          const index = s.items.length + i + 1;
+          return {
+            ...it,
+            id: it.id ?? String(index).padStart(2, "0"),
+            index,
+            tested: it.tested ?? [],
+            attachments: it.attachments ?? [],
+          };
+        }),
+      ],
       lastAgentActivityAt: Date.now(),
       pokeFailed: false,
     }));
