@@ -113,10 +113,21 @@ export const PipStrip: Component = () => {
             const responseState = (): PipState | null => responsesByItem().get(slot.item.id) ?? null;
             const isActive = () => slot.index === currentItemIdx();
             const state = (): PipState => responseState() ?? (isActive() ? "focused" : "pending");
+            // Use classList for ALL dynamic classes — when `class={template}`
+            // reactively reassigned the full attribute (e.g. on agent_address_comment),
+            // it wiped the classList-managed `is-active` out, making the active-item
+            // amber underline vanish for the just-addressed item.
             return (
               <div
-                class={`pip ${state()}`}
-                classList={{ "is-active": isActive() }}
+                class="pip"
+                classList={{
+                  approved: state() === "approved",
+                  "agent-addressed": state() === "agent-addressed",
+                  commented: state() === "commented",
+                  focused: state() === "focused",
+                  pending: state() === "pending",
+                  "is-active": isActive(),
+                }}
                 data-idx={slot.index}
                 onClick={() => setCurrentItemIdx(slot.index)}
               >
