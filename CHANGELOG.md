@@ -2,6 +2,11 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.60 — 2026-05-08
+
+### Fixed
+- **Lifecycle strip drops side borders.** Sitting between AgentFeed and Footer (both full-drawer-width), a 4-sided border framed the strip as a contained card and competed with the actual content cards above (item body, `LOOK_OUT_FOR` section). Top + bottom rules only reads as a horizontal status row, which is what it semantically is. Slight horizontal-padding bump (12 → 14px) to match the drawer's content gutter.
+
 ## v0.3.59 — 2026-05-08
 
 ### Changed
