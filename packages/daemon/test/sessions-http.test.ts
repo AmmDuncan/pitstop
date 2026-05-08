@@ -67,3 +67,15 @@ test("GET /api/sessions/active returns the active session for a projectRoot", as
   expect(s.id).toBe(created.id);
   rmSync(dir, { recursive: true, force: true });
 });
+
+test("POST /api/sessions/:id/status returns 404 for unknown sessionId (was 500)", async () => {
+  const res = await json("/api/sessions/NOPE1234/status", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ status: "complete" }),
+  });
+  expect(res.status).toBe(404);
+  const body = await res.json();
+  expect(body.error).toBe("NOT_FOUND");
+  rmSync(dir, { recursive: true, force: true });
+});

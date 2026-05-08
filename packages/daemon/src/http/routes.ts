@@ -188,10 +188,22 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     // separate `before = store.get(id)` read (the resume-detection branch
     // below only needed `before?.status === "paused"`, nothing else from it).
     let prevStatus: typeof parsed.data.status | undefined;
-    const session = await store.update(id, (s) => {
-      prevStatus = s.status;
-      return { ...s, status: parsed.data.status };
-    });
+    let session: Awaited<ReturnType<typeof store.update>>;
+    try {
+      session = await store.update(id, (s) => {
+        prevStatus = s.status;
+        return { ...s, status: parsed.data.status };
+      });
+    } catch (err) {
+      // store.update throws "NOT_FOUND" — map it the same way /api/rpc does
+      // instead of letting it fall through to a generic 500. The drawer's
+      // DONE button hits this route, and a 500 there is a noisy false alarm
+      // when the session was just deleted by a parallel complete_review.
+      if (err instanceof Error && err.message === "NOT_FOUND") {
+        return c.json({ error: "NOT_FOUND" }, 404);
+      }
+      throw err;
+    }
     bus.publish(session.id, { type: "state-changed", session });
 
     // DONE button or any path that flips status to 'complete' — drop the

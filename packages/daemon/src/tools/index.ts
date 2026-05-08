@@ -31,7 +31,10 @@ const StartReviewZ = z.object({
   /** Origins (e.g. http://localhost:3000) where this review's surfaces live.
    *  Lets the browser-extension drawer scope itself to the right tabs. */
   devUrls: z.array(z.string()).optional(),
-  items: z.array(ItemZ.omit({ index: true }).partial({ id: true, attachments: true })),
+  // A review with zero items has nothing for the user to walk — the drawer
+  // would render an empty body. Reject up front rather than create a
+  // ghost session that the agent then has to clean up.
+  items: z.array(ItemZ.omit({ index: true }).partial({ id: true, attachments: true })).min(1),
 });
 
 export const tools = {

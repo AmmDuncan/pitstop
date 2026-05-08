@@ -45,3 +45,21 @@ test("start_review uses default scriptsDir when not provided", async () => {
   expect(body.watcher.command).toMatch(/packages\/scripts\/pitstop-watch\.sh /);
   expect(body.watcher.command).toContain(body.sessionId);
 });
+
+test("start_review rejects empty items array with a zod error", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "wt-"));
+  const app = buildApp({ port: 0, dataDir: dir });
+  const r = await app.fetch(
+    new Request("http://localhost/api/rpc", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        method: "start_review",
+        params: { projectRoot: "/tmp/p", items: [] },
+      }),
+    }),
+  );
+  expect(r.status).toBe(500);
+  const body = await r.json();
+  expect(body.error).toContain("at least 1");
+});
