@@ -22,6 +22,7 @@ import { Detail } from "./Detail";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { KeymapOverlay } from "./KeymapOverlay";
+import { LifecycleStrip } from "./LifecycleStrip";
 import { PipStrip } from "./PipStrip";
 import { ResizeHandle } from "./ResizeHandle";
 import { ReviewComplete } from "./ReviewComplete";
@@ -239,6 +240,7 @@ export const Drawer: Component = () => {
               <ReviewComplete />
             </Show>
             <AgentFeed />
+            <LifecycleStrip />
             <Footer />
           </Show>
           <SessionSwitchPrompt />

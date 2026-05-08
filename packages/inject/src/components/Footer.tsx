@@ -1,6 +1,6 @@
 import { type Component, Show } from "solid-js";
 import { patchSessionStatus } from "../state/client";
-import { responseCounts, reviewingComplete, session, setReviewingComplete } from "../state/store";
+import { reviewingComplete, session, setReviewingComplete } from "../state/store";
 
 export const Footer: Component = () => {
   const isPaused = () => session.s?.status === "paused";
@@ -16,19 +16,11 @@ export const Footer: Component = () => {
     await patchSessionStatus(session.s.id, "complete");
   };
 
+  // v0.3.58: dropped the OK / QUEUED / LEFT counts segment. Pip strip + the
+  // header's `01/04` counter already carry "where am I in the review";
+  // repeating the info here served no practical purpose.
   return (
     <footer class="dfooter">
-      <div class="counts">
-        <span class="ok-c">
-          <span class="v">{String(responseCounts().approved).padStart(2, "0")}</span>_OK
-        </span>
-        <span class="am-c">
-          <span class="v">{String(responseCounts().commented).padStart(2, "0")}</span>_QUEUED
-        </span>
-        <span>
-          <span class="v">{String(responseCounts().left).padStart(2, "0")}</span>_LEFT
-        </span>
-      </div>
       <div class="actions-r">
         <Show
           when={!isComplete()}
