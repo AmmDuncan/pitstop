@@ -84,12 +84,27 @@ export function flagSent(): void {
 export function applyEvent(e: SseEvent): void {
   switch (e.type) {
     case "state-snapshot":
-    case "state-changed":
+    case "state-changed": {
+      // Detect agent-activity growth even when the SSE arrived as state-changed
+      // (not as the typed `agent-activity` event). Without this, missed bus
+      // deliveries / reconnects / browser-tab throttling can leave submitState
+      // stuck at "poked" indefinitely while the feed and pip colors update via
+      // the snapshot reconcile. Compare lengths BEFORE the reconcile overwrites
+      // the prior value.
+      const prevActivityLen = session.s?.agentActivity?.length ?? 0;
+      const newActivityLen = e.session.agentActivity?.length ?? 0;
       // `reconcile` does a deep diff against the existing store value and
       // properly REMOVES keys that disappeared (e.g. pendingQuestion when an
       // answer is submitted). Plain `setSession('s', e.session)` keeps the
       // current key in the store; reconcile fixes that.
       setSession("s", reconcile(e.session));
+      if (newActivityLen > prevActivityLen) {
+        setSubmitState("idle");
+        if (pokedClearTimer) {
+          clearTimeout(pokedClearTimer);
+          pokedClearTimer = null;
+        }
+      }
       // Agent-authoritative cursor: when the daemon's session has a
       // currentItemId, snap the local cursor to match. This is how the
       // agent moves the user via set_current_item (Phase B).
@@ -100,6 +115,7 @@ export function applyEvent(e: SseEvent): void {
         }
       }
       break;
+    }
     case "item-added":
       setSession(
         "s",
