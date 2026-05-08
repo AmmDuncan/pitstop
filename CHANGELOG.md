@@ -2,6 +2,14 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.57 — 2026-05-08
+
+### Fixed
+- **Pip `is-active` amber underline survives response-state transitions.** Previously the pip rendered via `class={`pip ${state()}`} classList={{ "is-active": isActive() }}`. When state() changed reactively (on agent_address_comment, on user approve, on user comment), Solid reassigned the full `class` attribute string — clobbering the classList-managed `is-active` class out of the DOM. The amber active-item underline vanished for exactly the item the user was looking at, every time the agent or user took action on it. Consolidated all dynamic classes into a single `classList` directive so none of them races with the others.
+
+### Added
+- **`update_item` MCP tool** — patch an existing item's authored fields (title, body, lookFor, concerns, question) mid-session without creating a new item. Closes the gap where ongoing iteration changed what the user should look at but the agent could only `add_items`. Patch is shallow-merged; arrays replace wholesale (not append), matching the agent's mental model of "this is what the user should look at" being a fresh statement. Throws `UNKNOWN_ITEM_ID:<id>` on missing item, rejects empty patches at the schema layer. Five hermetic tests cover the happy path, array-replace semantics, unknown-itemId/sessionId errors, and empty-patch rejection. Added to `start_review`'s `toolsToPreload` list so it loads up front.
+
 ## v0.3.56 — 2026-05-08
 
 ### Fixed
