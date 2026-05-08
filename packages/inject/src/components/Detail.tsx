@@ -84,10 +84,51 @@ export const Detail: Component = () => {
         e.tool === "mark_addressing" && e.itemId === id && e.arrived !== false && e.at > lastUserCommentAt,
     );
   });
+  // Hoisted: `now` is a 1Hz tick used by both the strip's elapsed counter and
+  // the driving-narration freshness window below. Was originally declared
+  // alongside the elapsed counter further down; lifted here so drivingNarration
+  // can subscribe to it.
+  const [stripStartedAt, setStripStartedAt] = createSignal<number | null>(null);
+  const [now, setNow] = createSignal(Date.now());
+
+  /** Most recent mid-drive narration (mark_addressing with arrived: false) for
+   *  the current item, within the last 60s. Surfaces in the strip while
+   *  awaiting so the user knows WHAT the agent is doing, not just THAT it's
+   *  doing something. Repurposes the existing tool — no new MCP surface — and
+   *  preserves the three-feed-tools rule (narrate stays ambient; only
+   *  mark_addressing(arrived: false) is loud enough to take the strip slot).
+   *  Subscribes to `now()` so the 60s freshness check re-evaluates per tick. */
+  const STRIP_DRIVING_STALE_MS = 60_000;
+  const STRIP_DRIVING_TRUNCATE = 50;
+  const drivingNarration = createMemo(() => {
+    const id = item()?.id;
+    if (!id) return null;
+    const cur = now();
+    const cutoff = cur - STRIP_DRIVING_STALE_MS;
+    let best: { at: number; narration: string } | null = null;
+    for (const e of session.s?.agentActivity ?? []) {
+      if (e.tool !== "mark_addressing") continue;
+      if (e.itemId !== id) continue;
+      if (e.arrived !== false) continue;
+      if (!e.narration) continue;
+      if (e.at < cutoff) continue;
+      if (!best || e.at > best.at) best = { at: e.at, narration: e.narration };
+    }
+    return best?.narration ?? null;
+  });
+
   const stripState = () => {
     if (submitState() === "sending") return { kind: "sending", label: "SENDING…" };
     if (submitState() === "poked") return { kind: "poked", label: "POKED · WAITING" };
-    if (!itemAddressed()) return { kind: "awaiting", label: "AWAITING CLAUDE" };
+    if (!itemAddressed()) {
+      const drv = drivingNarration();
+      if (drv) {
+        const truncated =
+          drv.length > STRIP_DRIVING_TRUNCATE ? `${drv.slice(0, STRIP_DRIVING_TRUNCATE - 1)}…` : drv;
+        return { kind: "awaiting", label: `DRIVING · ${truncated}` };
+      }
+      return { kind: "awaiting", label: "AWAITING CLAUDE" };
+    }
     return null;
   };
 
@@ -121,8 +162,6 @@ export const Detail: Component = () => {
     }
   });
 
-  const [stripStartedAt, setStripStartedAt] = createSignal<number | null>(null);
-  const [now, setNow] = createSignal(Date.now());
   let lastStripKind: string | null = null;
   createEffect(() => {
     const ss = stripState();
