@@ -135,25 +135,23 @@ createRoot(() => {
     });
   });
 
-  // Expose the drawer's current width on :root as --pitstop-drawer-width.
-  // Always set, regardless of pinned/floating state — host pages can read it
-  // if they want to know how much screen pitstop is occupying. This was the
-  // anchor point for the v0.3.27–v0.3.35 reflow mode (host opt-in via
-  // `right: var(--pitstop-drawer-width, 0)` on slideovers etc.); reflow itself
-  // was retired in v0.3.36 because of layout-citizen issues, but the var
-  // stays exposed in case reflow ever comes back or hosts find other uses.
+  // One-time cleanup for users upgrading from v0.3.35 or earlier with the
+  // retired reflow mode on — strip any stale body/html padding their last
+  // session left. removeProperty on a non-existent property is a no-op DOM
+  // mutation, so it's safe to run pre-hydration without tripping React.
   if (typeof document !== "undefined") {
-    // One-time cleanup for users upgrading from v0.3.35 or earlier with
-    // reflow on — strip any stale body/html padding their last session left.
     document.documentElement.style.removeProperty("padding-left");
     document.documentElement.style.removeProperty("padding-right");
     document.body.style.removeProperty("padding-left");
     document.body.style.removeProperty("padding-right");
   }
-  createEffect(() => {
-    if (typeof document === "undefined") return;
-    document.documentElement.style.setProperty("--pitstop-drawer-width", `${width()}px`);
-  });
+  // The previous `--pitstop-drawer-width` var on :root was removed in
+  // v0.3.67 — Next 15 flagged it as a hydration mismatch (the Solid effect
+  // mutated <html>'s style attribute *after* React had hydrated). It was
+  // an anchor point for the retired v0.3.36 reflow feature and had no
+  // current consumers. If a host ever needs the width again, expose it on
+  // the `<pitstop-drawer>` custom element instead — that element is not
+  // SSR'd so mutations on it can't conflict with framework hydration.
 });
 
 /**
