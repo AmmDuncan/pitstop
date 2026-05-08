@@ -1,7 +1,7 @@
 {
   "name": "@pitstop/daemon",
   "type": "module",
-  "version": "0.3.63",
+  "version": "0.3.64",
   "bin": {
     "pitstop-daemon": "./src/index.ts"
   },

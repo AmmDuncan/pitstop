@@ -2,6 +2,11 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.64 — 2026-05-08
+
+- fix(daemon): `POST /api/sessions/:id/status` now returns 404 for unknown session ids instead of bubbling up as a 500. The drawer's DONE button hits this route, and a 500 there was a noisy false alarm when the session had just been deleted by a concurrent `complete_review`.
+- fix(daemon): `start_review` now rejects `items: []` at the schema level. A review with zero items is a ghost session the drawer can't render — `min(1)` catches the mistake at the boundary instead of letting it through.
+
 ## v0.3.63 — 2026-05-08
 
 - feat(drawer): default to strip when no session is active. The drawer auto-lifts to standard the moment a session arrives, then drops back to your persisted preference when the session ends. Explicit resizes (click strip to expand, size toggle) are sticky as before — the auto-lift never overwrites them. Existing users keep whatever they previously persisted.
