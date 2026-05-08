@@ -2,6 +2,11 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.59 — 2026-05-08
+
+### Changed
+- **Light-mode base color shifts off pure white to warm cream.** Old light tokens were essentially pure white — paper at `oklch(0.985 0.003 70)` and inputs at `#fff`. Felt clinical against a developer's editor surroundings, and the tiny chroma made the warm hue invisible in practice. Lightness ramp pulled down ~0.025 across the board (paper `0.985 → 0.96`, panel `0.99 → 0.97`, input `#fff → 0.985`, rail `0.97 → 0.94`); hue shifted `70 → 80` with slightly higher chroma. Reads as "paper" rather than "blank canvas," and the amber accents (DRIVING label, pip underline, amber-soft highlights) — already in this hue family — pair more intentionally now. Hierarchy preserved: input > panel > paper > rail.
+
 ## v0.3.58 — 2026-05-08
 
 ### Changed
