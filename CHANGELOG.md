@@ -2,6 +2,10 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.67 — 2026-05-08
+
+- fix(inject): drop the `:root` `--pitstop-drawer-width` CSS variable that broke Next 15 hydration. The Solid effect was mutating `document.documentElement.style` after React hydrated, and Next's checker correctly flagged it as a server/client mismatch (visible in the dev overlay as `style={{--pitstop-drawer-width:"454px"}}` on the `<html>` element). The variable was a forward-compat anchor for the v0.3.36-retired reflow feature and had no current consumers. If a host ever needs the width again, the right place to expose it is the `<pitstop-drawer>` custom element — which is not SSR'd, so mutations there can't conflict with framework hydration.
+
 ## v0.3.66 — 2026-05-08
 
 - feat(daemon): pre-flight drawer-live check on `start_review` and `get_state`. Real-flow report surfaced an orphaned-tab case where `drawerStatus.connected` was true (the existing 10-minute fetch heuristic) but the user could no longer interact — the tab they were typing into was stale. Add a stronger `drawerStatus.live` signal driven by active SSE subscribers on the project lobby: gold "a real browser tab has the drawer mounted *right now*" proof. When `connected: true, live: false`, the hint directs the agent to STOP and ask the user to open their dev app rather than narrate beats into the void. Surfaced on `start_review` (initial pre-flight) and `get_state` (so an agent that paused can poll until the user opens the tab without restarting the session). New `activeSessionRules.drawerLiveCheck` bullet codifies the contract.
