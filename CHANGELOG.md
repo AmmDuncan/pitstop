@@ -2,6 +2,10 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.66 — 2026-05-08
+
+- feat(daemon): pre-flight drawer-live check on `start_review` and `get_state`. Real-flow report surfaced an orphaned-tab case where `drawerStatus.connected` was true (the existing 10-minute fetch heuristic) but the user could no longer interact — the tab they were typing into was stale. Add a stronger `drawerStatus.live` signal driven by active SSE subscribers on the project lobby: gold "a real browser tab has the drawer mounted *right now*" proof. When `connected: true, live: false`, the hint directs the agent to STOP and ask the user to open their dev app rather than narrate beats into the void. Surfaced on `start_review` (initial pre-flight) and `get_state` (so an agent that paused can poll until the user opens the tab without restarting the session). New `activeSessionRules.drawerLiveCheck` bullet codifies the contract.
+
 ## v0.3.65 — 2026-05-08
 
 - fix(daemon): concurrent `store.update` calls against the same session no longer drop writes. Surfaced in smoke-round-3: 10 parallel `narrate` calls used to persist only 2 beats and return ENOENT for 7 of the calls. Two compounding bugs: `writeAtomic`'s tmp filename collided when two writes landed in the same millisecond from the same process (one's tmp got overwritten before its rename), and `store.update` was an unguarded read-modify-write so the last writer clobbered everyone else's `agentActivity` even when the tmp collision didn't bite. Tmp name now uses `crypto.randomUUID()`; updates serialize through a per-session async mutex that self-clears when the chain settles. Regression test fires 10 parallel narrates and asserts every beat persists.

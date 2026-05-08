@@ -11,7 +11,7 @@ const baseUrl = `http://localhost:${port}`;
 // Adapter version, sent on every RPC call as `x-pitstop-adapter-version`.
 // Daemon emits a stale-adapter SSE event on mismatch so the drawer can prompt
 // the user to restart CC. Bumped by scripts/release.ts alongside the others.
-const ADAPTER_VERSION = "0.3.65";
+const ADAPTER_VERSION = "0.3.66";
 const ADAPTER_PID = String(process.pid);
 const fwd = new Forwarder({
   baseUrl,
@@ -20,7 +20,7 @@ const fwd = new Forwarder({
   adapterPid: ADAPTER_PID,
 });
 
-const server = new Server({ name: "pitstop", version: "0.3.65" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "pitstop", version: "0.3.66" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
