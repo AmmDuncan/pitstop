@@ -2,6 +2,20 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.58 — 2026-05-08
+
+### Changed
+- **Lifecycle strip is now a drawer-level slot between AgentFeed and Footer.** Previously the strip lived inside Detail's per-item action area, so it vanished the moment LOOKS_GOOD auto-advanced you to the next item — at exactly the moment you expected to keep watching POKED · WAITING or DRIVING · …. Lifted to a persistent grid row that survives item navigation. Animates max-height 0 ↔ 80px like the stale-adapter banner; always present in the DOM so collapsed states don't shift other rows. Renders in compact mode too (AgentFeed hides in compact, strip stays — status visibility is the whole point of the lift).
+- **Strip typography respects the "mono uppercase = label, sans = prose" rule.** DRIVING narrations were being rendered in mono+uppercase+wide-letter-spacing, which made multi-line wraps look cramped and treated prose like a label. Split into label (`DRIVING`, mono uppercase) + narration (sans, normal case, line-height 1.4, line-clamp 2). The narration's full text remains in the AgentFeed.
+- **Action area stays inside Detail's normal flow.** Textarea + LOOKS_GOOD / SEND_COMMENT keep their position below the item content (this is the design lock from the brainstorming pass — the lift is for the strip only, not for the actions). Detail's 1fr region absorbs the strip's height when it expands; AgentFeed slides up; actions stay at the bottom of Detail's space.
+
+### Removed
+- **Footer counts segment** (`01_OK 00_QUEUED 03_LEFT`). The pip strip + the header's `01/04` counter already carry "where am I in the review"; repeating it in the footer served no practical purpose. Footer is now flex with PAUSE / DONE right-aligned.
+
+### Internal
+- New `state/lifecycle.ts` — single drawer-level instance of `stripState`, the driving-narration memo, elapsed-timer signals, and the poke handler. Both `LifecycleStrip` and `Detail` (for disabling LOOKS_GOOD) read from here.
+- New `components/LifecycleStrip.tsx` — reads stripState directly inside JSX (no captured const, same reactivity lesson as v0.3.55).
+
 ## v0.3.57 — 2026-05-08
 
 ### Fixed
