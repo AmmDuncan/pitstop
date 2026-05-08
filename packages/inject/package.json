@@ -1,7 +1,7 @@
 {
   "name": "@pitstop/inject",
   "type": "module",
-  "version": "0.3.64",
+  "version": "0.3.65",
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch"

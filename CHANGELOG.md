@@ -2,6 +2,10 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.65 — 2026-05-08
+
+- fix(daemon): concurrent `store.update` calls against the same session no longer drop writes. Surfaced in smoke-round-3: 10 parallel `narrate` calls used to persist only 2 beats and return ENOENT for 7 of the calls. Two compounding bugs: `writeAtomic`'s tmp filename collided when two writes landed in the same millisecond from the same process (one's tmp got overwritten before its rename), and `store.update` was an unguarded read-modify-write so the last writer clobbered everyone else's `agentActivity` even when the tmp collision didn't bite. Tmp name now uses `crypto.randomUUID()`; updates serialize through a per-session async mutex that self-clears when the chain settles. Regression test fires 10 parallel narrates and asserts every beat persists.
+
 ## v0.3.64 — 2026-05-08
 
 - fix(daemon): `POST /api/sessions/:id/status` now returns 404 for unknown session ids instead of bubbling up as a 500. The drawer's DONE button hits this route, and a 500 there was a noisy false alarm when the session had just been deleted by a concurrent `complete_review`.
