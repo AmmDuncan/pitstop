@@ -2,6 +2,11 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.61 — 2026-05-08
+
+### Changed
+- **Header kebab collapse disabled.** With only one secondary control today, collapsing into a kebab when the drawer narrows wasn't earning its complexity — users had to open the kebab to reach a single button. Inline buttons render always. ResizeObserver + threshold + kebab JSX stay in place; re-enabling is a one-line revert when we add more secondary controls.
+
 ## v0.3.60 — 2026-05-08
 
 ### Fixed
