@@ -334,43 +334,50 @@ export const Detail: Component = () => {
           const pending = () => session.s?.pendingQuestion ?? null;
           const ss = stripState;
 
-          const LifecycleStrip = (props: { isFooter?: boolean }) => {
-            const state = ss();
-            if (!state) return null;
-            return (
-              <>
-                <div
-                  class={props.isFooter ? "lifecycle-strip is-footer" : "lifecycle-strip"}
-                  data-state={state.kind}
-                >
-                  <span class="lifecycle-dot" />
-                  <span class="lifecycle-label">{state.label}</span>
-                  {/* Elapsed counter on poked + awaiting; sending is too brief to show. */}
-                  <Show when={state.kind !== "sending"}>
-                    <span class="lifecycle-elapsed">{elapsedFormatted()}</span>
-                  </Show>
-                  {/* POKE only on AWAITING — re-poking during POKED is a no-op
-                      (daemon 409s the second /retry-poke while one's in flight)
-                      and confused users into clicking a button that did nothing. */}
-                  <Show when={state.kind === "awaiting"}>
-                    <button
-                      class="lifecycle-poke"
-                      onClick={onPoke}
-                      disabled={poking()}
-                      title="Poke Claude — re-engage if it seems stuck"
-                    >
-                      POKE
-                    </button>
-                  </Show>
-                </div>
-                <Show when={pokeError()}>
-                  <div class="lifecycle-error" role="alert">
-                    {pokeError()}
+          // Read ss() reactively inside JSX — capturing into a const at
+          // component-creation time meant the strip rendered with a stale
+          // snapshot of stripState and never updated when submitState
+          // transitioned (poked → idle/awaiting), leaving "POKED · WAITING"
+          // visible after agent-activity events that should have cleared it.
+          // Show's function-child pattern gives us a reactive non-null
+          // accessor that re-evaluates per state change.
+          const LifecycleStrip = (props: { isFooter?: boolean }) => (
+            <Show when={ss()}>
+              {(state) => (
+                <>
+                  <div
+                    class={props.isFooter ? "lifecycle-strip is-footer" : "lifecycle-strip"}
+                    data-state={state().kind}
+                  >
+                    <span class="lifecycle-dot" />
+                    <span class="lifecycle-label">{state().label}</span>
+                    {/* Elapsed counter on poked + awaiting; sending is too brief to show. */}
+                    <Show when={state().kind !== "sending"}>
+                      <span class="lifecycle-elapsed">{elapsedFormatted()}</span>
+                    </Show>
+                    {/* POKE only on AWAITING — re-poking during POKED is a no-op
+                        (daemon 409s the second /retry-poke while one's in flight)
+                        and confused users into clicking a button that did nothing. */}
+                    <Show when={state().kind === "awaiting"}>
+                      <button
+                        class="lifecycle-poke"
+                        onClick={onPoke}
+                        disabled={poking()}
+                        title="Poke Claude — re-engage if it seems stuck"
+                      >
+                        POKE
+                      </button>
+                    </Show>
                   </div>
-                </Show>
-              </>
-            );
-          };
+                  <Show when={pokeError()}>
+                    <div class="lifecycle-error" role="alert">
+                      {pokeError()}
+                    </div>
+                  </Show>
+                </>
+              )}
+            </Show>
+          );
 
           return (
             <Show when={!pending()} fallback={<PendingQuestion question={pending()!} />}>
