@@ -55,12 +55,16 @@ export const Header: Component = () => {
     onCleanup(() => document.removeEventListener("click", onDocClick, true));
   });
 
-  // Width is the only signal that should compact the chrome — `size()` is the
-  // user's drawer-height preference, not a chrome-density preference.
-  // Compact-size mode at standard width has plenty of horizontal room, so
-  // forcing the kebab there was over-eager. The width threshold catches
-  // the actually-narrow cases regardless of size mode.
-  const secondaryCollapsed = () => headerWidth() < NARROW_THRESHOLD;
+  // v0.3.61: kebab collapse disabled. With the current count of secondary
+  // buttons (just one), collapsing into a kebab when the drawer is narrow
+  // wasn't earning its complexity — users hit the kebab to reach a single
+  // button. Re-enable when we introduce more secondary controls; the
+  // ResizeObserver / NARROW_THRESHOLD / kebabOpen plumbing stays in place
+  // so flipping this back is a one-line change.
+  const secondaryCollapsed = () => false;
+  // Suppress unused warnings on the still-wired-but-dormant pieces.
+  void headerWidth;
+  void NARROW_THRESHOLD;
 
   const onRetry = async () => {
     if (!session.s) return;
