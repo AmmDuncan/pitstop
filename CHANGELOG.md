@@ -2,6 +2,20 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.56 — 2026-05-08
+
+### Fixed
+- **Lifecycle strip stuck at `POKED · WAITING` after agent activity.** Two compounding bugs:
+  1. `submitState` only cleared via the typed `agent-activity` SSE event handler or the 60s safety timeout. Missed bus deliveries / SSE reconnects / browser-tab throttling left it stuck. Fixed by also clearing when `agentActivity` array grows on a `state-changed` reconcile — the same signal, more robust delivery path.
+  2. `LifecycleStrip` (the IIFE-component sub-agent A introduced in v0.3.53) was reading `stripState()` into a `const state = ss()` at mount, which is a non-reactive snapshot. Once the strip mounted in poked state, its label stayed "POKED · WAITING" forever — even when fix (1) above (and the existing `agent-activity` case) DID update `submitState` correctly. Switched to `<Show when={ss()}>{(state) => …}</Show>` for a reactive non-null accessor.
+- **Stale-adapter banner reads less commanding.** "Run kill 12345, then quit + relaunch" → "To get them in sync, you'll want to run `kill 12345` and relaunch Claude Code." Same instructions, gentler frame.
+
+### Added
+- **`DRIVING · <narration>` in the awaiting strip.** When the agent is mid-drive (called `mark_addressing` with `arrived: false`), the strip now surfaces the narration alongside the elapsed timer so the user sees WHAT the agent is doing, not just THAT it's busy. Per-current-item; falls back to plain "AWAITING CLAUDE" after 60s of silence so stale state isn't shown. Truncated at 50 chars in strip; full text remains in feed. No new MCP surface — reuses the existing `mark_addressing(arrived: false)` semantics, preserving the three-feed-tools rule.
+
+### Internal
+- Hoisted `now` signal earlier in `Detail.tsx` so the new `drivingNarration` memo can subscribe to its 1Hz tick for freshness-window re-evaluation.
+
 ## v0.3.55 — 2026-05-07
 
 ### Internal
