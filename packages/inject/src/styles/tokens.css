@@ -26,18 +26,22 @@
 
 :host(.theme-light) {
   color-scheme: light;
-  --bg-paper: oklch(0.985 0.003 70);
-  --bg-rail: oklch(0.97 0.004 70);
-  --bg-panel: oklch(0.99 0.003 70);
-  --bg-input: oklch(1 0 0);
-  --dot: oklch(0.84 0.006 70);
-  --t1: oklch(0.18 0.005 70);
-  --t2: oklch(0.36 0.008 70);
-  --t3: oklch(0.5 0.01 70);
-  --t4: oklch(0.66 0.01 70);
-  --rule-1: oklch(0.92 0.006 70);
-  --rule-2: oklch(0.84 0.008 70);
-  --rule-3: oklch(0.66 0.01 70);
+  /* v0.3.59: shifted off pure white to a warm cream / paper tone. Hue 80
+     (was 70 — slightly more yellow), lightness pulled down ~0.025 across
+     the ramp. Keeps the existing input > panel > paper > rail hierarchy.
+     Amber accents already in this hue family, so they pair cleanly. */
+  --bg-paper: oklch(0.96 0.008 80);
+  --bg-rail: oklch(0.94 0.01 80);
+  --bg-panel: oklch(0.97 0.007 80);
+  --bg-input: oklch(0.985 0.005 80);
+  --dot: oklch(0.82 0.008 80);
+  --t1: oklch(0.18 0.005 80);
+  --t2: oklch(0.36 0.008 80);
+  --t3: oklch(0.5 0.01 80);
+  --t4: oklch(0.66 0.01 80);
+  --rule-1: oklch(0.89 0.008 80);
+  --rule-2: oklch(0.82 0.01 80);
+  --rule-3: oklch(0.64 0.012 80);
   --amber: oklch(0.62 0.18 60);
   --amber-soft: oklch(0.93 0.1 75);
   --amber-text: oklch(0.45 0.18 50);
