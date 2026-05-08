@@ -29,9 +29,12 @@ export const StaleAdapterBanner: Component = () => {
             </Show>{" "}
             is <span class="stale-adapter-tag">v{w()!.adapterVersion}</span>, daemon is{" "}
             <span class="stale-adapter-tag">v{w()!.daemonVersion}</span>.{" "}
-            <Show when={w()!.adapterPid} fallback="Fully quit Claude Code (Cmd+Q) and relaunch.">
-              Run <code class="stale-adapter-cmd">kill {w()!.adapterPid}</code>, then quit + relaunch Claude
-              Code.
+            <Show
+              when={w()!.adapterPid}
+              fallback="To get them in sync, you'll want to fully quit Claude Code (Cmd+Q) and relaunch."
+            >
+              To get them in sync, you'll want to run{" "}
+              <code class="stale-adapter-cmd">kill {w()!.adapterPid}</code> and relaunch Claude Code.
             </Show>
           </span>
           <button
