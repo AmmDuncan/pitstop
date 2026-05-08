@@ -1,6 +1,7 @@
-import { type Component, Show, createSignal, onCleanup, onMount } from "solid-js";
+import { type Component, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { fetchMostRecentActiveSession, openProjectEventStream } from "../state/client";
 import { installKeyboard } from "../state/keyboard";
+import { clearAutoExpand, liftIfStrip } from "../state/modes";
 import {
   bootstrap,
   closer,
@@ -100,6 +101,17 @@ export const App: Component = () => {
       setPendingSessionSwitch(incoming);
     });
   };
+
+  // Ephemeral strip-lift: when a session arrives and the user's persisted
+  // size is `strip`, render at standard for the duration of the session
+  // without overwriting their preference. Falls back to strip on session end.
+  // Treats `complete` as ended too — the post-review summary is still
+  // visible while size returns to the user's idle preference.
+  createEffect(() => {
+    const live = !!session.s && session.s.status !== "complete";
+    if (live) liftIfStrip();
+    else clearAutoExpand();
+  });
 
   onMount(async () => {
     await tryBootstrap();

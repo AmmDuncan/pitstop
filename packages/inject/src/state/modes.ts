@@ -29,7 +29,11 @@ function systemTheme(): Theme {
 const DEFAULTS: Modes = {
   position: "right",
   side: "right",
-  size: "standard",
+  // Idle-by-default: with no active session the drawer is a thin strip. When a
+  // session arrives we ephemerally lift to standard via setAutoExpanded so the
+  // user sees the items without their persisted preference being overwritten.
+  // Existing users keep whatever they previously persisted.
+  size: "strip",
   width: 504,
   height: 600,
   floatingTop: 80,
@@ -63,7 +67,30 @@ function load(): Modes {
 const initial = load();
 export const [position, setPosition] = createSignal<Position>(initial.position);
 export const [side, setSide] = createSignal<Side>(initial.side);
-export const [size, setSize] = createSignal<Size>(initial.size);
+
+// `persistedSize` is what the user explicitly chose; `size()` is what the
+// drawer renders. They diverge only while `autoExpanded` is true — i.e. a
+// session arrived while the user was in `strip` and we lifted the display
+// to `standard` for the duration of that session without touching localStorage.
+const [persistedSize, setPersistedSize] = createSignal<Size>(initial.size);
+const [autoExpanded, setAutoExpanded] = createSignal(false);
+/** Currently displayed size. Lifts strip→standard while a session is active. */
+export const size = (): Size =>
+  autoExpanded() && persistedSize() === "strip" ? "standard" : persistedSize();
+/** Explicit size change. Clears any auto-expansion override and persists. */
+export function setSize(s: Size): void {
+  setAutoExpanded(false);
+  setPersistedSize(s);
+}
+/** App.tsx calls this when a session arrives — lift strip to standard ephemerally. */
+export function liftIfStrip(): void {
+  if (persistedSize() === "strip") setAutoExpanded(true);
+}
+/** App.tsx calls this when the session ends — fall back to the persisted preference. */
+export function clearAutoExpand(): void {
+  setAutoExpanded(false);
+}
+
 export const [width, setWidth] = createSignal(initial.width);
 export const [height, setHeight] = createSignal(initial.height);
 export const [floatingTop, setFloatingTop] = createSignal(initial.floatingTop);
@@ -88,7 +115,10 @@ createRoot(() => {
     latestSnapshot = {
       position: position(),
       side: side(),
-      size: size(),
+      // Persist the user's explicit preference, NOT the auto-expanded display
+      // size — otherwise the strip-by-default behavior gets clobbered the
+      // first time a session lifts the drawer.
+      size: persistedSize(),
       width: width(),
       height: height(),
       floatingTop: floatingTop(),
