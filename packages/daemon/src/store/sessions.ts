@@ -20,6 +20,12 @@ export class Store {
    *  writes skip the syscall. Cheaper than `mkdir({ recursive: true })` on
    *  every writeAtomic call (which used to fire 5–10 times per MCP tool). */
   private dirReady = false;
+  /** Per-session write mutex. Each `update(id, …)` chains onto whatever the
+   *  previous in-flight update for that id was, so concurrent callers
+   *  serialize instead of racing the read-modify-write. The map entry is
+   *  cleared once the chain settles to avoid an unbounded memory footprint
+   *  for long-running daemons. */
+  private writeQueues = new Map<string, Promise<unknown>>();
 
   constructor(dataDir: string) {
     this.sessionsDir = join(dataDir, "sessions");
@@ -103,6 +109,28 @@ export class Store {
   }
 
   async update(id: string, updater: (s: Session) => Session): Promise<Session> {
+    // Serialize concurrent updates against the same session. Without this,
+    // two parallel tool calls (e.g. narrate + mark_addressing in the same
+    // turn) each read the file, mutate independently, then both write —
+    // last writer wins and the mid-writers' beats vanish. Chain each update
+    // off whatever's already in-flight for this id.
+    const prior = this.writeQueues.get(id) ?? Promise.resolve();
+    const next = prior.then(() => this.doUpdate(id, updater));
+    // Always clear the queue entry once this update settles (success or
+    // failure) so the map doesn't grow unbounded. Track via .finally on a
+    // detached promise so a thrown next still bubbles to the caller.
+    const settled = next.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.writeQueues.set(id, settled);
+    settled.finally(() => {
+      if (this.writeQueues.get(id) === settled) this.writeQueues.delete(id);
+    });
+    return next;
+  }
+
+  private async doUpdate(id: string, updater: (s: Session) => Session): Promise<Session> {
     const cur = await this.get(id);
     // Throw "NOT_FOUND" specifically — the /api/rpc handler maps this string
     // to HTTP 404. Anything else falls through to 500. Callers can drop their
