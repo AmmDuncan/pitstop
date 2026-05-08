@@ -164,10 +164,47 @@ export const tools = {
         "mcp__pitstop__get_unread_responses",
         "mcp__pitstop__get_state",
         "mcp__pitstop__add_items",
+        "mcp__pitstop__update_item",
         "mcp__pitstop__complete_review",
       ],
       ...(update ? { update } : {}),
     };
+  },
+
+  async update_item(ctx: Ctx, params: unknown) {
+    const PatchZ = z
+      .object({
+        title: z.string().min(1).optional(),
+        body: z.string().optional(),
+        lookFor: z.array(z.string()).optional(),
+        concerns: z.array(z.string()).optional(),
+        question: z.string().optional(),
+      })
+      .refine((p) => Object.keys(p).length > 0, {
+        message: "patch must include at least one field",
+      });
+    const P = z.object({
+      sessionId: z.string(),
+      itemId: z.string(),
+      patch: PatchZ,
+    });
+    const { sessionId, itemId, patch } = P.parse(params);
+    // Item-id check inside the updater so we read the session once;
+    // matches the pattern in set_current_item. store.update throws
+    // "NOT_FOUND" if the session doesn't exist; the rpc handler maps
+    // it to 404. UNKNOWN_ITEM_ID throws here when the patch targets a
+    // missing item.
+    const session = await ctx.store.update(sessionId, (s) => {
+      if (!s.items.some((it) => it.id === itemId)) throw new Error(`UNKNOWN_ITEM_ID:${itemId}`);
+      return {
+        ...s,
+        items: s.items.map((it) => (it.id === itemId ? { ...it, ...patch } : it)),
+        lastAgentActivityAt: Date.now(),
+        pokeFailed: false,
+      };
+    });
+    ctx.bus.publish(sessionId, { type: "state-changed", session });
+    return { ok: true };
   },
 
   async add_items(ctx: Ctx, params: unknown) {

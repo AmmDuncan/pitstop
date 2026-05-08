@@ -116,6 +116,42 @@ ${AUTHORING_HINT}`,
     },
   },
   {
+    name: "update_item",
+    description: `Patch an existing item's authored fields (title, body, lookFor, concerns, question) mid-session. Use when ongoing iteration changes what the user should look at — e.g. fixing a comment uncovered a different surface so the lookFor bullets need to update, a sub-issue emerged that belongs in concerns, or the question's framing changed after a clarification.
+
+DO NOT use for:
+- Adding wholly new items → add_items
+- Marking your work done on a comment → agent_address_comment
+- Driving the user to a surface → mark_addressing / set_current_item
+
+The patch is shallow-merged: pass only the fields you want to change. Arrays (lookFor, concerns) replace wholesale. Returns { ok: true }.
+
+${ASK_USER_CROSSREF}`,
+    inputSchema: {
+      type: "object",
+      required: ["sessionId", "itemId", "patch"],
+      properties: {
+        sessionId: { type: "string" },
+        itemId: {
+          type: "string",
+          description: "Id of the item to update. Must match an existing item from start_review/add_items.",
+        },
+        patch: {
+          type: "object",
+          description:
+            "Object with one or more authored fields to update. At least one field required. lookFor and concerns are array-replace, not append.",
+          properties: {
+            title: { type: "string", description: "Short headline. ~6 words." },
+            body: { type: "string", description: "WHY this changed. 1–3 sentences. Markdown supported." },
+            lookFor: { type: "array", items: { type: "string" }, description: "Up to 3 bullets." },
+            concerns: { type: "array", items: { type: "string" }, description: "Up to 3 bullets." },
+            question: { type: "string", description: 'The single decision being asked. End with "?".' },
+          },
+        },
+      },
+    },
+  },
+  {
     name: "add_items",
     description: `Append items to an existing session, mid-review. Same authoring rules as start_review.
 
