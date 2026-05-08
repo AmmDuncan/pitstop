@@ -25,6 +25,64 @@ type Ctx = {
 
 export const DRAWER_FRESHNESS_MS = 10 * 60 * 1000;
 
+type DrawerStatus =
+  | { connected: true; live: true; lastSeenAt: number }
+  | { connected: true; live: false; lastSeenAt: number; hint: string }
+  | { connected: false; live: false; hint: string };
+
+/** Compute the drawerStatus block for a given projectRoot. Used by both
+ *  start_review (initial pre-flight) and get_state (re-check after the
+ *  agent tells the user to open their tab). `live` is the gold signal
+ *  (active SSE subscriber); `connected` is the coarse 10-min-fetch fallback.
+ *  See feat/drawer-live-check (v0.3.66) for the contract the agent is
+ *  steered to follow. */
+function computeDrawerStatus(
+  ctx: Ctx,
+  projectRoot: string,
+  devUrls?: string[],
+): DrawerStatus {
+  const lastSeen = ctx.drawerSeen?.get(projectRoot);
+  const connected = lastSeen !== undefined && Date.now() - lastSeen < DRAWER_FRESHNESS_MS;
+  const live = ctx.bus.projectSubscriberCount(projectRoot) > 0;
+  if (connected && live) {
+    return { connected: true, live: true, lastSeenAt: lastSeen! };
+  }
+  if (connected && !live) {
+    return {
+      connected: true,
+      live: false,
+      lastSeenAt: lastSeen!,
+      hint:
+        "DRAWER NOT LIVE — pitstop saw /inject.js for this projectRoot recently, but no browser tab currently has an open SSE subscription. Almost always: the user's tab is closed, was navigated away, or the dev server died and the page failed to reload. " +
+        "DO NOT proceed with narrate, mark_addressing, or ask_user — they will fire into the void and the user will not see them. " +
+        `Tell the user: "Your pitstop drawer isn't live in any open tab. Make sure your dev server is running and open the app at ${devUrls?.[0] ?? "your dev URL"}, then say 'go' and I'll resume." Wait for them before continuing.`,
+    };
+  }
+  // No fetch in window. Look for ancestor/descendant projectRoots — almost
+  // always a wire_drawer / start_review path mismatch.
+  const now = Date.now();
+  const seenRecently = Array.from(ctx.drawerSeen?.entries() ?? [])
+    .filter(([root, ts]) => root !== projectRoot && now - ts < DRAWER_FRESHNESS_MS)
+    .map(([root]) => root);
+  const related = seenRecently.filter(
+    (r) => r.startsWith(`${projectRoot}/`) || projectRoot.startsWith(`${r}/`),
+  );
+  if (related.length > 0) {
+    return {
+      connected: false,
+      live: false,
+      hint: `projectRoot mismatch likely — the session and the drawer must share the EXACT same projectRoot string for the drawer to bind. No /inject.js fetch seen for "${projectRoot}" in the last 10 minutes, but a drawer IS wired with a related path: ${related.map((r) => `"${r}"`).join(", ")}. Probable cause: start_review and wire_drawer were called with different projectRoots. Either retry start_review with one of the related paths above, or re-wire the drawer with "${projectRoot}". The drawer will sit on the empty start screen until they match.`,
+    };
+  }
+  return {
+    connected: false,
+    live: false,
+    hint:
+      "No /inject.js fetch seen for this projectRoot in the last 10 minutes — the drawer probably is not wired into the dev app yet. " +
+      `Call wire_drawer({ projectRoot: ${JSON.stringify(projectRoot)} }) — it returns the framework + two wiring options (committed conditional snippet vs local-only gitignored file) with exact snippets and file paths. Surface the options to the user via AskUserQuestion, then perform the file edit yourself. Do NOT paste raw snippets into the conversation and ask the user to do it.`,
+  };
+}
+
 const StartReviewZ = z.object({
   projectRoot: z.string(),
   branch: z.string().optional(),
@@ -71,43 +129,9 @@ export const tools = {
     // start_review is invisible to lobby subscribers.
     ctx.bus.publishToProject(session.projectRoot, { type: "session-hello", session });
 
-    // Drawer-wiring sniff: if /inject.js has not been requested for this
-    // projectRoot in the last 10 min, the agent should warn the user before
-    // driving anything — they'll otherwise sit watching a session URL that
-    // 404s with no clue why. Also catches the common bug where the agent
-    // wired the drawer with a different projectRoot (e.g. /repo/apps/shop)
-    // than it called start_review with (e.g. /repo) — the drawer fetches
-    // /inject.js with its own key and the daemon won't bind the session.
-    const lastSeen = ctx.drawerSeen?.get(p.projectRoot);
-    const drawerLikelyConnected = lastSeen !== undefined && Date.now() - lastSeen < DRAWER_FRESHNESS_MS;
-    let drawerStatus: { connected: true; lastSeenAt: number } | { connected: false; hint: string };
-    if (drawerLikelyConnected) {
-      drawerStatus = { connected: true as const, lastSeenAt: lastSeen! };
-    } else {
-      // Look for recently-seen projectRoots that are ancestors or descendants
-      // of the requested one. These are almost always the agent calling
-      // start_review and wire_drawer with mismatched paths.
-      const now = Date.now();
-      const seenRecently = Array.from(ctx.drawerSeen?.entries() ?? [])
-        .filter(([root, ts]) => root !== p.projectRoot && now - ts < DRAWER_FRESHNESS_MS)
-        .map(([root]) => root);
-      const related = seenRecently.filter(
-        (r) => r.startsWith(`${p.projectRoot}/`) || p.projectRoot.startsWith(`${r}/`),
-      );
-      if (related.length > 0) {
-        drawerStatus = {
-          connected: false as const,
-          hint: `projectRoot mismatch likely — the session and the drawer must share the EXACT same projectRoot string for the drawer to bind. No /inject.js fetch seen for "${p.projectRoot}" in the last 10 minutes, but a drawer IS wired with a related path: ${related.map((r) => `"${r}"`).join(", ")}. Probable cause: start_review and wire_drawer were called with different projectRoots. Either retry start_review with one of the related paths above, or re-wire the drawer with "${p.projectRoot}". The drawer will sit on the empty start screen until they match.`,
-        };
-      } else {
-        drawerStatus = {
-          connected: false as const,
-          hint:
-            "No /inject.js fetch seen for this projectRoot in the last 10 minutes — the drawer probably is not wired into the dev app yet. " +
-            `Call wire_drawer({ projectRoot: ${JSON.stringify(p.projectRoot)} }) — it returns the framework + two wiring options (committed conditional snippet vs local-only gitignored file) with exact snippets and file paths. Surface the options to the user via AskUserQuestion, then perform the file edit yourself. Do NOT paste raw snippets into the conversation and ask the user to do it.`,
-        };
-      }
-    }
+    // Drawer pre-flight. See `computeDrawerStatus` JSDoc for the full
+    // contract. Agent's job: only proceed past start_review when `live: true`.
+    const drawerStatus = computeDrawerStatus(ctx, p.projectRoot, p.devUrls);
 
     // Surface a one-shot update offer. Agent reads this and decides whether
     // to ask the user "want me to run git pull && bun run setup?" — only on
@@ -139,6 +163,8 @@ export const tools = {
       // one: chat-only beats during a session never reach the user-in-
       // drawer, fail silently, look like the agent is hung.
       activeSessionRules: {
+        drawerLiveCheck:
+          "BEFORE narrating, asking, or marking arrival: check drawerStatus.live in this response. If false, the drawer is not mounted in any open tab — beats fire into the void. Tell the user to open their dev app + confirm the drawer is showing, then resume. Re-check by calling get_state; drawerStatus.live updates on subsequent calls' responses.",
         verificationSurface:
           'ANY surface the user needs to verify, check, or look at — call start_review or add_items, never "could you check this in the browser?"',
         conversationalBeat: "narrate(narration) — feed line, no state effects",
@@ -263,6 +289,10 @@ export const tools = {
     return {
       ...updated,
       lastResponseAt,
+      // Re-check the drawer presence. Agents that paused on start_review's
+      // `live: false` should poll this until it flips before resuming any
+      // narrate / mark_addressing / ask_user calls.
+      drawerStatus: computeDrawerStatus(ctx, updated.projectRoot, updated.devUrls),
       watcher: {
         command: `${ctx.scriptsDir}/pitstop-watch.sh ${updated.id}`,
         description: `pitstop unread responses · session ${updated.id}`,

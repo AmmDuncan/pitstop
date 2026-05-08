@@ -67,4 +67,13 @@ export class Bus {
     for (const s of this.byProject.values()) n += s.size;
     return n;
   }
+
+  /** Active project-lobby subscribers for a given projectRoot. The gold
+   *  "drawer is live in a real tab right now" signal — survives stale-fetch
+   *  noise (orphaned tabs whose `/inject.js` hit was minutes ago but whose
+   *  SSE connection has since died). Used by start_review's drawerStatus to
+   *  steer the agent away from narrating into a closed tab. */
+  projectSubscriberCount(projectRoot: string): number {
+    return this.byProject.get(projectRoot)?.size ?? 0;
+  }
 }
