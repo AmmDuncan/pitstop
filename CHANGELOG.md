@@ -2,6 +2,10 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.62 — 2026-05-08
+
+- fix(daemon): `add_items` now accepts the same item shape as `start_review` — `id`/`index`/`attachments` are optional and the daemon assigns a zero-padded `id` when omitted. Previously the stricter zod forced callers to invent fields the daemon overwrote anyway, in conflict with the MCP tool definition agents see.
+
 ## v0.3.61 — 2026-05-08
 
 ### Changed
