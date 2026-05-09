@@ -2,6 +2,18 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.74 — 2026-05-09
+
+### feat
+
+- **Drawer position changes are user-gated**. Agents calling `set_drawer` with a `position` field no longer yank the drawer across the screen. A confirmation modal (mirroring SessionSwitchPrompt's shape) now displays the agent's narration as the reason and offers MOVE / STAY buttons. Size-only changes still apply directly. New endpoint `POST /api/sessions/:id/drawer-move-decision` records the choice as a `user_drawer_decision` activity entry so the agent's next `get_state` sees the decision and can pivot (collapse to strip, scroll, force-click) instead of looping.
+- **Restored two-beat narrate rule** that v0.3.71 softened. Every user comment gets `narrate()` first (heartbeat: "I saw it") then `agent_address_comment()` at close (decision/fix). The v0.3.71 "skip when trivial" carve-out produced perceived silence — user reported "awaiting Claude while Claude was idle." Replaced with a "distinct content, not distinct calls" rule: the address narration must describe what was decided or done, not paraphrase the ack.
+
+### chore
+
+- Floating drawer `max-height` 80vh → 90vh.
+- LOOK_OUT_FOR / KNOWN_CONCERNS section backgrounds raised to `var(--bg-panel)` so they actually stand out from `--bg-paper` in both themes (the previous `color-mix` tint was darker than paper in dark mode and effectively invisible).
+
 ## v0.3.73 — 2026-05-09
 
 - fix(drawer): floating-mode MIN_H bumped from 280 to 360. The lower floor let users drag the drawer past the point where action buttons and the first feed entry stayed visible — content was getting clipped, not scrolled. New floor keeps the essentials visible at the smallest size; resize from there if you want bigger.
