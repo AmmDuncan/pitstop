@@ -548,19 +548,35 @@ export const tools = {
   },
 
   async ask_user(ctx: Ctx, params: unknown) {
-    const P = z.object({
-      sessionId: z.string(),
-      question: z.string().min(1),
-      options: z
-        .array(
-          z.object({
-            label: z.string().min(1),
-            description: z.string().optional(),
-          }),
-        )
-        .optional(),
-      itemId: z.string().optional(),
-    });
+    const P = z
+      .object({
+        sessionId: z.string(),
+        question: z.string().min(1),
+        options: z
+          .array(
+            z.object({
+              label: z.string().min(1),
+              description: z.string().optional(),
+            }),
+          )
+          .optional(),
+        itemId: z.string().optional(),
+        // Required v0.3.75. The mirror text the agent must include in its
+        // chat reply so the user sees the question whether they're looking
+        // at the drawer or the terminal. Has to be ≥ question.length so
+        // "see drawer" / empty cop-outs are rejected at schema validation
+        // time. Failure mode this prevents: the agent calls ask_user, the
+        // drawer shows the banner, the chat reply has no mention of it,
+        // and a user looking at the terminal has no idea anything was
+        // asked. Honor-system enforcement (description-only) regressed
+        // multiple times before this validation went in.
+        chatMirror: z.string().min(1),
+      })
+      .refine((p) => p.chatMirror.length >= p.question.length, {
+        message:
+          "chatMirror must be at least as long as the question — write the full question + options as readable chat text. Stub text like 'see drawer' is rejected.",
+        path: ["chatMirror"],
+      });
     const { sessionId, question, options, itemId } = P.parse(params);
     const at = Date.now();
     const session = await ctx.store.update(sessionId, (s) => ({

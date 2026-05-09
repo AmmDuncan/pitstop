@@ -307,25 +307,40 @@ ${ASK_USER_CROSSREF}`,
     name: "ask_user",
     description: `Ask the human reviewer a question that needs an answer before you can continue. Renders as a banner in the drawer (replaces the action area) — the user picks an option button or types a free-form answer; the response arrives via the Monitor → get_unread_responses loop with kind: 'answer'.
 
+═══ DUAL-SURFACE RULE (enforced) ═══
+\`chatMirror\` is a REQUIRED parameter. Write the FULL question + every option (label + description if any) as readable English in chatMirror, then ALSO paste that same text into your chat reply. The drawer is one UI surface; the user might be looking at the terminal. Both surfaces must carry the same content so the user can answer from either.
+
+The daemon validates \`chatMirror.length >= question.length\` and rejects stub text like "see drawer." Schema-level enforcement because honor-system framing regressed repeatedly: the agent would skip the chat side, a user looking at the terminal would see no question, and the drawer's banner would sit unanswered.
+
+Shape:
+  ask_user({
+    sessionId,
+    question: "Should I prefill the cart with one item or three?",
+    options: [{ label: "ONE" }, { label: "THREE" }],
+    chatMirror: "I need to know how to prefill the cart:\\n  - ONE: a single item\\n  - THREE: three items\\nLet me know which you prefer."
+  })
+And then your chat reply contains chatMirror's content verbatim, not just "I'm asking via the drawer."
+
 WHEN TO USE THIS INSTEAD OF AskUserQuestion:
-While ANY pitstop session is active, prefer ask_user over AskUserQuestion for questions related to the work in progress. AskUserQuestion hijacks the chat with a modal and pulls the user out of the flow they're already in (the drawer). ask_user surfaces the question where the user's eye already is.
-
-DUAL-SURFACE RULE (required): whenever you call ask_user, ALSO render the FULL question + EVERY option (label + description, if any) as readable text in your chat reply. The chat is canonical history; the drawer is one UI surface, not the only one. The user might be looking at the terminal, not the drawer, and shouldn't have to scroll the drawer to re-read what they're answering. A one-line "I'm asking via the drawer" teaser is NOT enough — both surfaces should carry the same content so the user can answer from either. Don't use AskUserQuestion for the same question, that would double-prompt and hijack the modal anyway.
-
-If you're certain there's no active pitstop session for this projectRoot, fall back to AskUserQuestion as normal.
+While ANY pitstop session is active, prefer ask_user over AskUserQuestion for questions related to the work in progress. AskUserQuestion hijacks the chat with a modal and pulls the user out of the flow they're already in (the drawer). ask_user surfaces the question where the user's eye already is. If you're certain there's no active pitstop session for this projectRoot, fall back to AskUserQuestion as normal.
 
 Returns: { ok: true }. The answer comes back asynchronously through the responses queue. Drain via get_unread_responses; the answer entry will have kind: 'answer', body: <user's answer>, questionText: <the question you asked>.
 
 OUT-OF-BAND ANSWER (chat instead of drawer): if the user answers your question by typing in the chat instead of clicking an option in the drawer, the drawer's banner stays up forever — pitstop has no idea the question got handled because the only normal clear path is an answer-kind response from a drawer click. As soon as you've captured the chat answer, call \`dismiss_pending_question({ sessionId, answer })\` to clear the banner and record the answer in the session history. Do NOT skip this step — a stuck banner makes the drawer look broken.`,
     inputSchema: {
       type: "object",
-      required: ["sessionId", "question"],
+      required: ["sessionId", "question", "chatMirror"],
       properties: {
         sessionId: { type: "string" },
         question: {
           type: "string",
           description:
             'The question to put in front of the user. One sentence. End with "?". Plain text, no markdown.',
+        },
+        chatMirror: {
+          type: "string",
+          description:
+            "REQUIRED. The full question + every option (label + description) as readable chat text. Daemon validates length >= question.length to reject stub text like 'see drawer.' This is the text you must ALSO paste into your chat reply — both surfaces must carry the same content so the user can answer from drawer or terminal. Example: 'I need to know how to prefill the cart:\\n  - ONE: a single item\\n  - THREE: three items\\nLet me know which you prefer.'",
         },
         options: {
           type: "array",
