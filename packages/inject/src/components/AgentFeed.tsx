@@ -1,11 +1,29 @@
-import { type Component, For, Show, createEffect, createMemo, createSignal } from "solid-js";
+import { type Component, For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { session } from "../state/store";
 
 const FEED_SIZE = 5;
 const FLASH_DURATION_MS = 1500;
 const FEED_DEFAULT_MAX = 120;
 const FEED_MIN = 80;
-const FEED_MAX = 400;
+/** Absolute cap on the feed's max-height. Prevents the feed from eating
+ *  half the drawer on tall monitors. */
+const FEED_ABSOLUTE_MAX_PX = 400;
+/** Viewport-relative cap. On smaller screens (laptops), the absolute 400px
+ *  was eating ~40% of the drawer in REVIEW_COMPLETE state where the main
+ *  body is mostly empty. Scaling to 25% of viewport keeps the feed
+ *  proportional regardless of screen size. */
+const FEED_MAX_VH_FRACTION = 0.25;
+const computeFeedMax = (): number =>
+  Math.max(
+    FEED_MIN,
+    Math.min(
+      FEED_ABSOLUTE_MAX_PX,
+      Math.floor(
+        (typeof window !== "undefined" ? window.innerHeight : FEED_ABSOLUTE_MAX_PX) *
+          FEED_MAX_VH_FRACTION,
+      ),
+    ),
+  );
 
 /** Bottom-of-drawer feed of the agent's recent narrations.
  *  Reads `session.agentActivity`, surfaces the last `FEED_SIZE` `mark_addressing`
@@ -16,6 +34,19 @@ export const AgentFeed: Component = () => {
   const [expanded, setExpanded] = createSignal(false);
   const [flashing, setFlashing] = createSignal(false);
   const [feedMaxHeight, setFeedMaxHeight] = createSignal(FEED_DEFAULT_MAX);
+  const [feedCap, setFeedCap] = createSignal(computeFeedMax());
+
+  // Recompute the viewport-relative cap when the window resizes; clamp the
+  // current user-set height down if the window shrank past it.
+  if (typeof window !== "undefined") {
+    const onResize = () => {
+      const cap = computeFeedMax();
+      setFeedCap(cap);
+      setFeedMaxHeight((h) => Math.min(h, cap));
+    };
+    window.addEventListener("resize", onResize);
+    onCleanup(() => window.removeEventListener("resize", onResize));
+  }
   /** Timestamp watermark of the last entry the user has acknowledged.
    *  Anything with `at > lastInteractedAt` counts as unread. Initialized
    *  on first render so existing entries don't show as unread when the
@@ -35,7 +66,7 @@ export const AgentFeed: Component = () => {
     const onMove = (ev: PointerEvent) => {
       if (ev.pointerId !== e.pointerId) return;
       const dy = startY - ev.clientY;
-      setFeedMaxHeight(Math.max(FEED_MIN, Math.min(FEED_MAX, startH + dy)));
+      setFeedMaxHeight(Math.max(FEED_MIN, Math.min(feedCap(), startH + dy)));
     };
     const release = () => {
       el.removeEventListener("pointermove", onMove);

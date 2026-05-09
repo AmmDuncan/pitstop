@@ -184,7 +184,13 @@ THE RESUME RECIPE: get_state(sessionId) → invoke watcher.command via Monitor �
     name: "get_unread_responses",
     description: `Drain all unread reviewer responses; marks them addressed atomically. Call this every time your Monitor watcher fires a stdout-line notification — that line means the reviewer pressed approve or sent a comment, and you need to read what they said before deciding what to do next. Returns an array; for each entry decide: navigate to the next item's surface (call set_current_item + mark_addressing), or, if it's a comment that requires action, fix the issue and add a follow-up item or carry on to the next.
 
-POSITIVE OBLIGATION on receiving a comment: your FIRST move is a narrate() acknowledgement beat ("Got it, looking now" / "Good catch — checking the spacing rule") sent within one tool call. THEN investigate. Silence after a comment reads as ignoring it; the reviewer is parked in the drawer and only sees the CLAUDE feed.
+POSITIVE OBLIGATION on receiving a comment: your FIRST move is an acknowledgement beat sent within one tool call. Silence after a comment reads as ignoring it; the reviewer is parked in the drawer and only sees the CLAUDE feed.
+
+WHICH TOOL FOR THE ACK depends on whether the comment needs investigation:
+- INVESTIGATION NEEDED (you'll fix code, look something up, navigate elsewhere): start with narrate() — "Got it, looking now" / "Good catch — checking the spacing rule." Then investigate. End the loop with agent_address_comment() carrying the resolution narration.
+- NO INVESTIGATION NEEDED (parking the idea, agreeing with no-action, confirming-unchanged, immediate trivial close): SKIP the narrate ACK and go straight to agent_address_comment() with an ack-flavored handled narration ("Captured — illustration parked as a future enhancement"). One beat, not two. The double-narrate pattern (ack with narrate + handled with agent_address_comment saying basically the same thing) clutters the feed without adding information.
+
+Rule of thumb: if the ACK and the close would carry similar text, collapse to one agent_address_comment call.
 
 ${ASK_USER_CROSSREF}`,
     inputSchema: { type: "object", required: ["sessionId"], properties: { sessionId: { type: "string" } } },
@@ -420,9 +426,10 @@ WHEN TO CALL: any time you receive an answer to your most recent \`ask_user\` fr
     name: "agent_address_comment",
     description: `Mark that you've HANDLED a user comment on an item — fix shipped, decided-not-to-act with reason given, or otherwise consciously closed the loop. Pushes a response of kind "agent-addressed" onto the item, which flips the amber pip to a third color (cyan ↻ — distinct from amber/commented and from green/approved) and lands a narration in the CLAUDE feed.
 
-THIS IS THE "I'M DONE WITH IT" SIGNAL — NOT THE EARLY-ACK SIGNAL.
-- For early acknowledgement BEFORE you investigate ("Got it, looking now" / "Good catch — checking"), use narrate() instead. narrate doesn't flip the pip, so the user's amber comment stays amber until you've actually addressed it.
-- For mid-fix progress beats ("Two ways to fix this; going with grid-rows", "HMR'ing"), use narrate() — same reason.
+THIS IS THE "I'M DONE WITH IT" SIGNAL.
+- If you'll INVESTIGATE before closing the loop ("Got it, looking now" / "Good catch — checking"), pre-ack with narrate() so the user knows you saw the comment, then agent_address_comment() at the end with the resolution. Two beats, two distinct moments.
+- If the comment doesn't need investigation (parking the idea, agreeing-with-no-action, confirming-unchanged, immediate trivial close): SKIP the narrate pre-ack and call agent_address_comment() directly with an ack-flavored handled narration ("Captured — illustration parked as a future enhancement"). ONE beat, not two — the double pattern (narrate "Got it" + agent_address_comment "Captured") just clutters the feed.
+- For mid-fix progress beats during a long investigation ("Two ways to fix this; going with grid-rows", "HMR'ing"), use narrate() — same reason as the pre-ack: the pip stays amber until the actual close.
 - Use agent_address_comment ONLY when there's nothing more for the agent to do on the comment. The pip color carries the "considered" semantics; flipping it pre-fix is dishonest.
 
 WHEN TO CALL — after EVERY user comment, AFTER you've actually handled it:
