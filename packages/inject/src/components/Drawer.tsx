@@ -63,7 +63,11 @@ const ClaudeBindChip: Component = () => {
 
 const MIN_W = 360;
 const MAX_W = 800;
-const MIN_H = 280;
+// 280 → 360 in v0.3.73. The previous floor let users drag past the point
+// where critical chrome (header, tabs, action buttons, first feed entry)
+// stayed visible without clipping — "scrollable" should mean "scrolls
+// within content," not "clips elements off-screen."
+const MIN_H = 360;
 const MAX_H = 900;
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
