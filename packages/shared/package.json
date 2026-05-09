@@ -1,7 +1,7 @@
 {
   "name": "@pitstop/shared",
   "type": "module",
-  "version": "0.3.68",
+  "version": "0.3.69",
   "exports": {
     ".": "./src/index.ts"
   },

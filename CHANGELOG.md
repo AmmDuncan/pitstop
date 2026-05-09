@@ -2,6 +2,10 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.69 — 2026-05-09
+
+- feat(daemon): pre-flight dev-server probe alongside `drawerStatus.live`. v0.3.66 caught "is the drawer mounted in some tab" but missed "is the dev server actually responding" — a stale tab can keep its SSE subscription alive against a dead dev server, leaving the agent narrating into a homepage that won't load. Added a `devServer` field on `start_review` and `get_state` responses: HEAD probe (with GET fallback for Next 15) at the URL passed via `devUrls` or the origin captured from the host page's Referer header. 800ms timeout. Three states: `up: true` / `up: false` / `up: "unknown"` (no candidate URL). Hint-only, same soft-steering pattern as `drawerStatus.live` — `activeSessionRules.devServerCheck` adds the contract.
+
 ## v0.3.68 — 2026-05-09
 
 - fix(inject): defer drawer mount to `window.load` to dodge host hydration. v0.3.67 stopped pitstop from mutating `<html>`'s style attribute, but the same family of bug remained — pitstop appended `<pitstop-drawer>` to `<body>` on `DOMContentLoaded`, racing the host's React/Vue hydration. The visible symptom in a Next 15 project was a hydration mismatch attributed to the user's own `ThemeSwitch` component (the next real child React walked past after hitting the unexpected pitstop element). Mount now waits for `window.load` + a `requestAnimationFrame`, which lands after the framework's initial hydration cycle in every framework I've checked. Practical delay before the drawer strip appears is a frame or two on most pages — invisible.
