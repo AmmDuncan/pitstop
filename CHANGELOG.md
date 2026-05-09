@@ -2,6 +2,10 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.73 — 2026-05-09
+
+- fix(drawer): floating-mode MIN_H bumped from 280 to 360. The lower floor let users drag the drawer past the point where action buttons and the first feed entry stayed visible — content was getting clipped, not scrolled. New floor keeps the essentials visible at the smallest size; resize from there if you want bigger.
+
 ## v0.3.72 — 2026-05-09
 
 - fix(drawer): cap the CLAUDE feed at `min(400px, 25vh)` so it stays proportional on small screens. The fixed 400px cap was eating ~40% of the drawer on laptop-sized viewports, especially in REVIEW_COMPLETE state where the main body is mostly empty and the feed visually dominated. Drag handle still respects the same cap; window-resize re-clamps current height down if the viewport shrinks.
