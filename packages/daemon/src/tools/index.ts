@@ -116,6 +116,7 @@ function computeDrawerStatus(
     return { connected: true, live: true, lastSeenAt: lastSeen!.at };
   }
   if (connected && !live) {
+    const targetUrl = devUrls?.[0] ?? lastSeen!.origin ?? "your dev URL";
     return {
       connected: true,
       live: false,
@@ -123,7 +124,9 @@ function computeDrawerStatus(
       hint:
         "DRAWER NOT LIVE — pitstop saw /inject.js for this projectRoot recently, but no browser tab currently has an open SSE subscription. Almost always: the user's tab is closed, was navigated away, or the dev server died and the page failed to reload. " +
         "DO NOT proceed with narrate, mark_addressing, or ask_user — they will fire into the void and the user will not see them. " +
-        `Tell the user: "Your pitstop drawer isn't live in any open tab. Make sure your dev server is running and open the app at ${devUrls?.[0] ?? lastSeen!.origin ?? "your dev URL"}, then say 'go' and I'll resume." Wait for them before continuing.`,
+        `PREFERRED: if you have a browser-driving tool (Claude in Chrome / agent-browser / Playwright), navigate to ${targetUrl} yourself — the drawer will mount as soon as the page loads and we'll be back live. ` +
+        `FALLBACK (only if you have no browser tool): tell the user "Your pitstop drawer isn't live in any open tab. Open ${targetUrl} and say 'go'." and wait. ` +
+        "Don't ask the user to drive when you can drive yourself — that's the whole point of pitstop.",
     };
   }
   // No fetch in window. Look for ancestor/descendant projectRoots — almost
@@ -147,7 +150,8 @@ function computeDrawerStatus(
     live: false,
     hint:
       "No /inject.js fetch seen for this projectRoot in the last 10 minutes — the drawer probably is not wired into the dev app yet. " +
-      `Call wire_drawer({ projectRoot: ${JSON.stringify(projectRoot)} }) — it returns the framework + two wiring options (committed conditional snippet vs local-only gitignored file) with exact snippets and file paths. Surface the options to the user via AskUserQuestion, then perform the file edit yourself. Do NOT paste raw snippets into the conversation and ask the user to do it.`,
+      `Call wire_drawer({ projectRoot: ${JSON.stringify(projectRoot)} }) — it returns the framework + two wiring options (committed conditional snippet vs local-only gitignored file) with exact snippets and file paths. Surface the options to the user via AskUserQuestion, then perform the file edit yourself. Do NOT paste raw snippets into the conversation and ask the user to do it. ` +
+      `AFTER WIRING: if you have a browser-driving tool (Claude in Chrome / agent-browser / Playwright), navigate to ${devUrls?.[0] ?? "the dev URL"} yourself so the drawer mounts. Don't ask the user to open the page when you can open it yourself — driving is the agent's job.`,
   };
 }
 
@@ -236,6 +240,8 @@ export const tools = {
       // one: chat-only beats during a session never reach the user-in-
       // drawer, fail silently, look like the agent is hung.
       activeSessionRules: {
+        agentDrives:
+          "AGENT DRIVES, USER REVIEWS. If you have a browser-driving tool (Claude in Chrome, agent-browser, Playwright, or any other MCP browser tool), use it to: (a) open the dev URL when the drawer isn't mounted yet, (b) navigate to each item's surface before mark_addressing. Do NOT ask the user to open URLs, hard-refresh, or click around when you can do it yourself. The user is parked in the drawer judging surfaces; making them switch to a terminal to follow your instructions defeats the point of pitstop. ONLY fall back to asking the user when you genuinely have no browser tool available.",
         drawerLiveCheck:
           "BEFORE narrating, asking, or marking arrival: check drawerStatus.live in this response. If false, the drawer is not mounted in any open tab — beats fire into the void. Tell the user to open their dev app + confirm the drawer is showing, then resume. Re-check by calling get_state; drawerStatus.live updates on subsequent calls' responses.",
         devServerCheck:
