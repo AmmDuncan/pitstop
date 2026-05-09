@@ -18,12 +18,18 @@ type Ctx = {
   baseUrl: string;
   clientSessionId?: string;
   scriptsDir: string;
-  /** projectRoot → epoch ms of the last `/inject.js` GET seen for it. Lets
-   *  start_review tell the agent if the drawer probably isn't wired yet. */
-  drawerSeen?: Map<string, number>;
+  /** projectRoot → metadata for the last `/inject.js` GET seen for it.
+   *  `at` is the epoch ms; `origin` is the host page's URL captured from
+   *  the Referer header (used for the dev-server probe). Lets start_review
+   *  tell the agent if the drawer is unwired AND whether the dev server
+   *  is alive at the URL the page came from. */
+  drawerSeen?: Map<string, { at: number; origin?: string }>;
 };
 
 export const DRAWER_FRESHNESS_MS = 10 * 60 * 1000;
+/** Probe budget for the dev-server check. Short — agents wait on start_review,
+ *  so we'd rather report "didn't respond in time" than spin for seconds. */
+const DEV_SERVER_PROBE_TIMEOUT_MS = 800;
 
 type DrawerStatus =
   | { connected: true; live: true; lastSeenAt: number }
@@ -36,33 +42,95 @@ type DrawerStatus =
  *  (active SSE subscriber); `connected` is the coarse 10-min-fetch fallback.
  *  See feat/drawer-live-check (v0.3.66) for the contract the agent is
  *  steered to follow. */
+type DevServerStatus =
+  | { up: true; url: string }
+  | { up: false; url: string; hint: string }
+  | { up: "unknown"; hint: string };
+
+/** Probe `url` with a short-timeout HEAD to check if a dev server is alive.
+ *  Any HTTP response (including 404, redirects) counts as "up" — we only
+ *  care that something is listening. Network errors / aborts → not up. */
+async function probeDevServer(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(DEV_SERVER_PROBE_TIMEOUT_MS),
+      redirect: "manual",
+    });
+    return res.status > 0;
+  } catch {
+    // Some dev servers (notably Next 15) don't implement HEAD cleanly and
+    // return a network-level error. Retry with GET — same timeout, body
+    // not consumed.
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        signal: AbortSignal.timeout(DEV_SERVER_PROBE_TIMEOUT_MS),
+        redirect: "manual",
+      });
+      return res.status > 0;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/** Decide which URL to probe and what to report. devUrls (passed by the
+ *  agent) wins; falls back to the origin captured from /inject.js Referer.
+ *  Returns "unknown" when we have nothing to probe — soft signal, not
+ *  load-bearing on its own. */
+async function computeDevServerStatus(
+  ctx: Ctx,
+  projectRoot: string,
+  devUrls?: string[],
+): Promise<DevServerStatus> {
+  const candidate = devUrls?.[0] ?? ctx.drawerSeen?.get(projectRoot)?.origin;
+  if (!candidate) {
+    return {
+      up: "unknown",
+      hint: "No dev URL known for this projectRoot — pass devUrls when calling start_review (e.g. ['http://localhost:3000']) so pitstop can probe whether your dev server is alive before you start narrating.",
+    };
+  }
+  const up = await probeDevServer(candidate);
+  if (up) return { up: true, url: candidate };
+  return {
+    up: false,
+    url: candidate,
+    hint:
+      `DEV SERVER NOT RESPONDING at ${candidate}. The probe timed out or got a network error. ` +
+      "Almost always: the dev server isn't running. " +
+      `DO NOT proceed with narrate / mark_addressing — the user will see a "this site can't be reached" page. ` +
+      `Offer to start it for them: cd into ${projectRoot} and run their dev script (pnpm dev / bun dev / npm run dev — check the project's package.json). Wait for it to come up before resuming.`,
+  };
+}
+
 function computeDrawerStatus(
   ctx: Ctx,
   projectRoot: string,
   devUrls?: string[],
 ): DrawerStatus {
   const lastSeen = ctx.drawerSeen?.get(projectRoot);
-  const connected = lastSeen !== undefined && Date.now() - lastSeen < DRAWER_FRESHNESS_MS;
+  const connected = lastSeen !== undefined && Date.now() - lastSeen.at < DRAWER_FRESHNESS_MS;
   const live = ctx.bus.projectSubscriberCount(projectRoot) > 0;
   if (connected && live) {
-    return { connected: true, live: true, lastSeenAt: lastSeen! };
+    return { connected: true, live: true, lastSeenAt: lastSeen!.at };
   }
   if (connected && !live) {
     return {
       connected: true,
       live: false,
-      lastSeenAt: lastSeen!,
+      lastSeenAt: lastSeen!.at,
       hint:
         "DRAWER NOT LIVE — pitstop saw /inject.js for this projectRoot recently, but no browser tab currently has an open SSE subscription. Almost always: the user's tab is closed, was navigated away, or the dev server died and the page failed to reload. " +
         "DO NOT proceed with narrate, mark_addressing, or ask_user — they will fire into the void and the user will not see them. " +
-        `Tell the user: "Your pitstop drawer isn't live in any open tab. Make sure your dev server is running and open the app at ${devUrls?.[0] ?? "your dev URL"}, then say 'go' and I'll resume." Wait for them before continuing.`,
+        `Tell the user: "Your pitstop drawer isn't live in any open tab. Make sure your dev server is running and open the app at ${devUrls?.[0] ?? lastSeen!.origin ?? "your dev URL"}, then say 'go' and I'll resume." Wait for them before continuing.`,
     };
   }
   // No fetch in window. Look for ancestor/descendant projectRoots — almost
   // always a wire_drawer / start_review path mismatch.
   const now = Date.now();
   const seenRecently = Array.from(ctx.drawerSeen?.entries() ?? [])
-    .filter(([root, ts]) => root !== projectRoot && now - ts < DRAWER_FRESHNESS_MS)
+    .filter(([root, meta]) => root !== projectRoot && now - meta.at < DRAWER_FRESHNESS_MS)
     .map(([root]) => root);
   const related = seenRecently.filter(
     (r) => r.startsWith(`${projectRoot}/`) || projectRoot.startsWith(`${r}/`),
@@ -132,6 +200,10 @@ export const tools = {
     // Drawer pre-flight. See `computeDrawerStatus` JSDoc for the full
     // contract. Agent's job: only proceed past start_review when `live: true`.
     const drawerStatus = computeDrawerStatus(ctx, p.projectRoot, p.devUrls);
+    // Dev-server probe. Decoupled from drawer status — drawer can be live
+    // (stale tab open) while the actual dev server is dead, leaving the user
+    // staring at a page that doesn't refresh. v0.3.69.
+    const devServer = await computeDevServerStatus(ctx, p.projectRoot, p.devUrls);
 
     // Surface a one-shot update offer. Agent reads this and decides whether
     // to ask the user "want me to run git pull && bun run setup?" — only on
@@ -152,6 +224,7 @@ export const tools = {
       sessionId: session.id,
       url: `${ctx.baseUrl}/?session=${session.id}`,
       drawerStatus,
+      devServer,
       watcher: {
         command: `${ctx.scriptsDir}/pitstop-watch.sh ${session.id}`,
         description: `pitstop unread responses · session ${session.id}`,
@@ -165,6 +238,8 @@ export const tools = {
       activeSessionRules: {
         drawerLiveCheck:
           "BEFORE narrating, asking, or marking arrival: check drawerStatus.live in this response. If false, the drawer is not mounted in any open tab — beats fire into the void. Tell the user to open their dev app + confirm the drawer is showing, then resume. Re-check by calling get_state; drawerStatus.live updates on subsequent calls' responses.",
+        devServerCheck:
+          "ALSO check devServer.up — drawer can be live (stale tab) while the actual dev server is dead. If devServer.up is false, the user is staring at a 'this site can't be reached' page. Pause and offer to start their dev script (cd projectRoot, run pnpm/bun/npm dev — check package.json) before continuing. If devServer.up is 'unknown' it just means we have no candidate URL — pass devUrls when calling start_review to get a probe.",
         verificationSurface:
           'ANY surface the user needs to verify, check, or look at — call start_review or add_items, never "could you check this in the browser?"',
         conversationalBeat: "narrate(narration) — feed line, no state effects",
@@ -293,6 +368,8 @@ export const tools = {
       // `live: false` should poll this until it flips before resuming any
       // narrate / mark_addressing / ask_user calls.
       drawerStatus: computeDrawerStatus(ctx, updated.projectRoot, updated.devUrls),
+      // Re-probe the dev server too, for the same poll-after-pause flow.
+      devServer: await computeDevServerStatus(ctx, updated.projectRoot, updated.devUrls),
       watcher: {
         command: `${ctx.scriptsDir}/pitstop-watch.sh ${updated.id}`,
         description: `pitstop unread responses · session ${updated.id}`,

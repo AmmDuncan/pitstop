@@ -52,7 +52,11 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
   // it, the agent would otherwise drive a tab full of items the user can't see.
   // /inject.js is served with `Cache-Control: no-cache`, so the browser
   // revalidates on every reload and we get a fresh signal each time.
-  const drawerSeen = new Map<string, number>();
+  // The captured `origin` comes from the host page's Referer header — that's
+  // the URL the dev server is actually serving on (e.g. http://localhost:3777).
+  // Used by start_review to probe whether the dev server is alive before the
+  // agent starts narrating into a dead app. v0.3.69.
+  const drawerSeen = new Map<string, { at: number; origin?: string }>();
 
   /** Dedupe set for stale-adapter notifications. Keyed by
    *  `${projectRoot}|${adapterVersion}|${adapterPid}`. Once we publish a
@@ -479,7 +483,20 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
 
   app.get("/inject.js", async (c) => {
     const projectRoot = c.req.query("pitstop-project");
-    if (projectRoot) drawerSeen.set(projectRoot, Date.now());
+    if (projectRoot) {
+      // Capture the host page's origin from the Referer header so start_review
+      // can probe whether the dev server is alive even when the agent forgot
+      // to pass devUrls. Strip to origin (no path/query) — that's the only
+      // part useful for a HEAD probe.
+      let origin: string | undefined;
+      const referer = c.req.header("referer");
+      if (referer) {
+        try {
+          origin = new URL(referer).origin;
+        } catch {}
+      }
+      drawerSeen.set(projectRoot, { at: Date.now(), origin });
+    }
     const file = Bun.file(new URL("../../../inject/dist/inject.js", import.meta.url));
     // If the bundle is missing, Bun.file() returns an HTML error fallback —
     // the browser would load that as JS, the custom element would never
@@ -542,7 +559,7 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     const projectRoot = c.req.query("projectRoot");
     if (!projectRoot) return c.json({ error: "projectRoot required" }, 400);
     const lastSeen = drawerSeen.get(projectRoot);
-    const wired = lastSeen !== undefined && Date.now() - lastSeen < DRAWER_FRESHNESS_MS;
+    const wired = lastSeen !== undefined && Date.now() - lastSeen.at < DRAWER_FRESHNESS_MS;
     return c.json({ wired });
   });
 
