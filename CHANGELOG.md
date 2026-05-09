@@ -2,6 +2,17 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.75 — 2026-05-09
+
+### feat
+
+- **`ask_user` requires `chatMirror`**. The dual-surface rule (write the question + options as readable text in your chat reply too) was honor-system before this and regressed repeatedly: agent calls `ask_user`, drawer shows the banner, chat reply has no mention of the question, user looking at the terminal sees nothing. Now it's a required tool parameter validated at the daemon (`chatMirror.length >= question.length` rejects "see drawer" cop-outs). The agent has to author the mirror text as part of the call, dramatically increasing the odds it also surfaces in chat. Three new daemon tests cover the contract.
+
+### fix
+
+- **Scroll inside the drawer no longer dead-ends at inner scrollables**. The previous global `* { overscroll-behavior: contain }` blocked even internal chaining, so reaching the bottom of `.pq-options` did nothing instead of continuing into `.detail-scroll`. Replaced with targeted `contain` on the six outer drawer scroll containers; inner scrollables now chain naturally to their parent, and the outer ones still block escape to the host page.
+- **Metabar (top strip with path / session id / claude chip) is now a drag handle when floating**. Users instinctively grabbed the very top of the drawer to move it and ended up text-selecting the session id instead. Extracted the header's pointer-drag into a shared `state/float-drag.ts` helper used by both surfaces; interactive children (UpdateChip, ClaudeBindChip) pass through correctly via the existing button-skip guard.
+
 ## v0.3.74 — 2026-05-09
 
 ### feat
