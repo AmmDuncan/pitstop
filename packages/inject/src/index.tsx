@@ -55,9 +55,25 @@ class PitstopDrawer extends HTMLElement {
 
 if (!customElements.get("pitstop-drawer")) {
   customElements.define("pitstop-drawer", PitstopDrawer);
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => document.body.appendChild(new PitstopDrawer()));
+  // Defer the body insertion until after the host page's framework has had a
+  // chance to hydrate. Mounting too early — DOMContentLoaded or sooner —
+  // appends a <pitstop-drawer> child to <body> that the host's React/Vue
+  // didn't server-render, and the framework's hydration reconciler trips
+  // on it. The visible symptom is usually a hydration mismatch on the
+  // *next* real component the framework hydrates (e.g. a header button)
+  // because the diff is detected as it walks the body's children.
+  //
+  // `window.load` fires after the document and all sub-resources finish
+  // loading, by which time React/Vue/Nuxt have completed their initial
+  // hydration cycle. requestAnimationFrame past that lets us slip in
+  // *between* the host's hydration tick and any user interaction.
+  // Codified in feedback_no_html_mutation.md after the v0.3.66/67 chain.
+  const mount = () => {
+    requestAnimationFrame(() => document.body.appendChild(new PitstopDrawer()));
+  };
+  if (document.readyState === "complete") {
+    mount();
   } else {
-    document.body.appendChild(new PitstopDrawer());
+    window.addEventListener("load", mount, { once: true });
   }
 }
