@@ -2,6 +2,11 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.70 — 2026-05-09
+
+- fix(drawer): clear `AWAITING CLAUDE` strip when the agent calls `agent_address_comment(itemId)` — the strip's `itemAddressed` memo only honored `mark_addressing(arrived: true)` as a "caught up" signal, even though `agent_address_comment` is the documented "I've handled your comment" tool (it flips the pip to cyan ↻). When Claude correctly used `agent_address_comment` after a comment, the strip stayed up forever. Loosen the memo to count either signal.
+- fix(drawer): walk back the v0.3.63 collapse-on-complete behavior. The drawer now stays expanded through `status: "complete"` and only falls back to the user's persisted size when the session is fully gone (session.s null). Completion was pulling the drawer out from under the user mid-summary, which felt rug-pull-y.
+
 ## v0.3.69 — 2026-05-09
 
 - feat(daemon): pre-flight dev-server probe alongside `drawerStatus.live`. v0.3.66 caught "is the drawer mounted in some tab" but missed "is the dev server actually responding" — a stale tab can keep its SSE subscription alive against a dead dev server, leaving the agent narrating into a homepage that won't load. Added a `devServer` field on `start_review` and `get_state` responses: HEAD probe (with GET fallback for Next 15) at the URL passed via `devUrls` or the origin captured from the host page's Referer header. 800ms timeout. Three states: `up: true` / `up: false` / `up: "unknown"` (no candidate URL). Hint-only, same soft-steering pattern as `drawerStatus.live` — `activeSessionRules.devServerCheck` adds the contract.
