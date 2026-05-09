@@ -2,6 +2,10 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.71 — 2026-05-09
+
+- feat(daemon): steer the agent to drive the browser instead of asking the user. New top-priority `activeSessionRules.agentDrives` rule says explicitly: if you have a browser-driving tool (Claude in Chrome, agent-browser, Playwright), use it — opening the dev URL, navigating to surfaces, hard-refreshing — before falling back to "tell the user to do it." The drawer-not-live and no-fetch hints were both rewritten with the same priority order: PREFERRED is agent drives, FALLBACK is ask user. The user is parked in the drawer judging surfaces; making them flip to the terminal to follow click-by-click instructions defeats the point of pitstop.
+
 ## v0.3.70 — 2026-05-09
 
 - fix(drawer): clear `AWAITING CLAUDE` strip when the agent calls `agent_address_comment(itemId)` — the strip's `itemAddressed` memo only honored `mark_addressing(arrived: true)` as a "caught up" signal, even though `agent_address_comment` is the documented "I've handled your comment" tool (it flips the pip to cyan ↻). When Claude correctly used `agent_address_comment` after a comment, the strip stayed up forever. Loosen the memo to count either signal.
