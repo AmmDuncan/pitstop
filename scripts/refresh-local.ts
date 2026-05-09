@@ -24,9 +24,19 @@ const note = (s: string) => log(`  · ${s}`);
 
 log("");
 log("▸ killing daemon (auto-respawns on next MCP call)");
-const daemonResult = await $`pkill -f "packages/daemon/src/index.ts"`.quiet().nothrow();
-if (daemonResult.exitCode === 0) ok("daemon stopped");
-else note("no running daemon to stop");
+// Match by *port* not by command-line path. The previous
+// `pkill -f "packages/daemon/src/index.ts"` pattern silently no-op'd when
+// the daemon was started with a relative path (e.g. `cd packages/daemon &&
+// bun run src/index.ts` produced a `bun run src/index.ts` command line that
+// the pattern didn't match). Whoever's bound to 7773 is the daemon — that
+// fact is robust across every spawn mode.
+const portPid = (await $`lsof -ti :7773 -sTCP:LISTEN`.text().catch(() => "")).trim();
+if (portPid) {
+  await $`kill ${portPid}`.quiet().nothrow();
+  ok(`daemon stopped (pid ${portPid})`);
+} else {
+  note("no running daemon to stop");
+}
 
 log("");
 log("▸ killing pitstop MCP subprocesses");
