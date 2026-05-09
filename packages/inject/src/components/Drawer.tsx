@@ -1,4 +1,5 @@
 import { type Component, Show } from "solid-js";
+import { startFloatDrag } from "../state/float-drag";
 import {
   floatingLeft,
   floatingTop,
@@ -223,7 +224,11 @@ export const Drawer: Component = () => {
               </div>
             }
           >
-            <div class="metabar">
+            <div
+              class="metabar"
+              classList={{ draggable: position() === "floating" }}
+              onPointerDown={startFloatDrag}
+            >
               <span>~/.claude/pitstop/sessions/{session.s?.id}.json</span>
               <span class="center">S#{session.s?.id}</span>
               <span class="right">

@@ -12,13 +12,16 @@
   padding: 0;
 }
 
-/* Stop scroll-chaining: when the user wheel/touch-scrolls past the edge of
-   any scrollable region inside the drawer, the wheel event was bubbling up
-   and scrolling the host dev page. `contain` keeps the scroll inside the
-   drawer (no-op on non-scrollable elements). */
-* {
-  overscroll-behavior: contain;
-}
+/* Scroll-chaining model:
+   - INSIDE the drawer, inner scrollables (e.g. .pq-options) chain naturally
+     to their nearest scrollable ancestor (e.g. .detail-scroll). The previous
+     `* { overscroll-behavior: contain }` blocked even this internal chain,
+     so reaching the bottom of an option list felt like a dead end instead
+     of continuing into the detail scroll.
+   - At the DRAWER BOUNDARY, the outermost scroll containers carry `contain`
+     so a wheel/touch past their edges doesn't escape to the host page. See
+     each container's rule below. Inner scrollables intentionally do NOT
+     carry `contain` so the chain reaches them. */
 
 @keyframes pulse {
   0%,
@@ -726,15 +729,24 @@
   height: 14px;
 }
 
-/* Header is a drag handle when drawer is floating */
-.drawer.pos-floating .dheader {
+/* Header AND metabar are both drag handles when drawer is floating. The
+   metabar covers the case where users instinctively grab the very top of
+   the drawer to move it; without this they end up text-selecting the
+   session-id span instead. The grip dots are drawn on the header only —
+   one indicator is enough; doubling it on the metabar reads as clutter. */
+.drawer.pos-floating .dheader,
+.drawer.pos-floating .metabar.draggable {
   cursor: move;
+}
+.drawer.pos-floating .dheader {
   padding-left: 28px;
   position: relative;
 }
 .drawer.pos-floating .dheader button,
 .drawer.pos-floating .dheader a,
-.drawer.pos-floating .dheader input {
+.drawer.pos-floating .dheader input,
+.drawer.pos-floating .metabar.draggable button,
+.drawer.pos-floating .metabar.draggable a {
   cursor: pointer;
 }
 /* Grip handle: 6 dots in a 2-col grid drawn as a radial-gradient — clear and crisp */
@@ -755,7 +767,8 @@
 .drawer.pos-floating .dheader:hover::before {
   opacity: 1;
 }
-.drawer.pos-floating .dheader.draggable:active {
+.drawer.pos-floating .dheader.draggable:active,
+.drawer.pos-floating .metabar.draggable:active {
   cursor: grabbing;
 }
 
@@ -1004,6 +1017,7 @@
 }
 .sheet-list {
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 4px 0;
 }
 .sheet-row {
@@ -1067,6 +1081,10 @@
 .detail-scroll {
   overflow-y: auto;
   overflow-x: hidden;
+  /* Outer scroll boundary inside the drawer body. .pq-options and any other
+     inner scrollable chain up to here naturally; `contain` stops the chain
+     from escaping the drawer to the host page. */
+  overscroll-behavior: contain;
   padding: 24px 24px 36px;
   background: var(--bg-paper);
   min-width: 0;
@@ -1251,6 +1269,7 @@
      entry; the list scrolls when content overflows. Showing/hiding older
      entries changes what's IN the list, not the height of it. */
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .agent-feed-line {
   position: relative;
@@ -1876,6 +1895,7 @@
   grid-template-rows: auto auto 1fr auto;
   gap: 18px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .summary-stamp {
   font-family: var(--mono);
@@ -1957,6 +1977,7 @@
   align-items: center;
   gap: 24px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .rc-stamp {
   font-family: var(--mono);
@@ -2348,6 +2369,7 @@
 }
 .keymap-body {
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 14px 16px;
 }
 .keymap-group {
