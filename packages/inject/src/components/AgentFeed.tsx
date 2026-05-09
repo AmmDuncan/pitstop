@@ -19,8 +19,7 @@ const computeFeedMax = (): number =>
     Math.min(
       FEED_ABSOLUTE_MAX_PX,
       Math.floor(
-        (typeof window !== "undefined" ? window.innerHeight : FEED_ABSOLUTE_MAX_PX) *
-          FEED_MAX_VH_FRACTION,
+        (typeof window !== "undefined" ? window.innerHeight : FEED_ABSOLUTE_MAX_PX) * FEED_MAX_VH_FRACTION,
       ),
     ),
   );

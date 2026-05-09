@@ -184,13 +184,9 @@ THE RESUME RECIPE: get_state(sessionId) → invoke watcher.command via Monitor �
     name: "get_unread_responses",
     description: `Drain all unread reviewer responses; marks them addressed atomically. Call this every time your Monitor watcher fires a stdout-line notification — that line means the reviewer pressed approve or sent a comment, and you need to read what they said before deciding what to do next. Returns an array; for each entry decide: navigate to the next item's surface (call set_current_item + mark_addressing), or, if it's a comment that requires action, fix the issue and add a follow-up item or carry on to the next.
 
-POSITIVE OBLIGATION on receiving a comment: your FIRST move is an acknowledgement beat sent within one tool call. Silence after a comment reads as ignoring it; the reviewer is parked in the drawer and only sees the CLAUDE feed.
+POSITIVE OBLIGATION on receiving a comment: your FIRST move is a narrate() acknowledgement beat ("Got it, looking now" / "Good catch — checking the spacing rule") sent within one tool call. THEN investigate. THEN close with agent_address_comment(). Silence between the comment landing and your first beat reads as ignoring it; the reviewer is parked in the drawer and only sees the CLAUDE feed. Even on a "trivial close" you don't yet know is trivial, lead with narrate — the cost of one extra feed line is far lower than the cost of perceived silence while you're deciding.
 
-WHICH TOOL FOR THE ACK depends on whether the comment needs investigation:
-- INVESTIGATION NEEDED (you'll fix code, look something up, navigate elsewhere): start with narrate() — "Got it, looking now" / "Good catch — checking the spacing rule." Then investigate. End the loop with agent_address_comment() carrying the resolution narration.
-- NO INVESTIGATION NEEDED (parking the idea, agreeing with no-action, confirming-unchanged, immediate trivial close): SKIP the narrate ACK and go straight to agent_address_comment() with an ack-flavored handled narration ("Captured — illustration parked as a future enhancement"). One beat, not two. The double-narrate pattern (ack with narrate + handled with agent_address_comment saying basically the same thing) clutters the feed without adding information.
-
-Rule of thumb: if the ACK and the close would carry similar text, collapse to one agent_address_comment call.
+DISTINCT CONTENT, NOT DISTINCT CALLS: the reason narrate + agent_address_comment can read as redundant is bad WRITING, not too many beats. The narrate ack is "I saw it, I'm on it." The agent_address_comment narration must describe the DECISION or the FIX — not paraphrase the ack. If your address narration is going to read like the ack ("Captured — got it"), rewrite it: say what you decided ("Parking as follow-up — added to backlog item #N") or what you did ("Switched the date format to YYYY-MM-DD"). If it would still echo the ack, you're using the wrong tool — narrate alone is fine for "noted, no action."
 
 ${ASK_USER_CROSSREF}`,
     inputSchema: { type: "object", required: ["sessionId"], properties: { sessionId: { type: "string" } } },
@@ -426,10 +422,14 @@ WHEN TO CALL: any time you receive an answer to your most recent \`ask_user\` fr
     name: "agent_address_comment",
     description: `Mark that you've HANDLED a user comment on an item — fix shipped, decided-not-to-act with reason given, or otherwise consciously closed the loop. Pushes a response of kind "agent-addressed" onto the item, which flips the amber pip to a third color (cyan ↻ — distinct from amber/commented and from green/approved) and lands a narration in the CLAUDE feed.
 
-THIS IS THE "I'M DONE WITH IT" SIGNAL.
-- If you'll INVESTIGATE before closing the loop ("Got it, looking now" / "Good catch — checking"), pre-ack with narrate() so the user knows you saw the comment, then agent_address_comment() at the end with the resolution. Two beats, two distinct moments.
-- If the comment doesn't need investigation (parking the idea, agreeing-with-no-action, confirming-unchanged, immediate trivial close): SKIP the narrate pre-ack and call agent_address_comment() directly with an ack-flavored handled narration ("Captured — illustration parked as a future enhancement"). ONE beat, not two — the double pattern (narrate "Got it" + agent_address_comment "Captured") just clutters the feed.
-- For mid-fix progress beats during a long investigation ("Two ways to fix this; going with grid-rows", "HMR'ing"), use narrate() — same reason as the pre-ack: the pip stays amber until the actual close.
+THIS IS THE "I'M DONE WITH IT" SIGNAL — NOT THE EARLY-ACK SIGNAL.
+- For early acknowledgement BEFORE you investigate ("Got it, looking now" / "Good catch — checking"), use narrate() instead. narrate doesn't flip the pip, so the user's amber comment stays amber until you've actually addressed it.
+- For mid-fix progress beats ("Two ways to fix this; going with grid-rows", "HMR'ing"), use narrate() — same reason.
+
+TWO BEATS ARE THE NORM, NOT REDUNDANCY: every comment gets a narrate() pre-ack first, then agent_address_comment() at close. The pre-ack is the heartbeat that tells the user-in-drawer you're on it; the close is what flips the pip and signals "done." Skipping the pre-ack to save a feed line creates perceived silence between the comment landing and the close — that silence reads as "Claude is idle" or "Claude ignored me." Don't do it.
+
+DISTINCT CONTENT, NOT DISTINCT CALLS: the way to keep two beats from feeling redundant is to make their TEXT different. The narrate ack says "I saw it / I'm on it." The address narration says what you DECIDED or DID — "Parking as follow-up — added to backlog," "Switched format to YYYY-MM-DD," "Confirmed unchanged on /pricing." If your address narration is going to read like the ack ("Captured — got it"), rewrite it. If it would still echo the ack even after rewriting, you probably shouldn't call agent_address_comment at all — narrate alone is the right tool for "noted, no action."
+
 - Use agent_address_comment ONLY when there's nothing more for the agent to do on the comment. The pip color carries the "considered" semantics; flipping it pre-fix is dishonest.
 
 WHEN TO CALL — after EVERY user comment, AFTER you've actually handled it:
@@ -476,7 +476,10 @@ WHEN TO USE:
 - The user is interacting with a region of their app that the drawer is permanently in the way of (e.g. a right-side cart on a host app while drawer is also pinned right).
 - BEFORE force-clicking via JS. Force-clicks skip the genuine UI interactions the user wants to verify; moving the drawer first preserves the real flow.
 
-The narration is REQUIRED — it's appended to the agent feed at the bottom of the drawer so the user knows why the chrome just shifted. Plain language, one short sentence ("Drawer covered the Place Order button — switching to left."). Without it, the move looks like a glitch.
+POSITION CHANGES ARE USER-GATED — drawer renders a confirmation modal on every position-bearing call, displaying your narration as the reason. The user clicks MOVE or STAY before anything visually shifts. Plan for both outcomes:
+- If accepted: agentActivity grows a "User OK'd drawer move" entry and the drawer is now where you asked.
+- If declined: agentActivity grows a "User declined drawer move … staying on <side>" entry. The drawer is unchanged. Don't loop — pick another path (collapse to strip via size-only, scroll the host page, or force-click as last resort).
+Do NOT assume a position change applied. If your next action depends on the drawer being in the new position, call get_state first and check the most recent user_drawer_decision activity entry. Size-only calls (no position) apply directly without the modal.
 
 Persists to the same localStorage the drawer's chrome buttons write to, so the change survives reload. Pass at least one of position/size; both is fine.
 
@@ -499,7 +502,7 @@ ${ASK_USER_CROSSREF}`,
         narration: {
           type: "string",
           description:
-            "REQUIRED. One-sentence reason for the move. Lands in the AgentFeed so the user isn't surprised. E.g. 'Cart button is under the drawer — moving to left.'",
+            "REQUIRED. One-sentence reason. For position changes this is shown to the user in the move-confirmation modal — write it as a request, not a fait accompli ('Drawer is covering the cart — move to left?'). For size-only changes it lands in the AgentFeed.",
         },
       },
     },

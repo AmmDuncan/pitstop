@@ -2,7 +2,7 @@ import type { Session, SseEvent } from "@pitstop/shared";
 import { createEffect, createMemo, createRoot, createSignal } from "solid-js";
 import { createStore, produce, reconcile } from "solid-js/store";
 import { fetchActiveSession, fetchMostRecentActiveSession, openEventStream } from "./client";
-import { setPosition, setSize } from "./modes";
+import { position as currentPosition, setPendingDrawerMove, setPosition, setSize } from "./modes";
 
 export const [session, setSession] = createStore<{ s: Session | null }>({ s: null });
 export const [currentItemIdx, setCurrentItemIdx] = createSignal(0);
@@ -150,10 +150,21 @@ export function applyEvent(e: SseEvent): void {
       );
       break;
     case "drawer-control":
-      // Agent-driven chrome change via set_drawer. Persisted by the modes
-      // effect so the drawer stays where the agent put it after reload.
-      if (e.position) setPosition(e.position);
+      // Agent-driven chrome change via set_drawer. Size-only events apply
+      // directly (resize doesn't yank). Position changes go through the
+      // user-confirmation gate via DrawerMovePrompt — set_drawer gives the
+      // AGENT the ability to *request* a move, never to silently relocate
+      // the drawer out from under the user. If the requested position
+      // matches the current one (no-op), skip the prompt and just apply
+      // any size change.
       if (e.size) setSize(e.size);
+      if (e.position && e.position !== currentPosition()) {
+        setPendingDrawerMove({
+          from: currentPosition(),
+          to: e.position,
+          narration: e.narration ?? "",
+        });
+      }
       break;
   }
 }

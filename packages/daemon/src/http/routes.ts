@@ -398,6 +398,37 @@ export function mountRoutes(app: Hono, opts: DaemonOpts) {
     return c.json({ accepted: true }, 202);
   });
 
+  // Drawer-side decision feedback for an agent-requested position change.
+  // The drawer holds set_drawer position changes in front of the user via
+  // DrawerMovePrompt; this endpoint records the user's accept/decline as an
+  // agentActivity entry so the CLAUDE feed shows the decision AND the agent
+  // can see it on its next get_state read. No poke fires — the agent's next
+  // action (click retry, etc.) provides the natural feedback loop.
+  app.post("/api/sessions/:id/drawer-move-decision", async (c) => {
+    const id = c.req.param("id");
+    const Body = z.object({
+      accepted: z.boolean(),
+      from: z.enum(["right", "left", "floating"]),
+      to: z.enum(["right", "left", "floating"]),
+    });
+    const parsed = Body.safeParse(await c.req.json());
+    if (!parsed.success) return c.json({ error: parsed.error.format() }, 400);
+    const { accepted, from, to } = parsed.data;
+    const at = Date.now();
+    const narration = accepted
+      ? `User OK'd drawer move ${from} → ${to}.`
+      : `User declined drawer move ${from} → ${to} — staying on ${from}.`;
+    const entry = { at, tool: "user_drawer_decision", narration };
+    const session = await store.update(id, (s) => ({
+      ...s,
+      agentActivity: [...s.agentActivity, entry].slice(-50),
+      lastAgentActivityAt: at,
+    }));
+    bus.publish(id, { type: "agent-activity", sessionId: id, entry });
+    bus.publish(id, { type: "state-changed", session });
+    return c.json({ ok: true });
+  });
+
   app.post("/api/sessions/:id/retry-poke", async (c) => {
     const id = c.req.param("id");
     const session = await store.get(id);

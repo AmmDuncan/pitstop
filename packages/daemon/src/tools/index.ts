@@ -104,11 +104,7 @@ async function computeDevServerStatus(
   };
 }
 
-function computeDrawerStatus(
-  ctx: Ctx,
-  projectRoot: string,
-  devUrls?: string[],
-): DrawerStatus {
+function computeDrawerStatus(ctx: Ctx, projectRoot: string, devUrls?: string[]): DrawerStatus {
   const lastSeen = ctx.drawerSeen?.get(projectRoot);
   const connected = lastSeen !== undefined && Date.now() - lastSeen.at < DRAWER_FRESHNESS_MS;
   const live = ctx.bus.projectSubscriberCount(projectRoot) > 0;
@@ -510,7 +506,7 @@ export const tools = {
     }));
     ctx.bus.publish(sessionId, { type: "agent-activity", sessionId, entry });
     ctx.bus.publish(sessionId, { type: "state-changed", session });
-    ctx.bus.publish(sessionId, { type: "drawer-control", sessionId, position, size });
+    ctx.bus.publish(sessionId, { type: "drawer-control", sessionId, position, size, narration });
     return { ok: true };
   },
 

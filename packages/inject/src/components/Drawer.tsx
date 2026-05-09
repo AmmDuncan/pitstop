@@ -19,6 +19,7 @@ import googleFonts from "../styles/google-fonts.css?raw";
 import tokensCss from "../styles/tokens.css?raw";
 import { AgentFeed } from "./AgentFeed";
 import { Detail } from "./Detail";
+import { DrawerMovePrompt } from "./DrawerMovePrompt";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { KeymapOverlay } from "./KeymapOverlay";
@@ -248,6 +249,7 @@ export const Drawer: Component = () => {
             <Footer />
           </Show>
           <SessionSwitchPrompt />
+          <DrawerMovePrompt />
           <Show when={helpOpen()}>
             <KeymapOverlay />
           </Show>

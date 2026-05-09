@@ -1,9 +1,22 @@
 import { createEffect, createRoot, createSignal } from "solid-js";
 
-type Position = "right" | "left" | "floating";
+export type Position = "right" | "left" | "floating";
 type Side = "right" | "left";
 type Size = "standard" | "compact" | "strip";
 export type Theme = "dark" | "light";
+
+/** A position change requested by the agent via set_drawer that we're holding
+ *  in front of the user for confirmation. ANY position change yanks the drawer
+ *  visually (right ↔ left across screen, floating jumps to last float pos,
+ *  pinned snaps to edge), so we route every position-bearing drawer-control
+ *  event through this gate. Size-only events apply directly (no yank). */
+export type PendingDrawerMove = {
+  from: Position;
+  to: Position;
+  /** Agent's stated reason — required by set_drawer's schema, displayed in
+   *  the modal so the user knows WHY the agent wants to move. */
+  narration: string;
+};
 
 const KEY = "pitstop.modes.v1";
 
@@ -102,6 +115,11 @@ export const [theme, setTheme] = createSignal<Theme>(initial.theme);
  *  CSS can suppress the width/height transition (otherwise every pixel-
  *  level pointer delta lerps over 220ms and the drag feels laggy). */
 export const [interactiveResize, setInteractiveResize] = createSignal(false);
+
+/** Agent-requested position change awaiting user confirmation. While set,
+ *  DrawerMovePrompt is rendered on top of the drawer. Cleared by accept/decline
+ *  (see store.ts); the drawer position itself doesn't change until accept. */
+export const [pendingDrawerMove, setPendingDrawerMove] = createSignal<PendingDrawerMove | null>(null);
 
 createRoot(() => {
   // Collapse rapid signal changes (e.g. floatingTop/floatingLeft on every

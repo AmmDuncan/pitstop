@@ -55,8 +55,7 @@ const lifecycle = createRoot(() => {
       (e) =>
         e.itemId === item.id &&
         e.at > lastUserCommentAt &&
-        ((e.tool === "mark_addressing" && e.arrived !== false) ||
-          e.tool === "agent_address_comment"),
+        ((e.tool === "mark_addressing" && e.arrived !== false) || e.tool === "agent_address_comment"),
     );
   });
 

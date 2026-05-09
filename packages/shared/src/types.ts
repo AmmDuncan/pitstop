@@ -152,6 +152,11 @@ export type SseEvent =
       sessionId: string;
       position?: "right" | "left" | "floating";
       size?: "standard" | "compact" | "strip";
+      /** Required when set_drawer is called — surfaced in the drawer-move
+       *  confirmation modal AND in the agent feed so the user always knows
+       *  why the agent wanted to move. Optional in the type because legacy
+       *  events (none in flight; this is forward-looking) might lack it. */
+      narration?: string;
     }
   /**
    * Published on the project lobby when the daemon detects an MCP adapter

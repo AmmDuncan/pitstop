@@ -113,6 +113,26 @@ export async function patchSessionStatus(
   if (!r.ok) throw new Error(`status patch failed: ${r.status}`);
 }
 
+/** Records the user's accept/decline of an agent-requested drawer move so it
+ *  lands in agentActivity (visible in the CLAUDE feed and to the agent's
+ *  next get_state). Failures are non-fatal — the visual move state is local;
+ *  this is just for the feedback record. */
+export async function postDrawerMoveDecision(
+  sessionId: string,
+  body: { accepted: boolean; from: "right" | "left" | "floating"; to: "right" | "left" | "floating" },
+): Promise<void> {
+  try {
+    await fetch(`${baseUrl}/api/sessions/${sessionId}/drawer-move-decision`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    // Non-fatal — the user has already accepted/declined locally; the only
+    // cost is the activity entry not landing.
+  }
+}
+
 let cachedConfig: PitstopConfig | null = null;
 
 export async function fetchConfig(): Promise<PitstopConfig> {

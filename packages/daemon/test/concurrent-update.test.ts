@@ -41,9 +41,9 @@ test("store.update serializes concurrent writers — no narrations dropped", asy
   }
 
   const state = await rpc(app, "get_state", { sessionId: sid });
-  const narrations = (
-    state.body.agentActivity as Array<{ tool: string; narration: string }>
-  ).filter((a) => a.tool === "narrate");
+  const narrations = (state.body.agentActivity as Array<{ tool: string; narration: string }>).filter(
+    (a) => a.tool === "narrate",
+  );
   expect(narrations).toHaveLength(N);
   const seen = new Set(narrations.map((n) => n.narration));
   for (let i = 0; i < N; i++) expect(seen.has(`race-${i}`)).toBe(true);

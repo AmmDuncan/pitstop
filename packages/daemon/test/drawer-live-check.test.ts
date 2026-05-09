@@ -43,9 +43,7 @@ test("start_review reports live:true when a project-lobby subscriber is connecte
   // Open an SSE subscription on the project lobby. The Hono streamSSE handler
   // returns a Response whose body is an unended ReadableStream — keep a reader
   // alive so the subscription persists across the next RPC.
-  const lobby = await app.fetch(
-    new Request("http://localhost/api/projects/events?projectRoot=/p"),
-  );
+  const lobby = await app.fetch(new Request("http://localhost/api/projects/events?projectRoot=/p"));
   const reader = lobby.body!.getReader();
   // Don't await reader.read() in full — just kick it off so the server-side
   // listener is registered. A microtask is enough to let Hono register.
@@ -79,9 +77,7 @@ test("get_state surfaces a fresh drawerStatus so agents can re-poll after asking
   expect(beforeState.body.drawerStatus.live).toBe(false);
 
   // User opens their tab → drawer subscribes to lobby.
-  const lobby = await app.fetch(
-    new Request("http://localhost/api/projects/events?projectRoot=/p"),
-  );
+  const lobby = await app.fetch(new Request("http://localhost/api/projects/events?projectRoot=/p"));
   const reader = lobby.body!.getReader();
   void reader.read();
   await new Promise((r) => setTimeout(r, 20));
