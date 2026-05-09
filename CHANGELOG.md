@@ -2,6 +2,10 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.68 — 2026-05-09
+
+- fix(inject): defer drawer mount to `window.load` to dodge host hydration. v0.3.67 stopped pitstop from mutating `<html>`'s style attribute, but the same family of bug remained — pitstop appended `<pitstop-drawer>` to `<body>` on `DOMContentLoaded`, racing the host's React/Vue hydration. The visible symptom in a Next 15 project was a hydration mismatch attributed to the user's own `ThemeSwitch` component (the next real child React walked past after hitting the unexpected pitstop element). Mount now waits for `window.load` + a `requestAnimationFrame`, which lands after the framework's initial hydration cycle in every framework I've checked. Practical delay before the drawer strip appears is a frame or two on most pages — invisible.
+
 ## v0.3.67 — 2026-05-08
 
 - fix(inject): drop the `:root` `--pitstop-drawer-width` CSS variable that broke Next 15 hydration. The Solid effect was mutating `document.documentElement.style` after React hydrated, and Next's checker correctly flagged it as a server/client mismatch (visible in the dev overlay as `style={{--pitstop-drawer-width:"454px"}}` on the `<html>` element). The variable was a forward-compat anchor for the v0.3.36-retired reflow feature and had no current consumers. If a host ever needs the width again, the right place to expose it is the `<pitstop-drawer>` custom element — which is not SSR'd, so mutations there can't conflict with framework hydration.
