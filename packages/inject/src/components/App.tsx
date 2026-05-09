@@ -104,12 +104,15 @@ export const App: Component = () => {
 
   // Ephemeral strip-lift: when a session arrives and the user's persisted
   // size is `strip`, render at standard for the duration of the session
-  // without overwriting their preference. Falls back to strip on session end.
-  // Treats `complete` as ended too — the post-review summary is still
-  // visible while size returns to the user's idle preference.
+  // without overwriting their preference. Falls back to strip only when
+  // the session is fully gone (session.s null) — `complete` keeps the
+  // drawer expanded so the user sees the post-review state until they
+  // reload or a new session arrives. v0.3.70 walked back the
+  // collapse-on-complete behavior shipped in v0.3.63 — collapsing the
+  // moment a session finished felt jarring, like the drawer rug-pulled
+  // the user out of the review.
   createEffect(() => {
-    const live = !!session.s && session.s.status !== "complete";
-    if (live) liftIfStrip();
+    if (session.s) liftIfStrip();
     else clearAutoExpand();
   });
 

@@ -30,10 +30,20 @@ export type StripKind = "sending" | "poked" | "awaiting";
 export type StripState = { kind: StripKind; label: string; narration?: string };
 
 const lifecycle = createRoot(() => {
-  /** True when the agent has called `mark_addressing(arrived: true)` for the
-   *  current item AFTER the user's most recent comment. Without the recency
-   *  check, the original arrival narration would falsely keep the strip
-   *  cleared even when the user re-comments. */
+  /** True when the agent has signalled it's caught up on the current item
+   *  AFTER the user's most recent comment. Two activity types count as
+   *  "caught up":
+   *    - `mark_addressing(arrived: true)` — the agent navigated the user
+   *      to a surface for this item.
+   *    - `agent_address_comment(itemId)` — the agent says "I've handled
+   *      your comment" (per the tool's documented role: flips the pip to
+   *      cyan ↻). Before v0.3.70, the strip only honored mark_addressing,
+   *      so when Claude correctly used agent_address_comment after a
+   *      comment, the strip stayed AWAITING CLAUDE indefinitely.
+   *  Without the post-comment recency check, the original arrival
+   *  narration would falsely keep the strip cleared even when the user
+   *  re-comments.
+   */
   const itemAddressed = createMemo(() => {
     const item = session.s?.items[currentItemIdx()];
     if (!item) return false;
@@ -43,10 +53,10 @@ const lifecycle = createRoot(() => {
       .reduce((max, r) => (r.at > max ? r.at : max), 0);
     return (session.s?.agentActivity ?? []).some(
       (e) =>
-        e.tool === "mark_addressing" &&
         e.itemId === item.id &&
-        e.arrived !== false &&
-        e.at > lastUserCommentAt,
+        e.at > lastUserCommentAt &&
+        ((e.tool === "mark_addressing" && e.arrived !== false) ||
+          e.tool === "agent_address_comment"),
     );
   });
 
