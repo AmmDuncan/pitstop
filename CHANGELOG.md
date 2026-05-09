@@ -2,6 +2,11 @@
 
 All notable changes to Pitstop are documented here. Each release on GitHub mirrors the corresponding section.
 
+## v0.3.72 — 2026-05-09
+
+- fix(drawer): cap the CLAUDE feed at `min(400px, 25vh)` so it stays proportional on small screens. The fixed 400px cap was eating ~40% of the drawer on laptop-sized viewports, especially in REVIEW_COMPLETE state where the main body is mostly empty and the feed visually dominated. Drag handle still respects the same cap; window-resize re-clamps current height down if the viewport shrinks.
+- fix(steering): collapse the double-narrate pattern on simple comments. The tool docs were forcing `narrate("Got it, looking now")` + `agent_address_comment(...)` for every comment, even when the comment was a parking-the-idea / agreeing-with-no-action / trivial-close case. The two beats carried similar text and cluttered the feed without adding information. Updated `get_unread_responses` and `agent_address_comment` to distinguish investigation-needed (still two beats, different content) from immediate-close (one `agent_address_comment` call with an ack-flavored handled narration).
+
 ## v0.3.71 — 2026-05-09
 
 - feat(daemon): steer the agent to drive the browser instead of asking the user. New top-priority `activeSessionRules.agentDrives` rule says explicitly: if you have a browser-driving tool (Claude in Chrome, agent-browser, Playwright), use it — opening the dev URL, navigating to surfaces, hard-refreshing — before falling back to "tell the user to do it." The drawer-not-live and no-fetch hints were both rewritten with the same priority order: PREFERRED is agent drives, FALLBACK is ask user. The user is parked in the drawer judging surfaces; making them flip to the terminal to follow click-by-click instructions defeats the point of pitstop.
