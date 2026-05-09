@@ -110,7 +110,7 @@
 .drawer.pos-floating {
   position: fixed;
   height: auto;
-  max-height: 80vh;
+  max-height: 90vh;
   border-radius: 4px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
 }
@@ -1126,7 +1126,7 @@
   margin: 0 0 14px;
   padding: 8px 12px 8px 14px;
   border-left: 2px solid var(--rule-1);
-  background: color-mix(in oklab, var(--bg-input) 30%, transparent);
+  background: var(--bg-panel);
 }
 .detail-list.lookfor {
   border-left-color: var(--amber);
